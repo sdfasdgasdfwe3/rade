@@ -10,7 +10,7 @@ from telethon import TelegramClient
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://github.com/sdfasdgasdfwe3/rade/blob/main/bot.py"  # Укажите URL вашего скрипта
-SCRIPT_VERSION = "1.4.25"
+SCRIPT_VERSION = "1.4.26"
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
