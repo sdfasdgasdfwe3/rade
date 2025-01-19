@@ -1,3 +1,4 @@
+import asyncio  # Добавить этот импорт
 import subprocess
 import os
 import requests
@@ -131,4 +132,4 @@ async def main():
 
 if __name__ == "__main__":
     check_for_updates()
-    asyncio.run(main())
+    asyncio.run(main())  # Здесь уже можно запускать main(), потому что asyncio теперь импортирован
