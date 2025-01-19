@@ -1,6 +1,6 @@
-import asyncio  # Импортируем asyncio для работы с асинхронным кодом
+import asyncio
 import subprocess
-import os  # Добавлен импорт модуля os
+import os
 import requests
 import json
 from telethon import TelegramClient, events, Button
@@ -130,67 +130,67 @@ else:
     PHONE_NUMBER = None
 
 # Уникальное имя файла для сессии
-SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}' if PHONE_NUMBER else 'session_temp'
+SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "") if PHONE_NUMBER else "none"}'
 
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Добавляем команду /reg для регистрации и авторизации
-@client.on(events.NewMessage(pattern='/reg'))
-async def handle_reg(event):
-    """Команда для запроса данных и авторизации."""
-    if not API_ID or not API_HASH or not PHONE_NUMBER:
-        # Запрашиваем данные у пользователя
-        await event.respond(
-            "Для регистрации мне нужны ваши данные. Пожалуйста, введите ваш API ID."
-        )
-        return
+@client.on(events.NewMessage(pattern=r'/p (.+)'))
+async def animated_typing(event):
+    """Команда для печатания текста с анимацией."""
+    global typing_speed, cursor_symbol
+    try:
+        if not event.out:
+            return
 
-    # Печатаем вопрос о завершении регистрации
-    await event.respond(
-        "Хотите пройти авторизацию? Нажмите 'Да' для подтверждения или 'Нет' для отмены.",
-        buttons=[
-            [Button.text('Да', resize=True), Button.text('Нет', resize=True)]
-        ]
-    )
+        text = event.pattern_match.group(1)
+        typed_text = ""
 
-@client.on(events.CallbackQuery)
-async def handle_callback(event):
-    """Обработка нажатий кнопок 'Да' или 'Нет'."""
-    if event.data.decode() == 'Да':
-        # Запрашиваем номер телефона, если еще не указан
-        if not PHONE_NUMBER:
-            await event.respond("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX):")
-        else:
-            # Если все данные есть, начинаем авторизацию
-            await event.respond("Авторизация начинается...")
-            await client.start(phone=PHONE_NUMBER)
-            await event.respond("Вы успешно авторизовались в Telegram!")
-    elif event.data.decode() == 'Нет':
-        await event.respond("Авторизация отменена.")
+        for char in text:
+            typed_text += char
+            await event.edit(typed_text + cursor_symbol)
+            await asyncio.sleep(typing_speed)
 
-@client.on(events.NewMessage)
-async def handle_new_message(event):
-    """Обработка ввода данных для регистрации."""
+        await event.edit(typed_text)
+    except Exception as e:
+        print(f"Ошибка анимации: {e}")
+
+# Функция принудительной авторизации и обновления конфигурации
+@client.on(events.NewMessage(pattern=r'/forceauth'))
+async def force_authorization(event):
+    """Команда для принудительной авторизации и обновления конфигурации."""
     global API_ID, API_HASH, PHONE_NUMBER
 
-    if API_ID is None:
-        API_ID = int(event.text)
-        await event.respond(f"API ID получен: {API_ID}. Пожалуйста, введите ваш API Hash.")
-        return
-    if API_HASH is None:
-        API_HASH = event.text
-        await event.respond(f"API Hash получен: {API_HASH}. Пожалуйста, введите ваш номер телефона.")
-        return
-    if PHONE_NUMBER is None:
-        PHONE_NUMBER = event.text.strip()
-        await event.respond(f"Номер телефона получен: {PHONE_NUMBER}.")
-        await event.respond(
-            "Теперь вы можете пройти авторизацию. Для этого нажмите 'Да' или 'Нет'.",
-            buttons=[
-                [Button.text('Да', resize=True), Button.text('Нет', resize=True)]
-            ]
-        )
+    # Запросим данные пользователя
+    await event.respond("Пожалуйста, введите ваш API_ID (целое число):")
+    response = await client.wait_for(events.NewMessage(from_users=event.sender.id))
+    API_ID = int(response.text.strip())
+
+    await event.respond("Теперь введите ваш API_HASH:")
+    response = await client.wait_for(events.NewMessage(from_users=event.sender.id))
+    API_HASH = response.text.strip()
+
+    await event.respond("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX):")
+    response = await client.wait_for(events.NewMessage(from_users=event.sender.id))
+    PHONE_NUMBER = response.text.strip()
+
+    # Сохраняем новые данные в файл конфигурации
+    try:
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({
+                "API_ID": API_ID,
+                "API_HASH": API_HASH,
+                "PHONE_NUMBER": PHONE_NUMBER,
+                "typing_speed": typing_speed,
+                "cursor_symbol": cursor_symbol
+            }, f)
+        await event.respond("Данные успешно обновлены! Начинаю авторизацию...")
+
+        # Авторизация
+        await client.start(phone=PHONE_NUMBER)
+        await event.respond("Вы успешно авторизовались в Telegram!")
+    except Exception as e:
+        await event.respond(f"Ошибка при обновлении конфигурации: {e}")
 
 async def main():
     print(f"Запуск main()\nВерсия скрипта: {SCRIPT_VERSION}")
