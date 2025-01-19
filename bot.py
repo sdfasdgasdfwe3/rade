@@ -6,11 +6,11 @@ import json
 from telethon import TelegramClient, events
 
 # Константы
-CONFIG_FILE = "config.json"  # Исправлено: имя файла должно быть в кавычках
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/..."  # Исправленный URL
-SCRIPT_VERSION = "0.0.9"  # Исправлено: версия должна быть строкой
+CONFIG_FILE = "config.json"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/your-username/your-repository/branch-name/mainbot.py"  # Исправленный URL
+SCRIPT_VERSION = 0.0.9
 DEFAULT_TYPING_SPEED = 0.3
-DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
+DEFAULT_CURSOR = "█"  # Символ по умолчанию для анимации
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -58,7 +58,8 @@ def check_for_updates():
             else:
                 print("Не удалось определить версии для сравнения.")
         else:
-            print(f"Не удалось проверить обновления. Код ответа сервера {response.status_code}")
+            print(f"Не удалось проверить обновления. Код ответа сервера: {response.status_code}")
+            print(f"Содержимое ошибки: {response.text}")  # Выводим тело ответа для диагностики
     except Exception as e:
         print(f"Ошибка при проверке обновлений {e}")
 
@@ -82,7 +83,7 @@ def setup_autostart():
     with open(script_path, 'w') as f:
         f.write(f"#!/data/data/com.termux/files/usr/bin/bash\n")
         f.write(f"cd /data/data/com.termux/files/home/rade\n")  # Путь к вашему боту
-        f.write(f"python3 {bot_script_path}\n")  # Запуск бота
+        f.write(f"python3 {bot_script_path}  # Запуск бота\n")
     
     # Даем права на исполнение скрипту
     os.chmod(script_path, 0o755)
@@ -104,7 +105,7 @@ def remove_autostart():
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
     # Выводим информацию по отключению автозапуска
-    print("Для отключения автозапуска скрипта бота выполните следующую команду в Termux:")
+    print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux:")
     print("Удаление автозапуска:")
     print("  python3 путь_к_скрипту bot.py --remove-autostart")
     print("Чтобы отключить автозапуск вручную, просто удалите файл:")
@@ -153,7 +154,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
         exit(1)
 
 # Уникальное имя файла для сессии
-SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
+SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
