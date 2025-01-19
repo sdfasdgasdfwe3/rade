@@ -8,7 +8,7 @@ from telethon import TelegramClient, events
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.0.3"
+SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = "\u2588"  # Символ по умолчанию для анимации
 
@@ -122,26 +122,33 @@ if os.path.exists(CONFIG_FILE):
         typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
         cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Ошибка чтения конфигурации: {e}. Удалите {CONFIG_FILE} и попробуйте снова.")
-        exit(1)
+        print(f"Ошибка чтения конфигурации: {e}. Попробуем запросить данные заново.")
+        API_ID = None
+        API_HASH = None
+        PHONE_NUMBER = None
 else:
-    # Запрашиваем данные у пользователя
+    # Если файл не существует, запрашиваем данные у пользователя
+    API_ID = None
+    API_HASH = None
+    PHONE_NUMBER = None
+
+if not API_ID or not API_HASH or not PHONE_NUMBER:
     try:
+        print("Пожалуйста, введите данные для авторизации в Telegram:")
         API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
-        typing_speed = DEFAULT_TYPING_SPEED
-        cursor_symbol = DEFAULT_CURSOR
-
+        
         # Сохраняем данные в файл конфигурации
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump({
                 "API_ID": API_ID,
                 "API_HASH": API_HASH,
                 "PHONE_NUMBER": PHONE_NUMBER,
-                "typing_speed": typing_speed,
-                "cursor_symbol": cursor_symbol
+                "typing_speed": DEFAULT_TYPING_SPEED,
+                "cursor_symbol": DEFAULT_CURSOR
             }, f)
+        print("Данные успешно сохранены в конфигурации.")
     except Exception as e:
         print(f"Ошибка сохранения конфигурации: {e}")
         exit(1)
