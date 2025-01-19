@@ -1,4 +1,4 @@
-import asyncio  # Добавить этот импорт
+import asyncio  # Импортируем asyncio для работы с асинхронным кодом
 import subprocess
 import os
 import requests
@@ -8,7 +8,7 @@ from telethon import TelegramClient, events
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.0.3"
+SCRIPT_VERSION = "0.0.4"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = "\u2588"  # Символ по умолчанию для анимации
 
@@ -21,6 +21,55 @@ def discard_local_changes():
         print("Локальные изменения в файле bot.py были отменены.")
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений: {e}")
+
+# Функция для настройки автозапуска
+def setup_autostart():
+    """Функция для настройки автозапуска бота в Termux при старте устройства"""
+    boot_directory = os.path.expanduser("~/.termux/boot")
+    
+    # Проверяем, существует ли папка для автозапуска
+    if not os.path.exists(boot_directory):
+        os.makedirs(boot_directory)
+        print(f"Папка {boot_directory} создана.")
+    
+    # Путь к скрипту автозапуска
+    script_path = os.path.join(boot_directory, "start_bot.sh")
+    
+    # Путь к вашему скрипту бота
+    bot_script_path = "/data/data/com.termux/files/home/rade/bot.py"  # Измените на актуальный путь
+    
+    # Создаем скрипт для автозапуска
+    with open(script_path, "w") as f:
+        f.write(f"""#!/data/data/com.termux/files/usr/bin/bash
+cd /data/data/com.termux/files/home/rade  # Путь к вашему боту
+python3 {bot_script_path}  # Запуск бота
+""")
+    
+    # Даем права на исполнение скрипту
+    os.chmod(script_path, 0o755)
+    
+    print(f"Автозапуск настроен. Скрипт сохранен в {script_path}.")
+
+# Функция для удаления автозапуска
+def remove_autostart():
+    """Функция для удаления автозапуска бота в Termux"""
+    boot_directory = os.path.expanduser("~/.termux/boot")
+    script_path = os.path.join(boot_directory, "start_bot.sh")
+    
+    if os.path.exists(script_path):
+        os.remove(script_path)
+        print(f"Автозапуск удален. Скрипт {script_path} больше не будет запускаться при старте.")
+    else:
+        print("Скрипт автозапуска не найден. Возможно, он уже был удален.")
+
+# Выводим инструкцию по отключению автозапуска
+def print_autostart_instructions():
+    """Выводим информацию по отключению автозапуска"""
+    print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux:")
+    print("Удаление автозапуска:")
+    print("  python3 <путь_к_скрипту>/bot.py --remove-autostart")
+    print("Чтобы отключить автозапуск вручную, просто удалите файл:")
+    print("  rm ~/.termux/boot/start_bot.sh")
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -124,6 +173,10 @@ async def animated_typing(event):
 
 async def main():
     print(f"Запуск main()\nВерсия скрипта: {SCRIPT_VERSION}")
+    
+    # Настроим автозапуск
+    setup_autostart()
+    
     check_for_updates()
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
@@ -132,4 +185,8 @@ async def main():
 
 if __name__ == "__main__":
     check_for_updates()
-    asyncio.run(main())  # Здесь уже можно запускать main(), потому что asyncio теперь импортирован
+    
+    # Печатаем инструкции по отключению автозапуска
+    print_autostart_instructions()
+    
+    asyncio.run(main())  # Теперь asyncio импортирован и main() может быть вызван
