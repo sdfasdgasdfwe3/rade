@@ -14,9 +14,12 @@ DEFAULT_CURSOR = u'\u2588'
 
 # Функция для отмены локальных изменений
 def discard_local_changes():
+    """Отменить локальные изменения в файле bot.py."""
     try:
         print("Отмена локальных изменений в bot.py...")
-        subprocess.run(['git', 'checkout', '--', 'bot.py'], check=True)
+        # Можно использовать любую из команд, в зависимости от вашей версии Git:
+        # subprocess.run(['git', 'checkout', '--', 'bot.py'], check=True)  # Для старых версий Git
+        subprocess.run(['git', 'restore', '--staged', 'bot.py'], check=True)  # Для новых версий Git
         print("Локальные изменения в bot.py были отменены.")
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений: {e}")
