@@ -8,7 +8,7 @@ from telethon import TelegramClient, events, Button
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.0.3"
+SCRIPT_VERSION = "0.0.8"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = "\u2588"  # Символ по умолчанию для анимации
 
