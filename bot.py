@@ -181,12 +181,12 @@ async def main():
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
     print("Для использования анимации текста используйте команду /p <ваш текст>.")    
+    
+    # Печатаем инструкции по отключению автозапуска после старта бота
+    print_autostart_instructions()
+    
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
     check_for_updates()
-    
-    # Печатаем инструкции по отключению автозапуска
-    print_autostart_instructions()
-    
     asyncio.run(main())  # Теперь asyncio импортирован и main() может быть вызван
