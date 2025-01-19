@@ -54,25 +54,33 @@ def check_for_updates():
         if response.status_code == 200:
             remote_script = response.text
             current_file = os.path.abspath(__file__)
+
             with open(current_file, 'r', encoding='utf-8') as f:
                 current_script = f.read()
 
+            # Проверяем наличие строки "SCRIPT_VERSION" в обоих скриптах
             if "SCRIPT_VERSION" in remote_script and "SCRIPT_VERSION" in current_script:
-                remote_version = remote_script.split('SCRIPT_VERSION = "')[1].split('"')[0]
-                if SCRIPT_VERSION != remote_version:
-                    print(f"Доступна новая версия скрипта: {remote_version} (текущая: {SCRIPT_VERSION})")
-                    choice = input("Хотите обновиться? (y/n): ").strip().lower()
-                    if choice == 'y':
-                        with open(current_file, 'w', encoding='utf-8') as f:
-                            f.write(remote_script)
-                        print("Скрипт обновлен. Перезапустите программу.")
-                        exit()
+                remote_version_line = [
+                    line for line in remote_script.splitlines() if "SCRIPT_VERSION" in line
+                ]
+                if remote_version_line:
+                    remote_version = remote_version_line[0].split('=')[1].strip().strip('"')
+                    if SCRIPT_VERSION != remote_version:
+                        print(f"Доступна новая версия скрипта: {remote_version} (текущая: {SCRIPT_VERSION})")
+                        choice = input("Хотите обновиться? (y/n): ").strip().lower()
+                        if choice == 'y':
+                            with open(current_file, 'w', encoding='utf-8') as f:
+                                f.write(remote_script)
+                            print("Скрипт обновлен. Перезапустите программу.")
+                            exit()
+                    else:
+                        print("У вас уже установлена последняя версия скрипта.")
                 else:
-                    print("У вас уже установлена последняя версия скрипта.")
+                    print("Не удалось найти информацию о версии в загруженном скрипте.")
             else:
                 print("Не удалось определить версии для сравнения.")
         else:
-            print("Не удалось проверить обновления. Проверьте соединение с GitHub.")
+            print(f"Не удалось проверить обновления. Код ответа сервера: {response.status_code}")
     except Exception as e:
         print(f"Ошибка при проверке обновлений: {e}")
 
