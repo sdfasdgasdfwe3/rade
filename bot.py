@@ -1,7 +1,7 @@
-import asyncio
-import json
+import subprocess
 import os
 import requests
+import json
 from telethon import TelegramClient, events
 
 # Константы
@@ -10,6 +10,16 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot
 SCRIPT_VERSION = "0.0.3"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = "\u2588"  # Символ по умолчанию для анимации
+
+# Функция для отмены локальных изменений в git
+def discard_local_changes():
+    """Отменить локальные изменения в файле bot.py."""
+    try:
+        print("Отмена локальных изменений в файле bot.py...")
+        subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
+        print("Локальные изменения в файле bot.py были отменены.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при отмене изменений: {e}")
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -55,6 +65,10 @@ client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 def check_for_updates():
     """Проверка наличия обновлений скрипта на GitHub."""
     try:
+        # Сначала отменяем локальные изменения
+        discard_local_changes()
+
+        # Теперь обновляем скрипт
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
             remote_script = response.text
