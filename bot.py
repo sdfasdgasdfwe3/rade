@@ -9,7 +9,7 @@ from random import choice
 # Константы
 CONFIG_FILE = 'config.json'
 GITHUB_RAW_URL = 'https://raw.githubusercontent.com/sdfasdgasdfwe3rademainbot.py'  # Исправленный URL
-SCRIPT_VERSION = 0.0.9
+SCRIPT_VERSION = 0.1.0
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = '▌'  # Символ по умолчанию для анимации
 HEART = '🤍'
