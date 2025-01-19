@@ -6,7 +6,7 @@ from telethon import TelegramClient, events
 
 # Константы
 CONFIG_FILE = "config.json"
-GITHUB_RAW_URL = "https://github.com/sdfasdgasdfwe3/rade/blob/main/bot.py"  # Укажите URL вашего скрипта
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
 SCRIPT_VERSION = "0.0.3"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = "\u2588"  # Символ по умолчанию для анимации
@@ -112,7 +112,7 @@ async def main():
     check_for_updates()
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
-    print("Для использования анимации текста используйте команду /p <ваш текст>.")
+    print("Для использования анимации текста используйте команду /p <ваш текст>.")    
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
