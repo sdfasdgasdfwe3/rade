@@ -112,7 +112,7 @@ def remove_autostart():
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
     print("Для отключения автозапуска скрипта бота выполните следующую команду в Termux:")
-    print("Удаление автозапуска:")
+    print("Удаление автозапуска: ")
     print("  python3 путь_к_скрипту bot.py --remove-autostart")
     print("Чтобы отключить автозапуск вручную, просто удалите файл:")
     print("  rm ~/.termux/boot/start_bot.sh")
