@@ -186,7 +186,7 @@ async def show_animation_menu(event):
 @client.on(events.NewMessage(pattern=r'Меню'))
 async def menu_handler(event):
     try:
-        # Показываем меню анимаций
+        # Показываем меню анимаций и сохраняем ID сообщения
         menu_message = await show_animation_menu(event)
         
         # Удаляем сообщение "Меню" после его отображения
@@ -229,23 +229,18 @@ async def change_animation(event):
                 }, f)
 
             # Отправляем сообщение, подтверждающее выбор анимации
-            await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
+            confirmation_message = await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
 
             # Удаляем сообщение с выбором анимации
             await event.delete()
 
-            # Дополнительно удаляем меню
-            # Используем ID сообщения меню, чтобы удалить его
-            if hasattr(event, 'reply_to_msg_id') and event.reply_to_msg_id:
-                message = await event.get_reply_message()
-                if message:
-                    await message.delete()
+            # Удаляем сообщение с подтверждением выбора анимации
+            await confirmation_message.delete()
 
         else:
             await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
     except Exception as e:
         print(f"Ошибка при изменении анимации: {e}")
-
 
 # Обработчик команды анимации для текста
 @client.on(events.NewMessage(pattern=r'р (.+)'))
