@@ -154,7 +154,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
         exit(1)
 
 # Инициализируем клиента Telegram
-client = TelegramClient('tg-account', APP_ID, API_HASH)
+client = TelegramClient('tg-account', API_ID, API_HASH)
 
 def generate_parade_colored():
     output = ''
