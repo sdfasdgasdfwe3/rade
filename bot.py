@@ -154,6 +154,27 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
+# Анимация сердечек
+@client.on(events.NewMessage(pattern=r'heart (.+)'))
+async def heart_animation(event):
+    print("Команда для анимации сердечек.")
+    try:
+        if not event.out:
+            return
+
+        text = event.pattern_match.group(1)
+        heart = "❤️"
+        animated_heart = ""
+        for char in text:
+            animated_heart += heart
+            await event.edit(animated_heart)
+            await asyncio.sleep(0.2)  # Скорость анимации
+
+        await event.edit(animated_heart)
+    except Exception as e:
+        print(f"Ошибка анимации сердечек: {e}")
+
+# Анимация текста с эффектом печатания
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
     print("Команда для печатания текста с анимацией.")
@@ -184,6 +205,7 @@ async def main():
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
     print("Для использования анимации текста используйте команду p ваш текст.")
+    print("Для использования анимации сердечек используйте команду heart ваш текст.")
     
     # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
