@@ -39,13 +39,13 @@ def check_for_updates():
                 current_script = f.read()
 
             # Проверяем наличие строки SCRIPT_VERSION в обоих скриптах
-            if SCRIPT_VERSION in remote_script and SCRIPT_VERSION in current_script:
+            if str(SCRIPT_VERSION) in remote_script and str(SCRIPT_VERSION) in current_script:
                 remote_version_line = [
-                    line for line in remote_script.splitlines() if SCRIPT_VERSION in line
+                    line for line in remote_script.splitlines() if str(SCRIPT_VERSION) in line
                 ]
                 if remote_version_line:
                     remote_version = remote_version_line[0].split('=')[1].strip().strip('')
-                    if SCRIPT_VERSION != remote_version:
+                    if str(SCRIPT_VERSION) != remote_version:
                         print(f"Доступна новая версия скрипта {remote_version} (текущая {SCRIPT_VERSION})")
                         with open(current_file, 'w', encoding='utf-8') as f:
                             f.write(remote_script)
