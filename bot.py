@@ -105,7 +105,7 @@ def remove_autostart():
 def print_autostart_instructions():
     # Выводим информацию по отключению автозапуска
     print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux")
-    print("Удаление автозапуска:")
+    print("Удаление автозапуска: ")
     print("  python3 путь_к_скриптуbot.py --remove-autostart")
     print("Чтобы отключить автозапуск вручную, просто удалите файл:")
     print("  rm ~/.termux/boot/start_bot.sh")
@@ -177,6 +177,33 @@ async def animated_typing(event):
         await event.edit(typed_text)
     except Exception as e:
         print(f"Ошибка анимации {e}")
+
+# Новая команда для запуска внешнего скрипта
+@client.on(events.NewMessage(pattern=r'/magic'))
+async def run_magic_script(event):
+    """Команда для запуска другого скрипта и возвращения в основной бот."""
+    try:
+        if not event.out:
+            return
+
+        # Уведомляем пользователя о запуске другого скрипта
+        await event.reply("<b>Перехожу в другой скрипт...</b>", parse_mode='html')
+
+        # Запуск другого скрипта (например, "other_script.py")
+        result = subprocess.run(["python3", "other_script.py"], capture_output=True, text=True)
+
+        # Получаем вывод из второго скрипта
+        if result.returncode == 0:
+            await event.reply(f"<b>Другой скрипт выполнен успешно. Результат:</b>\n{result.stdout}", parse_mode='html')
+        else:
+            await event.reply(f"<b>Произошла ошибка при выполнении второго скрипта:</b>\n{result.stderr}", parse_mode='html')
+
+        # Возвращаемся в основной бот
+        await event.reply("<b>Возвращаемся в основной бот...</b>", parse_mode='html')
+
+    except Exception as e:
+        print(f"Ошибка при запуске другого скрипта: {e}")
+        await event.reply("<b>Произошла ошибка при выполнении команды.</b>", parse_mode='html')
 
 async def main():
     print(f"Запуск main()\nВерсия скрипта {SCRIPT_VERSION}")
