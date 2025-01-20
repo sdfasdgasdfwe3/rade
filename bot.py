@@ -19,7 +19,7 @@ async def main():
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
      # Отменить локальные изменения в файле bot.py.
-    try:
+     try:
         print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
         print("Локальные изменения в файле bot.py были отменены.")
