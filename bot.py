@@ -1,4 +1,4 @@
-import asyncio  # Импортируем asyncio для работы с асинхронным кодом
+import asyncio  # Импортируем asyncio для работы с асинхронным кодом 
 import subprocess
 import os  # Добавлен импорт модуля os
 import requests
@@ -216,7 +216,8 @@ async def change_animation(event):
     except Exception as e:
         print(f"Ошибка при изменении анимации: {e}")
 
-@client.on(events.NewMessage(pattern=r'p (.+)'))
+# Обработчик команды анимации для текста
+@client.on(events.NewMessage(pattern=r'р (.+)'))
 async def animated_typing(event):
     print("Команда для печатания текста с анимацией.")
     global typing_speed, cursor_symbol
@@ -245,7 +246,7 @@ async def main():
     check_for_updates()
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
-    print("Для использования анимации текста используйте команду p ваш текст.")
+    print("Для использования анимации текста используйте команду р ваш текст.")
     
     # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
