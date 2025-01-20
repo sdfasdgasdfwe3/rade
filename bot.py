@@ -229,5 +229,6 @@ async def handle_message(event: NewMessage.Event):
     
     await client.run_until_disconnected()
 
-client.start()
-client.run_until_disconnected()  # Эта строка будет запускать клиента и слушать сообщения
+if __name__ == "__main__":
+    asyncio.run(client.start(phone=PHONE_NUMBER))
+    asyncio.run(client.run_until_disconnected())
