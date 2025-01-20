@@ -9,7 +9,7 @@ from telethon import TelegramClient, events
 CONFIG_FILE = 'config.json'
 GITHUB_RAW_URL = 'https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py'  # Исправленный URL
 SCRIPT_VERSION = 0.1
-DEFAULT_TYPING_SPEED = 0.3
+DEFAULT_TYPING_SPEED = 0.4
 DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для анимации
 
 # Список доступных анимаций
@@ -214,4 +214,23 @@ async def change_animation(event):
                     }, f)
                 await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
             else:
-                await event.respond("Неверный выбор. Пожалуйста,
+                await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
+    except Exception as e:
+        print(f"Ошибка при изменении анимации: {e}")
+
+# Запуск бота
+client.start()
+
+# Обработчик для остановки
+@client.on(events.NewMessage(pattern=r'!stop'))
+async def stop(event):
+    if event.sender_id == client.user.id:  # Игнорируем другие сообщения
+        await event.respond("Остановка бота.")
+        await client.disconnect()
+
+# Запуск клиента
+async def main():
+    await client.run_until_disconnected()
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
