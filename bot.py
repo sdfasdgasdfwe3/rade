@@ -9,7 +9,7 @@ from telethon import TelegramClient, events
 CONFIG_FILE = 'config.json'
 GITHUB_RAW_URL = 'https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py'  # Исправленный URL
 SCRIPT_VERSION = 0.1
-DEFAULT_TYPING_SPEED = 0.4
+DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для анимации
 
 # Список доступных анимаций
@@ -165,14 +165,6 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Список доступных анимаций
-animations = {
-    1: {'name': 'Стандартная анимация', 'symbol': u'\u2588', 'speed': DEFAULT_TYPING_SPEED},
-    2: {'name': 'Точка-символ анимации', 'symbol': '.', 'speed': 0.15},
-    3: {'name': 'Быстрая анимация', 'symbol': u'\u2588', 'speed': 0.05},
-    4: {'name': 'Звездочка', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},
-}
-
 # Функция для отображения меню выбора анимации
 async def show_animation_menu(event):
     menu_text = "Меню анимаций:\n"
@@ -186,8 +178,7 @@ async def show_animation_menu(event):
 @client.on(events.NewMessage(pattern=r'Меню'))
 async def menu_handler(event):
     try:
-        if event.sender_id == client.user.id:  # Проверяем, что сообщение от бота
-            await show_animation_menu(event)
+        await show_animation_menu(event)
     except Exception as e:
         print(f"Ошибка при выводе меню: {e}")
 
@@ -195,42 +186,64 @@ async def menu_handler(event):
 @client.on(events.NewMessage(pattern=r'\d'))
 async def change_animation(event):
     try:
-        if event.sender_id == client.user.id:  # Проверяем, что сообщение от бота
-            choice = int(event.text.strip())
-            if choice in animations:
-                global cursor_symbol, typing_speed
-                selected_animation = animations[choice]
-                cursor_symbol = selected_animation['symbol']
-                typing_speed = selected_animation['speed']
+        choice = int(event.text.strip())
+        if choice in animations:
+            global cursor_symbol, typing_speed
+            selected_animation = animations[choice]
+            cursor_symbol = selected_animation['symbol']
+            typing_speed = selected_animation['speed']
 
-                # Сохраняем выбранную анимацию в конфигурации
-                with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        "API_ID": API_ID,
-                        "API_HASH": API_HASH,
-                        "PHONE_NUMBER": PHONE_NUMBER,
-                        "typing_speed": typing_speed,
-                        "cursor_symbol": cursor_symbol
-                    }, f)
-                await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
-            else:
-                await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
+            # Сохраняем выбранную анимацию в конфигурации
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "API_ID": API_ID,
+                    "API_HASH": API_HASH,
+                    "PHONE_NUMBER": PHONE_NUMBER,
+                    "typing_speed": typing_speed,
+                    "cursor_symbol": cursor_symbol
+                }, f)
+            await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
+        else:
+            await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
     except Exception as e:
         print(f"Ошибка при изменении анимации: {e}")
 
-# Запуск бота
-client.start()
+@client.on(events.NewMessage(pattern=r'p (.+)'))
+async def animated_typing(event):
+    print("Команда для печатания текста с анимацией.")
+    global typing_speed, cursor_symbol
+    try:
+        if not event.out:
+            return
 
-# Обработчик для остановки
-@client.on(events.NewMessage(pattern=r'!stop'))
-async def stop(event):
-    if event.sender_id == client.user.id:  # Игнорируем другие сообщения
-        await event.respond("Остановка бота.")
-        await client.disconnect()
+        text = event.pattern_match.group(1)
+        typed_text = ""
 
-# Запуск клиента
+        for char in text:
+            typed_text += char
+            await event.edit(typed_text + cursor_symbol)
+            await asyncio.sleep(typing_speed)
+
+        await event.edit(typed_text)
+    except Exception as e:
+        print(f"Ошибка анимации: {e}")
+
 async def main():
+    print(f"Запуск main()... Версия скрипта {SCRIPT_VERSION}")
+    
+    # Настроим автозапуск
+    setup_autostart()
+    
+    check_for_updates()
+    await client.start(phone=PHONE_NUMBER)
+    print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
+    print("Для использования анимации текста используйте команду p ваш текст.")
+    
+    # Печатаем инструкции по отключению автозапуска после старта бота
+    print_autostart_instructions()
+    
     await client.run_until_disconnected()
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+if __name__ == '__main__':
+    check_for_updates()
+    asyncio.run(main())  # Теперь asyncio импортирован и main() может быть вызван
