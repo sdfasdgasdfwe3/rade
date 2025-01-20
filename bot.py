@@ -12,15 +12,15 @@ SCRIPT_VERSION = 0.0
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для анимации
 
-# Функция для отмены локальных изменений в git
+ # Функция для отмены локальных изменений в git
 def discard_local_changes():
-    # print("Отменить локальные изменения в файле bot.py.")
+    print("Отменить локальные изменения в файле bot.py.")
     try:
-        # print("Отмена локальных изменений в файле bot.py...")
+        print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(['git', 'checkout', '--', 'bot.py'], check=True)
-        # print("Локальные изменения в файле bot.py были отменены.")
+        print("Локальные изменения в файле bot.py были отменены.")
     except subprocess.CalledProcessError as e:
-        # print(f"Ошибка при отмене изменений: {e}")
+        print(f"Ошибка при отмене изменений: {e}")
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
