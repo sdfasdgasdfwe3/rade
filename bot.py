@@ -1,4 +1,4 @@
-import asyncio  # Импортируем asyncio для работы с асинхронным кодом
+import asyncio 
 import subprocess
 import os  # Добавлен импорт модуля os
 import requests
