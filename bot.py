@@ -178,6 +178,10 @@ async def show_animation_menu(event):
 @client.on(events.NewMessage(pattern=r'Меню'))
 async def menu_handler(event):
     try:
+        # Проверяем, что сообщение отправлено вашим пользователем
+        if event.sender_id != PHONE_NUMBER:
+            return  # Игнорируем сообщение от других пользователей
+
         await show_animation_menu(event)
     except Exception as e:
         print(f"Ошибка при выводе меню: {e}")
@@ -186,6 +190,10 @@ async def menu_handler(event):
 @client.on(events.NewMessage(pattern=r'\d'))
 async def change_animation(event):
     try:
+        # Проверяем, что сообщение отправлено вашим пользователем
+        if event.sender_id != PHONE_NUMBER:
+            return  # Игнорируем сообщение от других пользователей
+
         choice = int(event.text.strip())
         if choice in animations:
             global cursor_symbol, typing_speed
@@ -213,6 +221,10 @@ async def animated_typing(event):
     print("Команда для печатания текста с анимацией.")
     global typing_speed, cursor_symbol
     try:
+        # Проверяем, что сообщение отправлено вашим пользователем
+        if event.sender_id != PHONE_NUMBER:
+            return  # Игнорируем сообщение от других пользователей
+
         if not event.out:
             return
 
