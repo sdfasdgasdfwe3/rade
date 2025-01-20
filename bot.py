@@ -3,13 +3,13 @@ import subprocess
 import os
 import requests
 import json
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, Button
 
 # Константы
 CONFIG_FILE = 'config.json'
 GITHUB_RAW_URL = 'https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py'
 SCRIPT_VERSION = 0.1
-DEFAULT_TYPING_SPEED = 0.1  # Уменьшаем скорость для эффекта печатной машинки
+DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'
 
 # Функция для проверки обновлений
@@ -63,7 +63,6 @@ selected_animation = "typing_machine"  # Устанавливаем печатн
 
 # Анимации
 async def typing_machine(event, text):
-    # Эмуляция печатной машинки
     cursor = DEFAULT_CURSOR
     for i in range(len(text)):
         current_text = text[:i+1] + cursor
@@ -77,10 +76,10 @@ async def running_line(event, text):
         await asyncio.sleep(0.3)
 
 async def blinking_text(event, text):
-    for _ in range(5):
+    for _ in range(5):  # Количество мерцаний
         await event.edit(text)
         await asyncio.sleep(0.5)
-        await event.edit("")
+        await event.edit("")  # Убираем текст
         await asyncio.sleep(0.5)
 
 async def carousel_text(event, text):
@@ -92,6 +91,10 @@ async def carousel_text(event, text):
 # Обработчик команды выбора анимации
 @client.on(events.NewMessage(pattern='/menu'))
 async def menu_handler(event):
+    # Проверка, чтобы бот отвечал только на свои сообщения
+    if event.sender_id != (await client.get_me()).id:
+        return
+
     # Выводим список анимаций как текст
     menu_text = (
         "Выберите стиль анимации:\n"
@@ -106,18 +109,34 @@ async def menu_handler(event):
 # Обработчик текстовых сообщений для выбора анимации
 @client.on(events.NewMessage(pattern=r'^[1-4]$'))
 async def select_animation(event):
+    # Проверка, чтобы бот отвечал только на свои сообщения
+    if event.sender_id != (await client.get_me()).id:
+        return
+
     global selected_animation
     choice = event.message.text.strip()  # Получаем выбор пользователя
-    if choice in animations:
-        selected_animation = animations[choice]
-        await event.respond(f"Вы выбрали анимацию: {selected_animation.replace('_', ' ').title()}")
+    if choice == "1":
+        selected_animation = "typing_machine"
+        await event.respond("Вы выбрали анимацию: Печатная машинка")
+    elif choice == "2":
+        selected_animation = "running_line"
+        await event.respond("Вы выбрали анимацию: Бегущая строка")
+    elif choice == "3":
+        selected_animation = "blinking_text"
+        await event.respond("Вы выбрали анимацию: Мерцающий текст")
+    elif choice == "4":
+        selected_animation = "carousel_text"
+        await event.respond("Вы выбрали анимацию: Карусель текста")
     else:
         await event.respond("Неверный выбор! Пожалуйста, выберите цифру от 1 до 4.")
 
 # Обработчик анимаций
 @client.on(events.NewMessage(pattern=r'/p (.+)'))
 async def animated_text_handler(event):
-    global selected_animation
+    # Проверка, чтобы бот отвечал только на свои сообщения
+    if event.sender_id != (await client.get_me()).id:
+        return
+
     text = event.pattern_match.group(1)
 
     if selected_animation == "typing_machine":
