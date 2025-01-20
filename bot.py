@@ -8,7 +8,7 @@ from telethon import TelegramClient, events
 # Константы
 CONFIG_FILE = 'config.json'
 GITHUB_RAW_URL = 'https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py'  # Исправленный URL
-SCRIPT_VERSION = 2
+SCRIPT_VERSION = '1.2.9'
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'
 
@@ -17,9 +17,8 @@ def discard_local_changes():
     """Отменить локальные изменения в файле bot.py."""
     try:
         print("Отмена локальных изменений в bot.py...")
-        # Можно использовать любую из команд, в зависимости от вашей версии Git:
-        # subprocess.run(['git', 'checkout', '--', 'bot.py'], check=True)  # Для старых версий Git
-        subprocess.run(['git', 'restore', '--staged', 'bot.py'], check=True)  # Для новых версий Git
+        # Применяем команду git restore для отмены локальных изменений в git
+        subprocess.run(['git', 'restore', '--staged', 'bot.py'], check=True)
         print("Локальные изменения в bot.py были отменены.")
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений: {e}")
@@ -36,20 +35,25 @@ def check_for_updates():
             with open(current_file, 'r', encoding='utf-8') as f:
                 current_script = f.read()
 
+            # Сравниваем версии в обоих скриптах
             if SCRIPT_VERSION in remote_script and SCRIPT_VERSION in current_script:
                 remote_version_line = [
                     line for line in remote_script.splitlines() if "SCRIPT_VERSION" in line
                 ]
                 if remote_version_line:
                     remote_version = remote_version_line[0].split('=')[1].strip().strip('"')
-                    if SCRIPT_VERSION != remote_version:
-                        print(f"Доступна новая версия {remote_version} (текущая {SCRIPT_VERSION})")
-                        with open(current_file, 'w', encoding='utf-8') as f:
-                            f.write(remote_script)
-                        print("Скрипт обновлен. Перезапустите программу.")
-                        exit()
+                    # Проверяем, что версии имеют строковый тип
+                    if isinstance(remote_version, str) and isinstance(SCRIPT_VERSION, str):
+                        if SCRIPT_VERSION != remote_version:
+                            print(f"Доступна новая версия {remote_version} (текущая {SCRIPT_VERSION})")
+                            with open(current_file, 'w', encoding='utf-8') as f:
+                                f.write(remote_script)
+                            print("Скрипт обновлен. Перезапустите программу.")
+                            exit()
+                        else:
+                            print("У вас последняя версия скрипта.")
                     else:
-                        print("У вас последняя версия скрипта.")
+                        print("Ошибка: Невозможно сравнить версии, так как одна из них не является строкой.")
                 else:
                     print("Не удалось найти информацию о версии.")
             else:
@@ -69,14 +73,17 @@ def setup_autostart():
     script_path = os.path.join(boot_directory, 'start_bot.sh')
     bot_script_path = '/data/data/com.termux/files/home/bot.py'
     
+    # Записываем скрипт для автозапуска
     with open(script_path, 'w') as f:
         f.write(f"#!/data/data/com.termux/files/usr/bin/bash\n")
         f.write(f"cd /data/data/com.termux/files/home/\n")
         f.write(f"python3 {bot_script_path}\n")
     
+    # Устанавливаем права на выполнение для скрипта
     os.chmod(script_path, 0o755)
     print(f"Автозапуск настроен: {script_path}")
 
+# Функция для удаления автозапуска
 def remove_autostart():
     boot_directory = os.path.expanduser('~/.termux/boot')
     script_path = os.path.join(boot_directory, 'start_bot.sh')
@@ -87,6 +94,7 @@ def remove_autostart():
     else:
         print("Скрипт автозапуска не найден.")
 
+# Печать инструкции по отключению автозапуска
 def print_autostart_instructions():
     print("\nДля отключения автозапуска выполните:")
     print("Удаление автозапуска:")
