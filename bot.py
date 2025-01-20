@@ -4,8 +4,9 @@ import os  # Добавлен импорт модуля os
 import requests
 import json
 from telethon import TelegramClient, events
+import threading
 import os
-import sys
+import time
 
 
 # Константы
@@ -66,20 +67,29 @@ def check_for_updates():
     except Exception as e:
         print(f"Ошибка при проверке обновлений {e}")
 
-# Функция для перехода к другому скрипту
+# Функция для запуска второго скрипта
 def run_script():
     os.system("python3 other_script.py")
 
-# Основной цикл для ввода пользователя
-while True:
-    user_input = input("Введите команду: ")
+# Функция для постоянной проверки ввода
+def check_input():
+    while True:
+        user_input = input("Введите команду: ")
+        if user_input.lower() == "magic":
+            print("Вы ввели кодовое слово 'Magic', запускаем второй скрипт...")
+            run_script()  # Запуск второго скрипта
+            break  # Прерывание, если мы запустили второй скрипт
+        else:
+            time.sleep(1)  # Можно сделать паузу между проверками, чтобы не загружать процессор
 
-    if user_input == "Magic":
-        print("Переход к другому скрипту...")
-        run_script()
-        break  # Выход из первого скрипта
-    else:
-        print("Неверная команда. Попробуйте снова.")
+# Создаем и запускаем отдельный поток для проверки ввода
+input_thread = threading.Thread(target=check_input)
+input_thread.start()
+
+# Программа продолжает выполнять другие действия
+while True:
+    time.sleep(10)  # Пример: программа может выполнять другие задачи параллельно
+    print("Программа продолжает работу...")
 
 # Функция для настройки автозапуска
 def setup_autostart():
