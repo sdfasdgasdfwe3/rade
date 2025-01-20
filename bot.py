@@ -3,6 +3,7 @@ import subprocess
 import os  # Добавлен импорт модуля os
 import requests
 import json
+import subprocess
 from telethon import TelegramClient, events
 
 # Константы
@@ -151,7 +152,27 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
     except Exception as e:
         print(f"Ошибка сохранения конфигурации {e}")
         exit(1)
+# Функция для выполнения внешнего скрипта
+async def execute_other_script():
+    # Важно, чтобы путь к скрипту был правильным
+    # В Termux укажите полный путь к скрипту, например, '/data/data/com.termux/files/home/other_script.py'
+    result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
+    return result.stdout
 
+
+@client.on(NewMessage(outgoing=True))
+async def handle_message(event: NewMessage.Event):
+    if event.message.message in MAGIC_PHRASES:
+        await process_build_place(event)
+        await process_colored_parade(event)
+        await process_love_words(event)
+
+        # Выполнение внешнего скрипта по команде 'magic'
+        print("[*] Выполнение внешнего скрипта по команде 'magic'")
+        output = await execute_other_script()
+        print("[*] Результат выполнения скрипта:")
+        print(output)
+        
 # Уникальное имя файла для сессии
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
