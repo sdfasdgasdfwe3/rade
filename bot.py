@@ -1,6 +1,6 @@
-import asyncio  # Импортируем asyncio для работы с асинхронным кодом
+import asyncio
 import subprocess
-import os  # Добавлен импорт модуля os
+import os
 import requests
 import json
 from telethon import TelegramClient, events
@@ -27,6 +27,9 @@ PARADE_MAP = '''
 00001110000
 00000100000
 '''
+
+# Инициализация клиента
+client = TelegramClient('session_name', API_ID, API_HASH)
 
 # Функции анимации
 def generate_parade_colored():
