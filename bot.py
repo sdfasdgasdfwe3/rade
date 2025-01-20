@@ -3,6 +3,7 @@ import subprocess
 import os  # Добавлен импорт модуля os
 import requests
 import json
+import logging
 from telethon import TelegramClient, events
 
 # Константы
@@ -12,7 +13,10 @@ SCRIPT_VERSION = 0.0
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для анимации
 
- # Функция для отмены локальных изменений в git
+# Настройка логирования
+logging.basicConfig(level=logging.DEBUG)
+
+# Функция для отмены локальных изменений в git
 def discard_local_changes():
     print("Отменить локальные изменения в файле bot.py.")
     try:
@@ -29,8 +33,15 @@ def check_for_updates():
         # Сначала отменяем локальные изменения
         discard_local_changes()
 
+        # Логирование запроса к GitHub
+        logging.debug(f"Запрос на получение скрипта с {GITHUB_RAW_URL}")
+        
         # Теперь обновляем скрипт
         response = requests.get(GITHUB_RAW_URL)
+        
+        # Логирование статуса ответа
+        logging.debug(f"Ответ от сервера: {response.status_code}")
+        
         if response.status_code == 200:
             remote_script = response.text
             current_file = os.path.abspath(__file__)
