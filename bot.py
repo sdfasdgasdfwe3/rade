@@ -143,6 +143,7 @@ client = TelegramClient('tg-account', API_ID, API_HASH)
 # Функция для выполнения внешнего скрипта
 async def execute_other_script():
     result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
+    print(result.stdout)  # Выводим результат выполнения скрипта
     return result.stdout
 
 # Анимация текста
@@ -152,7 +153,7 @@ async def animate_text(event, text, delay=0.1):
         await asyncio.sleep(delay)
 
 # Основной обработчик для сообщений
-@client.on(NewMessage(outgoing=True))
+@client.on(NewMessage)
 async def handle_message(event: NewMessage.Event):
     if event.message.text in MAGIC_PHRASES:  # Проверка на команду "magic"
         print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
@@ -160,8 +161,6 @@ async def handle_message(event: NewMessage.Event):
         
         # Запуск анимации текста
         await animate_text(event, "Выполнение магической команды...", delay=0.05)
-
-    await client.send_message(event.peer_id, "Бот работает!")
 
     # Настроим автозапуск
     setup_autostart()
