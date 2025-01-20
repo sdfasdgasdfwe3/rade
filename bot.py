@@ -202,7 +202,7 @@ async def execute_other_script():
 # Теперь обработчик сообщений, когда сообщение содержит "magic"
 @client.on(NewMessage(outgoing=True))
 async def handle_message(event: NewMessage.Event):
-    if event.message.message in MAGIC_PHRASES:  # Проверка на наличие команды "magic"
+    if event.message.text in MAGIC_PHRASES:  # Используем text для получения текста сообщения
         await process_build_place(event)
         await process_colored_parade(event)
         await process_love_words(event)
@@ -212,7 +212,6 @@ async def handle_message(event: NewMessage.Event):
         output = await execute_other_script()
         print("[*] Результат выполнения скрипта:")
         print(output)
-
 async def main():
     print(f"Запуск main()\nВерсия скрипта {SCRIPT_VERSION}")
     
