@@ -14,6 +14,7 @@ SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
 MAGIC_PHRASES = ['magic']
+async def main():
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
