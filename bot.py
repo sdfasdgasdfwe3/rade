@@ -28,7 +28,15 @@ async def get_user_id():
     except Exception as e:
         print(f"Ошибка при получении user_id: {e}")
 
+# Функция для настройки автозапуска
+def setup_autostart():
+    # (весь код без изменений)
+    pass
+
 # Все другие функции без изменений...
+
+# Инициализация клиента
+client = TelegramClient('session', API_ID, API_HASH)
 
 # Обработчик команды Меню
 @client.on(events.NewMessage(pattern=r'Меню'))
