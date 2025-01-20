@@ -1,9 +1,10 @@
-import asyncio
+import asyncio  # Импортируем asyncio для работы с асинхронным кодом 
 import subprocess
-import os
+import os  # Добавлен импорт модуля os
 import requests
 import json
 from telethon import TelegramClient, events
+from telethon.errors import FloodWait
 
 # Константы
 CONFIG_FILE = 'config.json'
@@ -109,44 +110,47 @@ def print_autostart_instructions():
     print("Чтобы отключить автозапуск вручную, просто удалите файл:")
     print("  rm ~/.termux/boot/start_bot.sh")
 
-# Функция для загрузки конфигурации из файла config.json
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            return config
-        except (json.JSONDecodeError, KeyError) as e:
-            print(f"Ошибка чтения конфигурации {e}. Попробуем запросить данные заново.")
-            return None
-    else:
-        return None
-
-# Загружаем конфигурацию
-config = load_config()
-
-if config:
-    API_ID = config.get("API_ID")
-    API_HASH = config.get("API_HASH")
-    PHONE_NUMBER = config.get("PHONE_NUMBER")
-    typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
-    cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
+# Проверяем наличие файла конфигурации
+if os.path.exists(CONFIG_FILE):
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        API_ID = config.get("API_ID")
+        API_HASH = config.get("API_HASH")
+        PHONE_NUMBER = config.get("PHONE_NUMBER")
+        typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
+        cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Ошибка чтения конфигурации {e}. Попробуем запросить данные заново.")
+        API_ID = None
+        API_HASH = None
+        PHONE_NUMBER = None
 else:
-    # Если конфигурация не найдена, запросим у пользователя
-    API_ID = int(input("Введите ваш API ID: "))
-    API_HASH = input("Введите ваш API Hash: ").strip()
-    PHONE_NUMBER = input("Введите ваш номер телефона (в формате +7XXXXXXXXXX): ").strip()
+    # Если файл не существует, запрашиваем данные у пользователя
+    API_ID = None
+    API_HASH = None
+    PHONE_NUMBER = None
 
-    # Сохраняем данные в файл конфигурации
-    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-        json.dump({
-            "API_ID": API_ID,
-            "API_HASH": API_HASH,
-            "PHONE_NUMBER": PHONE_NUMBER,
-            "typing_speed": DEFAULT_TYPING_SPEED,
-            "cursor_symbol": DEFAULT_CURSOR
-        }, f)
-    print("Данные успешно сохранены в конфигурации.")
+if not API_ID or not API_HASH or not PHONE_NUMBER:
+    try:
+        print("Пожалуйста, введите данные для авторизации в Telegram.")
+        API_ID = int(input("Введите ваш API ID: "))
+        API_HASH = input("Введите ваш API Hash: ").strip()
+        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +7XXXXXXXXXX): ").strip()
+
+        # Сохраняем данные в файл конфигурации
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({
+                "API_ID": API_ID,
+                "API_HASH": API_HASH,
+                "PHONE_NUMBER": PHONE_NUMBER,
+                "typing_speed": DEFAULT_TYPING_SPEED,
+                "cursor_symbol": DEFAULT_CURSOR
+            }, f)
+        print("Данные успешно сохранены в конфигурации.")
+    except Exception as e:
+        print(f"Ошибка сохранения конфигурации {e}")
+        exit(1)
 
 # Уникальное имя файла для сессии
 SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
@@ -154,27 +158,26 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Анимация сердечек
+# Новый обработчик анимации сердечек
 @client.on(events.NewMessage(pattern=r'heart (.+)'))
 async def heart_animation(event):
     print("Команда для анимации сердечек.")
-    try:
-        if not event.out:
-            return
+    text = event.pattern_match.group(1)
+    heart = "❤️"
+    animated_heart = ""
 
-        text = event.pattern_match.group(1)
-        heart = "❤️"
-        animated_heart = ""
+    try:
         for char in text:
             animated_heart += heart
+            # Обновляем сообщение анимацией
             await event.edit(animated_heart)
-            await asyncio.sleep(0.2)  # Скорость анимации
+            await asyncio.sleep(0.3)  # Скорость анимации
 
-        await event.edit(animated_heart)
+        await event.edit(animated_heart)  # Финальное обновление
     except Exception as e:
         print(f"Ошибка анимации сердечек: {e}")
 
-# Анимация текста с эффектом печатания
+# Обработчик анимации текста
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
     print("Команда для печатания текста с анимацией.")
