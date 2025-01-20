@@ -4,7 +4,6 @@ import os  # Добавлен импорт модуля os
 import requests
 import json
 from telethon import TelegramClient, events
-from telethon.errors import FloodWait
 
 # Константы
 CONFIG_FILE = 'config.json'
@@ -13,7 +12,7 @@ SCRIPT_VERSION = 0.0
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для анимации
 
-# Функция для отмены локальных изменений в git
+ # Функция для отмены локальных изменений в git
 def discard_local_changes():
     print("Отменить локальные изменения в файле bot.py.")
     try:
@@ -158,26 +157,6 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Новый обработчик анимации сердечек
-@client.on(events.NewMessage(pattern=r'heart (.+)'))
-async def heart_animation(event):
-    print("Команда для анимации сердечек.")
-    text = event.pattern_match.group(1)
-    heart = "❤️"
-    animated_heart = ""
-
-    try:
-        for char in text:
-            animated_heart += heart
-            # Обновляем сообщение анимацией
-            await event.edit(animated_heart)
-            await asyncio.sleep(0.3)  # Скорость анимации
-
-        await event.edit(animated_heart)  # Финальное обновление
-    except Exception as e:
-        print(f"Ошибка анимации сердечек: {e}")
-
-# Обработчик анимации текста
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
     print("Команда для печатания текста с анимацией.")
@@ -208,7 +187,6 @@ async def main():
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
     print("Для использования анимации текста используйте команду p ваш текст.")
-    print("Для использования анимации сердечек используйте команду heart ваш текст.")
     
     # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
