@@ -186,7 +186,7 @@ async def show_animation_menu(event):
 @client.on(events.NewMessage(pattern=r'Меню'))
 async def menu_handler(event):
     try:
-        # Показываем меню анимаций и сохраняем ID сообщения
+        # Показываем меню анимаций
         menu_message = await show_animation_menu(event)
         
         # Удаляем сообщение "Меню" после его отображения
@@ -234,7 +234,8 @@ async def change_animation(event):
             # Удаляем сообщение с выбором анимации
             await event.delete()
 
-            # Удаляем меню анимаций
+            # Удаляем меню анимаций через 1 секунду (чтобы дать время на прочтение)
+            await asyncio.sleep(1)
             await confirmation_message.delete()
 
         else:
