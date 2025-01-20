@@ -234,5 +234,5 @@ async def handle_message(event: NewMessage.Event):
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    check_for_updates()
-    asyncio.run(main())  # Теперь asyncio импортирован и main() может быть вызван
+ client.start()
+    client.run_until_disconnected()  # Эта строка будет запускать клиента и слушать сообщения
