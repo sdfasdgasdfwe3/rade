@@ -1,9 +1,10 @@
 import asyncio
 from random import choice
-
 from telethon import TelegramClient
 from telethon.events import NewMessage
+import sys
 
+# Настройки из основного бота
 APP_ID = 1252636
 API_HASH = '4037e9f957f6f17d461b0c288ffa50f1'
 
@@ -25,7 +26,7 @@ PARADE_MAP = '''
 
 client = TelegramClient('tg-account', APP_ID, API_HASH)
 
-
+# Функция для генерации разноцветных сердец
 def generate_parade_colored():
     output = ''
     for c in PARADE_MAP:
@@ -37,7 +38,7 @@ def generate_parade_colored():
             output += c
     return output
 
-
+# Процесс вывода фраз любви
 async def process_love_words(event: NewMessage.Event):
     await client.edit_message(event.peer_id.user_id, event.message.id, 'i')
     await asyncio.sleep(1)
@@ -49,7 +50,7 @@ async def process_love_words(event: NewMessage.Event):
     await asyncio.sleep(1)
     await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever💗')
 
-
+# Процесс создания сердца в виде парада
 async def process_build_place(event: NewMessage.Event):
     output = ''
     for i in range(8):
@@ -59,15 +60,14 @@ async def process_build_place(event: NewMessage.Event):
             await client.edit_message(event.peer_id.user_id, event.message.id, output)
             await asyncio.sleep(EDIT_DELAY / 2)
 
-
+# Процесс создания разноцветного парада
 async def process_colored_parade(event: NewMessage.Event):
     for i in range(50):
         text = generate_parade_colored()
         await client.edit_message(event.peer_id.user_id, event.message.id, text)
-
         await asyncio.sleep(EDIT_DELAY)
 
-
+# Обработчик команд
 @client.on(NewMessage(outgoing=True))
 async def handle_message(event: NewMessage.Event):
     if event.message.message in MAGIC_PHRASES:
@@ -75,8 +75,11 @@ async def handle_message(event: NewMessage.Event):
         await process_colored_parade(event)
         await process_love_words(event)
 
-
 if __name__ == '__main__':
     print('[*] Connect to client...')
+    
+    # Запускаем клиента
     client.start()
+
+    # Основной цикл
     client.run_until_disconnected()
