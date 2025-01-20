@@ -125,6 +125,14 @@ def print_autostart_instructions():
     print("Чтобы отключить автозапуск вручную, просто удалите файл: ")
     print("  rm ~/.termux/boot/start_bot.sh")
 
+# Функция логгирования для работы
+async def log_message(log_text, log_file="bot_log.txt"):
+    try:
+        with open(log_file, "a", encoding="utf-8") as file:
+            file.write(log_text + "\n")
+    except Exception as e:
+        print(f"Ошибка записи лога: {e}")
+
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
     try:
@@ -243,7 +251,6 @@ async def change_animation(event):
     except Exception as e:
         print(f"Ошибка при изменении анимации: {e}")
 
-
 # Обработчик команды анимации для текста
 @client.on(events.NewMessage(pattern=r'р (.+)'))
 async def animated_typing(event):
@@ -264,6 +271,20 @@ async def animated_typing(event):
         await event.edit(typed_text)
     except Exception as e:
         print(f"Ошибка анимации: {e}")
+
+# Функция отображения справки
+async def show_help(event):
+    help_text = (
+        "Доступные команды:\n"
+        "Меню - отобразить меню анимаций.\n"
+        "р <текст> - показать текст с анимацией.\n"
+        "\d - выбрать номер анимации из меню.\n"
+    )
+    await event.respond(help_text)
+
+@client.on(events.NewMessage(pattern=r'Помощь'))
+async def help_handler(event):
+    await show_help(event)
 
 async def main():
     print(f"Запуск main()... Версия скрипта {SCRIPT_VERSION}")
