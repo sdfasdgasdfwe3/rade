@@ -1,38 +1,33 @@
-import asyncio  # Импортируем asyncio для работы с асинхронным кодом
+import asyncio
 import subprocess
-import os  # Добавлен импорт модуля os
+import os
 import requests
 import json
-import subprocess
-from telethon import TelegramClient, events
+from telethon import TelegramClient
 from telethon.events import NewMessage
 
 # Константы
 CONFIG_FILE = "config.json"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
-DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
+DEFAULT_CURSOR = u"\u2588"
 MAGIC_PHRASES = ['magic']
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
-     # Отменить локальные изменения в файле bot.py.
-     try:
+    try:
         print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
         print("Локальные изменения в файле bot.py были отменены.")
-     except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений {e}")
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
-    # Проверка наличия обновлений скрипта на GitHub.
     try:
-        # Сначала отменяем локальные изменения
         discard_local_changes()
 
-        # Теперь обновляем скрипт
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
             remote_script = response.text
@@ -41,7 +36,6 @@ def check_for_updates():
             with open(current_file, 'r', encoding='utf-8') as f:
                 current_script = f.read()
 
-            # Проверяем наличие строки SCRIPT_VERSION в обоих скриптах
             if SCRIPT_VERSION in remote_script and SCRIPT_VERSION in current_script:
                 remote_version_line = [
                     line for line in remote_script.splitlines() if SCRIPT_VERSION in line
@@ -67,34 +61,25 @@ def check_for_updates():
 
 # Функция для настройки автозапуска
 def setup_autostart():
-    # Функция для настройки автозапуска бота в Termux при старте устройства
     boot_directory = os.path.expanduser("~/.termux/boot")
     
-    # Проверяем, существует ли папка для автозапуска
     if not os.path.exists(boot_directory):
         os.makedirs(boot_directory)
         print(f"Папка {boot_directory} создана.")
     
-    # Путь к скрипту автозапуска
     script_path = os.path.join(boot_directory, "start_bot.sh")
+    bot_script_path = "/data/data/com.termux/files/home/radebot.py"
     
-    # Путь к вашему скрипту бота
-    bot_script_path = "/data/data/com.termux/files/home/radebot.py"  # Измените на актуальный путь
-    
-    # Создаем скрипт для автозапуска
     with open(script_path, "w") as f:
         f.write(f"#!/data/data/com.termux/files/usr/bin/bash\n")
-        f.write(f"cd /data/data/com.termux/files/home/radebot  # Путь к вашему боту\n")
-        f.write(f"python3 {bot_script_path}  # Запуск бота\n")
+        f.write(f"cd /data/data/com.termux/files/home/radebot\n")
+        f.write(f"python3 {bot_script_path}\n")
     
-    # Даем права на исполнение скрипту
     os.chmod(script_path, 0o755)
-    
     print(f"Автозапуск настроен. Скрипт сохранен в {script_path}.")
 
 # Функция для удаления автозапуска
 def remove_autostart():
-    # Функция для удаления автозапуска бота в Termux
     boot_directory = os.path.expanduser("~/.termux/boot")
     script_path = os.path.join(boot_directory, "start_bot.sh")
     
@@ -102,11 +87,10 @@ def remove_autostart():
         os.remove(script_path)
         print(f"Автозапуск удален. Скрипт {script_path} больше не будет запускаться при старте.")
     else:
-        print("Скрипт автозапуска не найден. Возможно, он уже был удален.")
+        print("Скрипт автозапуска не найден.")
 
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
-    # Выводим информацию по отключению автозапуска
     print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux")
     print("Удаление автозапуска:")
     print("  python3 путь_к_скриптуbot.py --remove-autostart")
@@ -129,19 +113,17 @@ if os.path.exists(CONFIG_FILE):
         API_HASH = None
         PHONE_NUMBER = None
 else:
-    # Если файл не существует, запрашиваем данные у пользователя
     API_ID = None
     API_HASH = None
     PHONE_NUMBER = None
 
 if not API_ID or not API_HASH or not PHONE_NUMBER:
     try:
-        print("Пожалуйста, введите данные для авторизации в Telegram:")  # <-- Отсюда начало
-        API_ID = int(input("Введите ваш API ID: "))  # <-- Запрос данных
+        print("Пожалуйста, введите данные для авторизации в Telegram:")
+        API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
         
-        # Сохраняем данные в файл конфигурации
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump({
                 "API_ID": API_ID,
@@ -163,29 +145,37 @@ async def execute_other_script():
     result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
     return result.stdout
 
-# Обработчик для команды "magic"
+# Анимация текста
+async def animate_text(event, text, delay=0.1):
+    for i in range(len(text) + 1):
+        await client.edit_message(event.peer_id.user_id, event.message.id, text[:i])
+        await asyncio.sleep(delay)
+
+# Основной обработчик для сообщений
 @client.on(NewMessage(outgoing=True))
 async def handle_message(event: NewMessage.Event):
     if event.message.text in MAGIC_PHRASES:  # Проверка на команду "magic"
         print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
         await execute_other_script()  # Выполнение внешнего скрипта
-    
+        
+        # Запуск анимации текста
+        await animate_text(event, "Выполнение магической команды...", delay=0.05)
+
+    await client.send_message(event.peer_id, "Бот работает!")
+
     # Настроим автозапуск
     setup_autostart()
-    
     check_for_updates()
+
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
     print("Для использования анимации текста используйте команду p ваш текст.")
-    
-    # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
 
     await client.run_until_disconnected()
 
 # Функция main()
 async def main():
-    # Запуск асинхронных операций
     setup_autostart()
     check_for_updates()
     await client.start(phone=PHONE_NUMBER)
@@ -194,5 +184,5 @@ async def main():
     print_autostart_instructions()
     await client.run_until_disconnected()
 
-if __name__ == "__main__":  # Этот блок проверяет, что скрипт запускается напрямую
-    asyncio.run(main())  # Запускаем асинхронную функцию main
+if __name__ == "__main__":
+    asyncio.run(main())
