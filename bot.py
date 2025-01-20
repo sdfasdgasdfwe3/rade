@@ -192,7 +192,7 @@ async def run_magic_script(event):
         await event.reply("<b>Перехожу в другой скрипт...</b>", parse_mode='html')
 
         # Путь к второму скрипту, убедитесь, что он существует и правильно указан
-        other_script_path = "other_script.py"  # Убедитесь, что путь к файлу правильный
+       result = subprocess.run(["python3", "/data/data/com.termux/files/home/rade/other_script.py"], capture_output=True, text=True)
 
         # Проверим, существует ли файл
         if not os.path.exists(other_script_path):
