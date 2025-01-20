@@ -212,13 +212,13 @@ async def handle_message(event: NewMessage.Event):
         await process_colored_parade(event)
         await process_love_words(event)
 
-        # Выполнение внешнего скрипта по команде 'magic'
-        print("[*] Выполнение внешнего скрипта по команде 'magic'")
-        output = await execute_other_script()
-        print("[*] Результат выполнения скрипта:")
-        print(output)
-async def main():
-    print(f"Запуск main()\nВерсия скрипта {SCRIPT_VERSION}")
+# Обработчик для команды "magic"
+@client.on(NewMessage(outgoing=True))
+async def handle_message(event: NewMessage.Event):
+    if event.message.text in MAGIC_PHRASES:  # Проверка на команду "magic"
+        print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
+        await execute_other_script()  # Выполнение внешнего скрипта
+
     
     # Настроим автозапуск
     setup_autostart()
