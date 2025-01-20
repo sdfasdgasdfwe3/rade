@@ -31,6 +31,7 @@ def check_for_updates():
 
         # Теперь обновляем скрипт
         response = requests.get(GITHUB_RAW_URL)
+        print(f"Статус ответа при проверке обновлений: {response.status_code}")  # Выводим статус ответа
         if response.status_code == 200:
             remote_script = response.text
             current_file = os.path.abspath(__file__)
