@@ -15,9 +15,9 @@ DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для ани
 # Список доступных анимаций
 animations = {
     1: {'name': 'Стандартная анимация', 'symbol': u'\u2588', 'speed': DEFAULT_TYPING_SPEED},
-    2: {'name': 'Точка-символ анимации', 'symbol': '.', 'speed': 0.15},
-    3: {'name': 'Быстрая анимация', 'symbol': u'\u2588', 'speed': 0.05},
-    4: {'name': 'Звездочка', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},
+    2: {'name': 'Текст с эффектом дождя', 'symbol': '.', 'speed': 0.15},  # Заменили на "Текст с эффектом дождя"
+    3: {'name': 'Текст с эффектом пузырей', 'symbol': u'\u2588', 'speed': 0.05},  # Заменили на "Текст с эффектом пузырей"
+    4: {'name': 'Текст с эффектом "письма"', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},  # Заменили на "Текст с эффектом письма"
 }
 
 # Добавление функции для получения user_id
@@ -119,8 +119,8 @@ def remove_autostart():
 
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
-    print("Для отключения автозапуска скрипта бота выполните следующую команду в Termux:")
-    print("Удаление автозапуска:")
+    print("Для отключения автозапуска скрипта бота выполните следующую команду в Termux: ")
+    print("Удаление автозапуска:") 
     print("  python3 путь_к_скрипту bot.py --remove-autostart")
     print("Чтобы отключить автозапуск вручную, просто удалите файл:")
     print("  rm ~/.termux/boot/start_bot.sh")
@@ -187,6 +187,10 @@ async def show_animation_menu(event):
 async def menu_handler(event):
     try:
         await show_animation_menu(event)
+        
+        # Удаляем сообщение "Меню" после его отображения
+        await event.delete()
+
     except Exception as e:
         print(f"Ошибка при выводе меню: {e}")
 
@@ -210,7 +214,12 @@ async def change_animation(event):
                     "typing_speed": typing_speed,
                     "cursor_symbol": cursor_symbol
                 }, f)
+
+            # Удаляем сообщение с номером анимации и меню
             await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
+            
+            # Удаляем сообщение с выбором анимации
+            await event.delete()
         else:
             await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
     except Exception as e:
