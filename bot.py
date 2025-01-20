@@ -3,7 +3,7 @@ import subprocess
 import os
 import requests
 import json
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events
 
 # Константы
 CONFIG_FILE = 'config.json'
@@ -92,27 +92,27 @@ async def carousel_text(event, text):
 # Обработчик команды выбора анимации
 @client.on(events.NewMessage(pattern='/menu'))
 async def menu_handler(event):
-    buttons = [
-        [Button.text("1. Печатная машинка")],
-        [Button.text("2. Бегущая строка")],
-        [Button.text("3. Мерцающий текст")],
-        [Button.text("4. Карусель текста")],
-    ]
-    # Отправляем меню с кнопками
-    await event.respond("Выберите стиль анимации (введите цифру от 1 до 4):", buttons=buttons)
+    # Выводим список анимаций как текст
+    menu_text = (
+        "Выберите стиль анимации:\n"
+        "1. Печатная машинка\n"
+        "2. Бегущая строка\n"
+        "3. Мерцающий текст\n"
+        "4. Карусель текста\n"
+        "Введите номер выбранной анимации (1-4):"
+    )
+    await event.respond(menu_text)
 
-# Обработчик кнопок
-@client.on(events.CallbackQuery)
-async def button_handler(event):
+# Обработчик текстовых сообщений для выбора анимации
+@client.on(events.NewMessage(pattern=r'^[1-4]$'))
+async def select_animation(event):
     global selected_animation
-    button_text = event.data.decode('utf-8')  # Получаем текст кнопки
-    animation_number = button_text.split(".")[0]  # Получаем цифру из текста кнопки (например, "1")
-    
-    if animation_number in animations:
-        selected_animation = animations[animation_number]  # Устанавливаем выбранную анимацию
-        await event.answer(f"Вы выбрали: {button_text}", alert=True)
+    choice = event.message.text.strip()  # Получаем выбор пользователя
+    if choice in animations:
+        selected_animation = animations[choice]
+        await event.respond(f"Вы выбрали анимацию: {selected_animation.replace('_', ' ').title()}")
     else:
-        await event.answer("Неверный выбор", alert=True)
+        await event.respond("Неверный выбор! Пожалуйста, выберите цифру от 1 до 4.")
 
 # Обработчик анимаций
 @client.on(events.NewMessage(pattern=r'/p (.+)'))
