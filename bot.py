@@ -16,8 +16,11 @@ DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для ани
 def discard_local_changes():
     # Отменить локальные изменения в файле bot.py.
     try:
+        print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
+        print("Локальные изменения в файле bot.py были отменены.")
     except subprocess.CalledProcessError as e:
+        print(f"Ошибка при отмене изменений {e}")
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
@@ -84,6 +87,7 @@ def setup_autostart():
     # Даем права на исполнение скрипту
     os.chmod(script_path, 0o755)
     
+    print(f"Автозапуск настроен. Скрипт сохранен в {script_path}.")
 
 # Функция для удаления автозапуска
 def remove_autostart():
@@ -99,7 +103,12 @@ def remove_autostart():
 
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
-
+    # Выводим информацию по отключению автозапуска
+    print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux")
+    print("Удаление автозапуска:")
+    print("  python3 путь_к_скриптуbot.py --remove-autostart")
+    print("Чтобы отключить автозапуск вручную, просто удалите файл:")
+    print("  rm ~/.termux/boot/start_bot.sh")
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
