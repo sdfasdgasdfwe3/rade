@@ -1,4 +1,3 @@
-print("Запуск другого скрипта")
 import asyncio
 from random import choice
 from telethon import TelegramClient
