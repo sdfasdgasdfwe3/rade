@@ -13,6 +13,7 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot
 SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
+MAGIC_PHRASES = ['magic']
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
