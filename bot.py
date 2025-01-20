@@ -20,6 +20,14 @@ animations = {
     4: {'name': 'Звездочка', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},
 }
 
+# Добавление функции для получения user_id
+async def get_user_id():
+    try:
+        me = await client.get_me()
+        print(f"Ваш user_id: {me.id}")  # Выводим user_id в консоль
+    except Exception as e:
+        print(f"Ошибка при получении user_id: {e}")
+
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
     print("Отменить локальные изменения в файле bot.py.")
@@ -112,7 +120,7 @@ def remove_autostart():
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
     print("Для отключения автозапуска скрипта бота выполните следующую команду в Termux:")
-    print("Удаление автозапуска: ")
+    print("Удаление автозапуска:")
     print("  python3 путь_к_скрипту bot.py --remove-autostart")
     print("Чтобы отключить автозапуск вручную, просто удалите файл:")
     print("  rm ~/.termux/boot/start_bot.sh")
@@ -178,10 +186,6 @@ async def show_animation_menu(event):
 @client.on(events.NewMessage(pattern=r'Меню'))
 async def menu_handler(event):
     try:
-        # Проверяем, что сообщение отправлено вашим пользователем
-        if event.sender_id != PHONE_NUMBER:
-            return  # Игнорируем сообщение от других пользователей
-
         await show_animation_menu(event)
     except Exception as e:
         print(f"Ошибка при выводе меню: {e}")
@@ -190,10 +194,6 @@ async def menu_handler(event):
 @client.on(events.NewMessage(pattern=r'\d'))
 async def change_animation(event):
     try:
-        # Проверяем, что сообщение отправлено вашим пользователем
-        if event.sender_id != PHONE_NUMBER:
-            return  # Игнорируем сообщение от других пользователей
-
         choice = int(event.text.strip())
         if choice in animations:
             global cursor_symbol, typing_speed
@@ -221,10 +221,6 @@ async def animated_typing(event):
     print("Команда для печатания текста с анимацией.")
     global typing_speed, cursor_symbol
     try:
-        # Проверяем, что сообщение отправлено вашим пользователем
-        if event.sender_id != PHONE_NUMBER:
-            return  # Игнорируем сообщение от других пользователей
-
         if not event.out:
             return
 
@@ -253,6 +249,9 @@ async def main():
     
     # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
+
+    # Получаем user_id
+    await get_user_id()
     
     await client.run_until_disconnected()
 
