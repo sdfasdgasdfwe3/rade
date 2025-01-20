@@ -152,14 +152,53 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
     except Exception as e:
         print(f"Ошибка сохранения конфигурации {e}")
         exit(1)
+
+# Инициализируем клиента Telegram
+client = TelegramClient('tg-account', APP_ID, API_HASH)
+
+def generate_parade_colored():
+    output = ''
+    for c in PARADE_MAP:
+        if c == '0':
+            output += HEART
+        elif c == '1':
+            output += choice(COLORED_HEARTS)
+        else:
+            output += c
+    return output
+
+async def process_love_words(event: NewMessage.Event):
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i')
+    await asyncio.sleep(1)
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love')
+    await asyncio.sleep(1)
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you')
+    await asyncio.sleep(1)
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever')
+    await asyncio.sleep(1)
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever💗')
+
+async def process_build_place(event: NewMessage.Event):
+    output = ''
+    for i in range(8):
+        output += '\n'
+        for j in range(11):
+            output += HEART
+            await client.edit_message(event.peer_id.user_id, event.message.id, output)
+            await asyncio.sleep(EDIT_DELAY / 2)
+
+async def process_colored_parade(event: NewMessage.Event):
+    for i in range(50):
+        text = generate_parade_colored()
+        await client.edit_message(event.peer_id.user_id, event.message.id, text)
+        await asyncio.sleep(EDIT_DELAY)
+
 # Функция для выполнения внешнего скрипта
 async def execute_other_script():
-    # Важно, чтобы путь к скрипту был правильным
-    # В Termux укажите полный путь к скрипту, например, '/data/data/com.termux/files/home/other_script.py'
     result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
     return result.stdout
 
-
+# Теперь обработчик сообщений, когда сообщение содержит "magic"
 @client.on(NewMessage(outgoing=True))
 async def handle_message(event: NewMessage.Event):
     if event.message.message in MAGIC_PHRASES:
@@ -172,32 +211,6 @@ async def handle_message(event: NewMessage.Event):
         output = await execute_other_script()
         print("[*] Результат выполнения скрипта:")
         print(output)
-        
-# Уникальное имя файла для сессии
-SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
-
-# Инициализация клиента
-client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
-
-@client.on(events.NewMessage(pattern=r'p (.+)'))
-async def animated_typing(event):
-    # Команда для печатания текста с анимацией.
-    global typing_speed, cursor_symbol
-    try:
-        if not event.out:
-            return
-
-        text = event.pattern_match.group(1)
-        typed_text = ""
-
-        for char in text:
-            typed_text += char
-            await event.edit(typed_text + cursor_symbol)
-            await asyncio.sleep(typing_speed)
-
-        await event.edit(typed_text)
-    except Exception as e:
-        print(f"Ошибка анимации {e}")
 
 async def main():
     print(f"Запуск main()\nВерсия скрипта {SCRIPT_VERSION}")
