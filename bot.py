@@ -14,7 +14,6 @@ SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
 MAGIC_PHRASES = ['magic']
-HEART = '🤍'
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -159,55 +158,10 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 # Инициализируем клиента Telegram
 client = TelegramClient('tg-account', API_ID, API_HASH)
 
-def generate_parade_colored():
-    output = ''
-    for c in PARADE_MAP:
-        if c == '0':
-            output += HEART
-        elif c == '1':
-            output += choice(COLORED_HEARTS)
-        else:
-            output += c
-    return output
-
-async def process_love_words(event: NewMessage.Event):
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i')
-    await asyncio.sleep(1)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love')
-    await asyncio.sleep(1)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you')
-    await asyncio.sleep(1)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever')
-    await asyncio.sleep(1)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever💗')
-
-async def process_build_place(event: NewMessage.Event):
-    output = ''
-    for i in range(8):
-        output += '\n'
-        for j in range(11):
-            output += HEART
-            await client.edit_message(event.peer_id.user_id, event.message.id, output)
-            await asyncio.sleep(EDIT_DELAY / 2)
-
-async def process_colored_parade(event: NewMessage.Event):
-    for i in range(50):
-        text = generate_parade_colored()
-        await client.edit_message(event.peer_id.user_id, event.message.id, text)
-        await asyncio.sleep(EDIT_DELAY)
-
 # Функция для выполнения внешнего скрипта
 async def execute_other_script():
     result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
     return result.stdout
-
-# Теперь обработчик сообщений, когда сообщение содержит "magic"
-@client.on(NewMessage(outgoing=True))
-async def handle_message(event: NewMessage.Event):
-    if event.message.text in MAGIC_PHRASES:
-        await process_build_place(event)
-        await process_colored_parade(event)
-        await process_love_words(event)
 
 # Обработчик для команды "magic"
 @client.on(NewMessage(outgoing=True))
@@ -215,7 +169,6 @@ async def handle_message(event: NewMessage.Event):
     if event.message.text in MAGIC_PHRASES:  # Проверка на команду "magic"
         print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
         await execute_other_script()  # Выполнение внешнего скрипта
-
     
     # Настроим автозапуск
     setup_autostart()
