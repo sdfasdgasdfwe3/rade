@@ -191,27 +191,13 @@ async def run_magic_script(event):
         # Уведомляем пользователя о запуске другого скрипта
         await event.reply("<b>Перехожу в другой скрипт...</b>", parse_mode='html')
 
-        # Путь к второму скрипту, убедитесь, что он существует и правильно указан
-       result = subprocess.run(["python3", "/data/data/com.termux/files/home/rade/other_script.py"], capture_output=True, text=True)
+        # Запуск другого скрипта (например, "other_script.py")
+        result = subprocess.run(["python3", "/data/data/com.termux/files/home/rade/other_script.py"], capture_output=True, text=True)
 
-        # Проверим, существует ли файл
-        if not os.path.exists(other_script_path):
-            await event.reply(f"<b>Ошибка:</b> Файл {other_script_path} не найден!", parse_mode='html')
-            return
-
-        # Запуск другого скрипта
-        result = subprocess.run(
-            ["python3", other_script_path],
-            capture_output=True, 
-            text=True
-        )
-
-        # Проверим результат выполнения
+        # Получаем вывод из второго скрипта
         if result.returncode == 0:
-            # Скрипт выполнился успешно, выводим результат
             await event.reply(f"<b>Другой скрипт выполнен успешно. Результат:</b>\n{result.stdout}", parse_mode='html')
         else:
-            # Произошла ошибка при выполнении скрипта, выводим stderr
             await event.reply(f"<b>Произошла ошибка при выполнении второго скрипта:</b>\n{result.stderr}", parse_mode='html')
 
         # Возвращаемся в основной бот
@@ -220,7 +206,6 @@ async def run_magic_script(event):
     except Exception as e:
         print(f"Ошибка при запуске другого скрипта: {e}")
         await event.reply("<b>Произошла ошибка при выполнении команды.</b>", parse_mode='html')
-
 
 # Функция анимации текста
 async def animate_text(event):
