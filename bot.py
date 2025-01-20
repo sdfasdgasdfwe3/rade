@@ -21,7 +21,7 @@ animations = {
 }
 
 # Добавление функции для получения user_id
-async def get_user_id():
+async def get_user_id(client):
     try:
         me = await client.get_me()
         print(f"Ваш user_id: {me.id}")  # Выводим user_id в консоль
@@ -35,90 +35,55 @@ def setup_autostart():
 
 # Все другие функции без изменений...
 
-# Инициализация клиента
-client = TelegramClient('session', API_ID, API_HASH)
+async def main():
+    # Проверяем наличие файла конфигурации
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            API_ID = config.get("API_ID")
+            API_HASH = config.get("API_HASH")
+            PHONE_NUMBER = config.get("PHONE_NUMBER")
+            typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
+            cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Ошибка чтения конфигурации {e}. Попробуем запросить данные заново.")
+            API_ID = None
+            API_HASH = None
+            PHONE_NUMBER = None
+    else:
+        # Если файл не существует, запрашиваем данные у пользователя
+        API_ID = None
+        API_HASH = None
+        PHONE_NUMBER = None
 
-# Обработчик команды Меню
-@client.on(events.NewMessage(pattern=r'Меню'))
-async def menu_handler(event):
-    try:
-        # Показываем меню анимаций
-        menu_message = await show_animation_menu(event)
-        
-        # Удаляем сообщение "Меню" после его отображения
-        await event.delete()
+    if not API_ID or not API_HASH or not PHONE_NUMBER:
+        try:
+            print("Пожалуйста, введите данные для авторизации в Telegram.")
+            API_ID = int(input("Введите ваш API ID: "))
+            API_HASH = input("Введите ваш API Hash: ").strip()
+            PHONE_NUMBER = input("Введите ваш номер телефона (в формате +7XXXXXXXXXX): ").strip()
 
-    except Exception as e:
-        print(f"Ошибка при выводе меню: {e}")
-
-# Функция для отображения меню выбора анимации
-async def show_animation_menu(event):
-    menu_text = "Меню анимаций:\n"
-    for num, animation in animations.items():
-        menu_text += f"{num}. {animation['name']}\n"
-    menu_text += "Выберите номер анимации для изменения."
-
-    # Отправляем меню и сохраняем ID сообщения
-    menu_message = await event.respond(menu_text)
-    return menu_message  # Возвращаем объект сообщения с меню
-
-# Обработчик для выбора анимации по номеру
-@client.on(events.NewMessage(pattern=r'\\d'))
-async def change_animation(event):
-    try:
-        # Получаем номер выбранной анимации
-        choice = int(event.text.strip())
-        if choice in animations:
-            global cursor_symbol, typing_speed
-            selected_animation = animations[choice]
-            cursor_symbol = selected_animation['symbol']
-            typing_speed = selected_animation['speed']
-
-            # Сохраняем выбранную анимацию в конфигурации
+            # Сохраняем данные в файл конфигурации
             with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump({
                     "API_ID": API_ID,
                     "API_HASH": API_HASH,
                     "PHONE_NUMBER": PHONE_NUMBER,
-                    "typing_speed": typing_speed,
-                    "cursor_symbol": cursor_symbol
+                    "typing_speed": DEFAULT_TYPING_SPEED,
+                    "cursor_symbol": DEFAULT_CURSOR
                 }, f)
+            print("Данные успешно сохранены в конфигурации.")
+        except Exception as e:
+            print(f"Ошибка сохранения конфигурации {e}")
+            exit(1)
 
-            # Отправляем сообщение, подтверждающее выбор анимации
-            confirmation_message = await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
+    # Инициализация клиента теперь после получения конфигурации
+    client = TelegramClient('session', API_ID, API_HASH)
 
-            # Удаляем сообщение с выбором анимации
-            await event.delete()
-
-            # Удаляем меню анимаций через 1 секунду (чтобы дать время на прочтение)
-            await asyncio.sleep(1)
-            await confirmation_message.delete()
-
-        else:
-            await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
-    except Exception as e:
-        print(f"Ошибка при изменении анимации: {e}")
-
-# Функция для отображения справки
-async def show_help(event):
-    help_text = (
-        "Доступные команды:\n"
-        "Меню - отобразить меню анимаций.\n"
-        "р <текст> - показать текст с анимацией.\n"
-        "\\d - выбрать номер анимации из меню.\n"
-    )
-    await event.respond(help_text)
-
-@client.on(events.NewMessage(pattern=r'Помощь'))
-async def help_handler(event):
-    await show_help(event)
-
-async def main():
-    print(f"Запуск main()... Версия скрипта {SCRIPT_VERSION}")
-    
     # Настроим автозапуск
     setup_autostart()
-    
+
     check_for_updates()
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
@@ -128,7 +93,7 @@ async def main():
     print_autostart_instructions()
 
     # Получаем user_id
-    await get_user_id()
+    await get_user_id(client)
     
     await client.run_until_disconnected()
 
