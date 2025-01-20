@@ -68,7 +68,7 @@ def check_for_updates():
 
 # Функция для перехода к другому скрипту
 def run_script():
-    os.system("python3 script2.py")
+    os.system("python3 other_script.py")
 
 # Основной цикл для ввода пользователя
 while True:
