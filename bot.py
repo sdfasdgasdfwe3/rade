@@ -15,7 +15,7 @@ DEFAULT_CURSOR = u2588  # Символ по умолчанию для анима
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
     print("Отменить локальные изменения в файле bot.py.")
-    try
+    try:
         print(Отмена локальных изменений в файле bot.py...)
         subprocess.run([git, checkout, --, bot.py], check=True)
         print(Локальные изменения в файле bot.py были отменены.)
