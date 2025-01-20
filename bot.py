@@ -136,8 +136,8 @@ else:
 
 if not API_ID or not API_HASH or not PHONE_NUMBER:
     try:
-        print("Пожалуйста, введите данные для авторизации в Telegram:")
-        API_ID = int(input("Введите ваш API ID: "))
+        print("Пожалуйста, введите данные для авторизации в Telegram:")  # <-- Отсюда начало
+        API_ID = int(input("Введите ваш API ID: "))  # <-- Запрос данных
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
         
@@ -226,7 +226,18 @@ async def handle_message(event: NewMessage.Event):
     
     # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
-    
+
+    await client.run_until_disconnected()
+
+# Функция main()
+async def main():
+    # Запуск асинхронных операций
+    setup_autostart()
+    check_for_updates()
+    await client.start(phone=PHONE_NUMBER)
+    print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
+    print("Для использования анимации текста используйте команду p ваш текст.")
+    print_autostart_instructions()
     await client.run_until_disconnected()
 
 if __name__ == "__main__":  # Этот блок проверяет, что скрипт запускается напрямую
