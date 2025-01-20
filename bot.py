@@ -229,5 +229,5 @@ async def handle_message(event: NewMessage.Event):
     
     await client.run_until_disconnected()
 
-if __name__ == "__main__":
-asyncio.run(main())  # Запускаем асинхронную функцию main
+if __name__ == "__main__":  # Этот блок проверяет, что скрипт запускается напрямую
+    asyncio.run(main())  # Запускаем асинхронную функцию main
