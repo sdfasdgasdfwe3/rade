@@ -18,7 +18,6 @@ async def main():
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
-    
     # Отменить локальные изменения в файле bot.py.
     try:
         print("Отмена локальных изменений в файле bot.py...")
@@ -26,6 +25,7 @@ def discard_local_changes():
         print("Локальные изменения в файле bot.py были отменены.")
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений {e}")
+    pass  # Это заглушка, которая не выполняет ничего, но позволяет функции существовать
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
