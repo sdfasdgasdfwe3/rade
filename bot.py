@@ -31,7 +31,6 @@ def check_for_updates():
 
         # Теперь обновляем скрипт
         response = requests.get(GITHUB_RAW_URL)
-        print(f"Статус ответа при проверке обновлений: {response.status_code}")  # Выводим статус ответа
         if response.status_code == 200:
             remote_script = response.text
             current_file = os.path.abspath(__file__)
@@ -106,9 +105,9 @@ def remove_autostart():
 def print_autostart_instructions():
     # Выводим информацию по отключению автозапуска
     print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux")
-    print("Удаление автозапуска: ")
+    print("Удаление автозапуска:")
     print("  python3 путь_к_скриптуbot.py --remove-autostart")
-    print("Чтобы отключить автозапуск вручную, просто удалите файл: ")
+    print("Чтобы отключить автозапуск вручную, просто удалите файл:")
     print("  rm ~/.termux/boot/start_bot.sh")
 
 # Проверяем наличие файла конфигурации
@@ -134,7 +133,7 @@ else:
 
 if not API_ID or not API_HASH or not PHONE_NUMBER:
     try:
-        print("Пожалуйста, введите данные для авторизации в Telegram: ")
+        print("Пожалуйста, введите данные для авторизации в Telegram:")
         API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
@@ -159,7 +158,6 @@ SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Команда для анимации текста
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
     # Команда для печатания текста с анимацией.
@@ -179,46 +177,6 @@ async def animated_typing(event):
         await event.edit(typed_text)
     except Exception as e:
         print(f"Ошибка анимации {e}")
-
-# Команда для запуска другого скрипта
-@client.on(events.NewMessage(pattern=r'/magic'))
-async def run_magic_script(event):
-    """Команда для запуска другого скрипта и возвращения в основной бот."""
-    try:
-        if not event.out:
-            return
-
-        # Уведомляем пользователя о запуске другого скрипта
-        await event.reply("<b>Перехожу в другой скрипт...</b>", parse_mode='html')
-
-        # Запуск другого скрипта (например, "other_script.py")
-        result = subprocess.run(["python3", "/data/data/com.termux/files/home/rade/other_script.py"], capture_output=True, text=True)
-
-        # Получаем вывод из второго скрипта
-        if result.returncode == 0:
-            await event.reply(f"<b>Другой скрипт выполнен успешно. Результат:</b>\n{result.stdout}", parse_mode='html')
-        else:
-            await event.reply(f"<b>Произошла ошибка при выполнении второго скрипта:</b>\n{result.stderr}", parse_mode='html')
-
-        # Возвращаемся в основной бот
-        await event.reply("<b>Возвращаемся в основной бот...</b>", parse_mode='html')
-
-    except Exception as e:
-        print(f"Ошибка при запуске другого скрипта: {e}")
-        await event.reply("<b>Произошла ошибка при выполнении команды.</b>", parse_mode='html')
-
-# Функция анимации текста
-async def animate_text(event):
-    text = "Этот текст будет анимирован..."
-    typed_text = ""
-
-    for char in text:
-        typed_text += char
-        await event.reply(typed_text)  # Отправляем текст с анимацией
-        await asyncio.sleep(0.1)  # Задержка между символами
-
-    # Когда анимация завершена, отправляем полный текст
-    await event.reply(text)
 
 async def main():
     print(f"Запуск main()\nВерсия скрипта {SCRIPT_VERSION}")
