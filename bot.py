@@ -25,7 +25,7 @@ def discard_local_changes():
         print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
         print("Локальные изменения в файле bot.py были отменены.")
-except subprocess.CalledProcessError as e:
+     except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений {e}")
 
 # Функция для проверки обновлений скрипта на GitHub
