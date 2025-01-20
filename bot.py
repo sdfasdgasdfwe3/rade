@@ -4,6 +4,8 @@ import os  # Добавлен импорт модуля os
 import requests
 import json
 from telethon import TelegramClient, events
+import os
+import sys
 
 
 # Константы
@@ -63,6 +65,21 @@ def check_for_updates():
             print(f"Не удалось проверить обновления. Код ответа сервера {response.status_code}")
     except Exception as e:
         print(f"Ошибка при проверке обновлений {e}")
+
+# Функция для перехода к другому скрипту
+def run_script():
+    os.system("python3 script2.py")
+
+# Основной цикл для ввода пользователя
+while True:
+    user_input = input("Введите команду: ")
+
+    if user_input == "Magic":
+        print("Переход к другому скрипту...")
+        run_script()
+        break  # Выход из первого скрипта
+    else:
+        print("Неверная команда. Попробуйте снова.")
 
 # Функция для настройки автозапуска
 def setup_autostart():
