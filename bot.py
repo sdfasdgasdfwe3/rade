@@ -16,11 +16,9 @@ DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для ани
 def discard_local_changes():
     # Отменить локальные изменения в файле bot.py.
     try:
-        print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
-        print("Локальные изменения в файле bot.py были отменены.")
     except subprocess.CalledProcessError as e:
-        print(f"Ошибка при отмене изменений {e}")
+        pass
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
@@ -70,7 +68,6 @@ def setup_autostart():
     # Проверяем, существует ли папка для автозапуска
     if not os.path.exists(boot_directory):
         os.makedirs(boot_directory)
-        print(f"Папка {boot_directory} создана.")
     
     # Путь к скрипту автозапуска
     script_path = os.path.join(boot_directory, "start_bot.sh")
@@ -86,8 +83,6 @@ def setup_autostart():
     
     # Даем права на исполнение скрипту
     os.chmod(script_path, 0o755)
-    
-    print(f"Автозапуск настроен. Скрипт сохранен в {script_path}.")
 
 # Функция для удаления автозапуска
 def remove_autostart():
@@ -97,9 +92,6 @@ def remove_autostart():
     
     if os.path.exists(script_path):
         os.remove(script_path)
-        print(f"Автозапуск удален. Скрипт {script_path} больше не будет запускаться при старте.")
-    else:
-        print("Скрипт автозапуска не найден. Возможно, он уже был удален.")
 
 # Выводим инструкцию по отключению автозапуска
 def print_autostart_instructions():
@@ -121,7 +113,6 @@ if os.path.exists(CONFIG_FILE):
         typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
         cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Ошибка чтения конфигурации {e}. Попробуем запросить данные заново.")
         API_ID = None
         API_HASH = None
         PHONE_NUMBER = None
@@ -147,9 +138,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
                 "typing_speed": DEFAULT_TYPING_SPEED,
                 "cursor_symbol": DEFAULT_CURSOR
             }, f)
-        print("Данные успешно сохранены в конфигурации.")
     except Exception as e:
-        print(f"Ошибка сохранения конфигурации {e}")
         exit(1)
 
 # Уникальное имя файла для сессии
@@ -176,21 +165,13 @@ async def animated_typing(event):
 
         await event.edit(typed_text)
     except Exception as e:
-        print(f"Ошибка анимации {e}")
+        pass
 
 async def main():
-    print(f"Запуск main()\nВерсия скрипта {SCRIPT_VERSION}")
-    
-    # Настроим автозапуск
-    setup_autostart()
+    print(f"Версия скрипта: {SCRIPT_VERSION}")
     
     check_for_updates()
     await client.start(phone=PHONE_NUMBER)
-    print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
-    print("Для использования анимации текста используйте команду p ваш текст.")
-    
-    # Печатаем инструкции по отключению автозапуска после старта бота
-    print_autostart_instructions()
     
     await client.run_until_disconnected()
 
