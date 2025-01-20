@@ -137,7 +137,8 @@ if not API_ID or not API_HASH or not PHONE_NUMBER
         print(Пожалуйста, введите данные для авторизации в Telegram)
         API_ID = int(input(Введите ваш API ID ))
         API_HASH = input(Введите ваш API Hash ).strip()
-        PHONE_NUMBER = input(Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX) ).strip()
+        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX) ").strip()
+
         
         # Сохраняем данные в файл конфигурации
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f
