@@ -230,4 +230,4 @@ async def handle_message(event: NewMessage.Event):
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
- asyncio.run(min())  # Запускаем асинхронную функцию main
+asyncio.run(main())  # Запускаем асинхронную функцию main
