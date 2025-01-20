@@ -202,7 +202,7 @@ async def execute_other_script():
 # Теперь обработчик сообщений, когда сообщение содержит "magic"
 @client.on(NewMessage(outgoing=True))
 async def handle_message(event: NewMessage.Event):
-    if event.message.text in MAGIC_PHRASES:  # Используем text для получения текста сообщения
+    if event.message.text in MAGIC_PHRASES:
         await process_build_place(event)
         await process_colored_parade(event)
         await process_love_words(event)
