@@ -54,10 +54,10 @@ client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
 # Глобальные переменные для анимации
 animations = {
-    "Печатная машинка": "typing_machine",
-    "Бегущая строка": "running_line",
-    "Мерцающий текст": "blinking_text",
-    "Карусель текста": "carousel_text",
+    "1": "typing_machine",    # Печатная машинка
+    "2": "running_line",      # Бегущая строка
+    "3": "blinking_text",     # Мерцающий текст
+    "4": "carousel_text",     # Карусель текста
 }
 selected_animation = "typing_machine"  # Устанавливаем печатную машинку как анимацию по умолчанию
 
@@ -93,16 +93,26 @@ async def carousel_text(event, text):
 @client.on(events.NewMessage(pattern='/menu'))
 async def menu_handler(event):
     buttons = [
-        [Button.text(name)] for name in animations.keys()
+        [Button.text("1. Печатная машинка")],
+        [Button.text("2. Бегущая строка")],
+        [Button.text("3. Мерцающий текст")],
+        [Button.text("4. Карусель текста")],
     ]
-    await event.respond("Выберите стиль анимации:", buttons=buttons)
+    # Отправляем меню с кнопками
+    await event.respond("Выберите стиль анимации (введите цифру от 1 до 4):", buttons=buttons)
 
 # Обработчик кнопок
 @client.on(events.CallbackQuery)
 async def button_handler(event):
     global selected_animation
-    selected_animation = animations.get(event.data.decode('utf-8'), "typing_machine")
-    await event.answer(f"Вы выбрали: {event.data.decode('utf-8')}", alert=True)
+    button_text = event.data.decode('utf-8')  # Получаем текст кнопки
+    animation_number = button_text.split(".")[0]  # Получаем цифру из текста кнопки (например, "1")
+    
+    if animation_number in animations:
+        selected_animation = animations[animation_number]  # Устанавливаем выбранную анимацию
+        await event.answer(f"Вы выбрали: {button_text}", alert=True)
+    else:
+        await event.answer("Неверный выбор", alert=True)
 
 # Обработчик анимаций
 @client.on(events.NewMessage(pattern=r'/p (.+)'))
