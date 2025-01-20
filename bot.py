@@ -5,6 +5,7 @@ import requests
 import json
 import subprocess
 from telethon import TelegramClient, events
+from telethon.events import NewMessage
 
 # Константы
 CONFIG_FILE = "config.json"
