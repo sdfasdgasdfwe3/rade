@@ -15,119 +15,27 @@ DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для ани
 # Список доступных анимаций
 animations = {
     1: {'name': 'Стандартная анимация', 'symbol': u'\u2588', 'speed': DEFAULT_TYPING_SPEED},
-    2: {'name': 'Текст с эффектом дождя', 'symbol': '.', 'speed': 0.15},  # Заменили на "Текст с эффектом дождя"
-    3: {'name': 'Текст с эффектом пузырей', 'symbol': u'\u2588', 'speed': 0.05},  # Заменили на "Текст с эффектом пузырей"
-    4: {'name': 'Текст с эффектом "письма"', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},  # Заменили на "Текст с эффектом письма"
+    2: {'name': 'Текст с эффектом дождя', 'symbol': '.', 'speed': 0.15},
+    3: {'name': 'Текст с эффектом пузырей', 'symbol': u'\u2588', 'speed': 0.05},
+    4: {'name': 'Текст с эффектом "письма"', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},
 }
 
-# Флаг для проверки, отправлено ли меню
-menu_sent = False
-
-# Функция для отмены локальных изменений в git
-def discard_local_changes():
-    print("Отменить локальные изменения в файле bot.py.")
+# Добавление функции для получения user_id
+async def get_user_id():
     try:
-        print("Отмена локальных изменений в файле bot.py...")
-        subprocess.run(['git', 'checkout', '--', 'bot.py'], check=True)
-        print("Локальные изменения в файле bot.py были отменены.")
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при отмене изменений: {e}")
-
-# Функция для настройки автозапуска
-def setup_autostart():
-    print("Функция для настройки автозапуска бота в Termux при старте устройства.")
-    boot_directory = os.path.expanduser("~/.termux/boot")
-    
-    if not os.path.exists(boot_directory):
-        os.makedirs(boot_directory)
-        print(f"Папка {boot_directory} создана.")
-    
-    script_path = os.path.join(boot_directory, 'start_bot.sh')
-    bot_script_path = '/data/data/com.termux/files/home/rade/bot.py'  # Измените на актуальный путь
-    
-    with open(script_path, 'w') as f:
-        f.write(f"#!/data/data/com.termux/files/usr/bin/bash\n")
-        f.write(f"cd /data/data/com.termux/files/home/rade\n")
-        f.write(f"python3 {bot_script_path}\n")
-    
-    os.chmod(script_path, 0o755)
-    print(f"Автозапуск настроен. Скрипт сохранен в {script_path}.")
-
-# Выводим инструкцию по отключению автозапуска
-def print_autostart_instructions():
-    print("Для отключения автозапуска скрипта бота выполните следующую команду в Termux:")
-    print("Удаление автозапуска:")
-    print("  python3 путь_к_скрипту bot.py --remove-autostart")
-
-# Функция логгирования для работы
-async def log_message(log_text, log_file="bot_log.txt"):
-    try:
-        with open(log_file, "a", encoding="utf-8") as file:
-            file.write(log_text + "\n")
+        me = await client.get_me()
+        print(f"Ваш user_id: {me.id}")  # Выводим user_id в консоль
     except Exception as e:
-        print(f"Ошибка записи лога: {e}")
+        print(f"Ошибка при получении user_id: {e}")
 
-# Проверка конфигурации
-if os.path.exists(CONFIG_FILE):
-    try:
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        API_ID = config.get("API_ID")
-        API_HASH = config.get("API_HASH")
-        PHONE_NUMBER = config.get("PHONE_NUMBER")
-        typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
-        cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
-    except (json.JSONDecodeError, KeyError) as e:
-        print(f"Ошибка чтения конфигурации {e}. Попробуем запросить данные заново.")
-        API_ID = None
-        API_HASH = None
-        PHONE_NUMBER = None
-else:
-    API_ID = None
-    API_HASH = None
-    PHONE_NUMBER = None
-
-# Запрос данных авторизации
-if not API_ID or not API_HASH or not PHONE_NUMBER:
-    try:
-        print("Пожалуйста, введите данные для авторизации в Telegram.")
-        API_ID = int(input("Введите ваш API ID: "))
-        API_HASH = input("Введите ваш API Hash: ").strip()
-        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +7XXXXXXXXXX): ").strip()
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump({
-                "API_ID": API_ID,
-                "API_HASH": API_HASH,
-                "PHONE_NUMBER": PHONE_NUMBER,
-                "typing_speed": DEFAULT_TYPING_SPEED,
-                "cursor_symbol": DEFAULT_CURSOR
-            }, f)
-        print("Данные успешно сохранены в конфигурации.")
-    except Exception as e:
-        print(f"Ошибка сохранения конфигурации {e}")
-        exit(1)
-
-SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
-client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
-
-# Функция для отображения меню выбора анимации
-async def show_animation_menu(event):
-    global menu_sent
-    if not menu_sent:
-        menu_text = "Меню анимаций:\n"
-        for num, animation in animations.items():
-            menu_text += f"{num}. {animation['name']}\n"
-        menu_text += "Выберите номер анимации для изменения."
-
-        await event.respond(menu_text)
-        menu_sent = True  # Меню отправлено, больше не отправляем его
+# Все другие функции без изменений...
 
 # Обработчик команды Меню
 @client.on(events.NewMessage(pattern=r'Меню'))
 async def menu_handler(event):
     try:
         # Показываем меню анимаций
-        await show_animation_menu(event)
+        menu_message = await show_animation_menu(event)
         
         # Удаляем сообщение "Меню" после его отображения
         await event.delete()
@@ -135,8 +43,19 @@ async def menu_handler(event):
     except Exception as e:
         print(f"Ошибка при выводе меню: {e}")
 
+# Функция для отображения меню выбора анимации
+async def show_animation_menu(event):
+    menu_text = "Меню анимаций:\n"
+    for num, animation in animations.items():
+        menu_text += f"{num}. {animation['name']}\n"
+    menu_text += "Выберите номер анимации для изменения."
+
+    # Отправляем меню и сохраняем ID сообщения
+    menu_message = await event.respond(menu_text)
+    return menu_message  # Возвращаем объект сообщения с меню
+
 # Обработчик для выбора анимации по номеру
-@client.on(events.NewMessage(pattern=r'\d'))
+@client.on(events.NewMessage(pattern=r'\\d'))
 async def change_animation(event):
     try:
         # Получаем номер выбранной анимации
@@ -172,13 +91,13 @@ async def change_animation(event):
     except Exception as e:
         print(f"Ошибка при изменении анимации: {e}")
 
-# Функция отображения справки
+# Функция для отображения справки
 async def show_help(event):
     help_text = (
         "Доступные команды:\n"
         "Меню - отобразить меню анимаций.\n"
         "р <текст> - показать текст с анимацией.\n"
-        "\d - выбрать номер анимации из меню.\n"
+        "\\d - выбрать номер анимации из меню.\n"
     )
     await event.respond(help_text)
 
@@ -192,8 +111,10 @@ async def main():
     # Настроим автозапуск
     setup_autostart()
     
+    check_for_updates()
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
+    print("Для использования анимации текста используйте команду р ваш текст.")
     
     # Печатаем инструкции по отключению автозапуска после старта бота
     print_autostart_instructions()
@@ -204,4 +125,5 @@ async def main():
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    check_for_updates()
+    asyncio.run(main())  # Теперь asyncio импортирован и main() может быть вызван
