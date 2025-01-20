@@ -1,4 +1,4 @@
-import asyncio  # Импортируем asyncio для работы с асинхронным кодом 
+import asyncio  # Импортируем asyncio для работы с асинхронным кодом
 import subprocess
 import os  # Добавлен импорт модуля os
 import requests
@@ -12,7 +12,15 @@ SCRIPT_VERSION = 0.1
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u'\u2588'  # Символ по умолчанию для анимации
 
- # Функция для отмены локальных изменений в git
+# Список доступных анимаций
+animations = {
+    1: {'name': 'Стандартная анимация', 'symbol': u'\u2588', 'speed': DEFAULT_TYPING_SPEED},
+    2: {'name': 'Точка-символ анимации', 'symbol': '.', 'speed': 0.15},
+    3: {'name': 'Быстрая анимация', 'symbol': u'\u2588', 'speed': 0.05},
+    4: {'name': 'Звездочка', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},
+}
+
+# Функция для отмены локальных изменений в git
 def discard_local_changes():
     print("Отменить локальные изменения в файле bot.py.")
     try:
@@ -156,6 +164,57 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 
 # Инициализация клиента
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+
+# Список доступных анимаций
+animations = {
+    1: {'name': 'Стандартная анимация', 'symbol': u'\u2588', 'speed': DEFAULT_TYPING_SPEED},
+    2: {'name': 'Точка-символ анимации', 'symbol': '.', 'speed': 0.15},
+    3: {'name': 'Быстрая анимация', 'symbol': u'\u2588', 'speed': 0.05},
+    4: {'name': 'Звездочка', 'symbol': '*', 'speed': DEFAULT_TYPING_SPEED},
+}
+
+# Функция для отображения меню выбора анимации
+async def show_animation_menu(event):
+    menu_text = "Меню анимаций:\n"
+    for num, animation in animations.items():
+        menu_text += f"{num}. {animation['name']}\n"
+    menu_text += "Выберите номер анимации для изменения."
+
+    await event.respond(menu_text)
+
+# Обработчик команды Меню
+@client.on(events.NewMessage(pattern=r'Меню'))
+async def menu_handler(event):
+    try:
+        await show_animation_menu(event)
+    except Exception as e:
+        print(f"Ошибка при выводе меню: {e}")
+
+# Обработчик для выбора анимации по номеру
+@client.on(events.NewMessage(pattern=r'\d'))
+async def change_animation(event):
+    try:
+        choice = int(event.text.strip())
+        if choice in animations:
+            global cursor_symbol, typing_speed
+            selected_animation = animations[choice]
+            cursor_symbol = selected_animation['symbol']
+            typing_speed = selected_animation['speed']
+
+            # Сохраняем выбранную анимацию в конфигурации
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "API_ID": API_ID,
+                    "API_HASH": API_HASH,
+                    "PHONE_NUMBER": PHONE_NUMBER,
+                    "typing_speed": typing_speed,
+                    "cursor_symbol": cursor_symbol
+                }, f)
+            await event.respond(f"Вы выбрали анимацию: {selected_animation['name']}")
+        else:
+            await event.respond("Неверный выбор. Пожалуйста, выберите номер из списка.")
+    except Exception as e:
+        print(f"Ошибка при изменении анимации: {e}")
 
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
