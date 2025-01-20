@@ -186,9 +186,6 @@ async def run_magic_script(event):
         if not event.out:
             return
 
-        # Уведомляем пользователя о запуске другого скрипта
-        await event.reply("<b>Перехожу в другой скрипт...</b>", parse_mode='html')
-
         # Запуск другого скрипта (например, "other_script.py")
         result = subprocess.run(["python3", "other_script.py"], capture_output=True, text=True)
 
