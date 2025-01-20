@@ -3,24 +3,29 @@ import subprocess
 import os
 import requests
 import json
-from telethon import TelegramClient
+import logging
+from telethon import TelegramClient, events
 from telethon.events import NewMessage
+
+# Настройка логирования
+logging.basicConfig(filename='bot_errors.log', level=logging.DEBUG, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Константы
 CONFIG_FILE = "config.json"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
 SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
-DEFAULT_CURSOR = u"\u2588"
+DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
 MAGIC_PHRASES = ['magic']
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
-    try:
+     try:
         print("Отмена локальных изменений в файле bot.py...")
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
         print("Локальные изменения в файле bot.py были отменены.")
-    except subprocess.CalledProcessError as e:
+     except subprocess.CalledProcessError as e:
         print(f"Ошибка при отмене изменений {e}")
 
 # Функция для проверки обновлений скрипта на GitHub
@@ -28,6 +33,7 @@ def check_for_updates():
     try:
         discard_local_changes()
 
+        # Проверка обновлений на GitHub
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
             remote_script = response.text
@@ -57,23 +63,22 @@ def check_for_updates():
         else:
             print(f"Не удалось проверить обновления. Код ответа сервера {response.status_code}")
     except Exception as e:
-        print(f"Ошибка при проверке обновлений {e}")
+        logging.error(f"Ошибка при проверке обновлений {e}")
 
 # Функция для настройки автозапуска
 def setup_autostart():
     boot_directory = os.path.expanduser("~/.termux/boot")
-    
     if not os.path.exists(boot_directory):
         os.makedirs(boot_directory)
         print(f"Папка {boot_directory} создана.")
     
     script_path = os.path.join(boot_directory, "start_bot.sh")
-    bot_script_path = "/data/data/com.termux/files/home/radebot.py"
+    bot_script_path = "/data/data/com.termux/files/home/radebot.py"  # Измените на актуальный путь
     
     with open(script_path, "w") as f:
         f.write(f"#!/data/data/com.termux/files/usr/bin/bash\n")
-        f.write(f"cd /data/data/com.termux/files/home/radebot\n")
-        f.write(f"python3 {bot_script_path}\n")
+        f.write(f"cd /data/data/com.termux/files/home/radebot  # Путь к вашему боту\n")
+        f.write(f"python3 {bot_script_path}  # Запуск бота\n")
     
     os.chmod(script_path, 0o755)
     print(f"Автозапуск настроен. Скрипт сохранен в {script_path}.")
@@ -82,22 +87,13 @@ def setup_autostart():
 def remove_autostart():
     boot_directory = os.path.expanduser("~/.termux/boot")
     script_path = os.path.join(boot_directory, "start_bot.sh")
-    
     if os.path.exists(script_path):
         os.remove(script_path)
         print(f"Автозапуск удален. Скрипт {script_path} больше не будет запускаться при старте.")
     else:
-        print("Скрипт автозапуска не найден.")
+        print("Скрипт автозапуска не найден. Возможно, он уже был удален.")
 
-# Выводим инструкцию по отключению автозапуска
-def print_autostart_instructions():
-    print("\nДля отключения автозапуска скрипта бота выполните следующую команду в Termux")
-    print("Удаление автозапуска:")
-    print("  python3 путь_к_скриптуbot.py --remove-autostart")
-    print("Чтобы отключить автозапуск вручную, просто удалите файл:")
-    print("  rm ~/.termux/boot/start_bot.sh")
-
-# Проверяем наличие файла конфигурации
+# Проверка наличия файла конфигурации
 if os.path.exists(CONFIG_FILE):
     try:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
@@ -142,45 +138,35 @@ client = TelegramClient('tg-account', API_ID, API_HASH)
 
 # Функция для выполнения внешнего скрипта
 async def execute_other_script():
-    result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
-    print(result.stdout)  # Выводим результат выполнения скрипта
-    return result.stdout
+    try:
+        # Запуск внешнего скрипта
+        result = subprocess.run(['python3', 'other_script.py'], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            logging.info(f"Скрипт успешно выполнен:\n{result.stdout}")
+        else:
+            logging.error(f"Ошибка при выполнении скрипта:\n{result.stderr}")
+        
+        return result.stdout
+    except Exception as e:
+        logging.error(f"Произошла ошибка при попытке выполнить внешний скрипт: {e}")
 
-# Анимация текста
-async def animate_text(event, text, delay=0.1):
-    for i in range(len(text) + 1):
-        await client.edit_message(event.peer_id.user_id, event.message.id, text[:i])
-        await asyncio.sleep(delay)
-
-# Основной обработчик для сообщений
-@client.on(NewMessage)
-async def handle_message(event: NewMessage.Event):
-    if event.message.text in MAGIC_PHRASES:  # Проверка на команду "magic"
+# Обработчик для команды "magic"
+@client.on(NewMessage(outgoing=True))
+async def handle_message(event):
+    if event.message.text.lower() == "magic":  # Проверка на команду "magic"
         print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
         await execute_other_script()  # Выполнение внешнего скрипта
-        
-        # Запуск анимации текста
-        await animate_text(event, "Выполнение магической команды...", delay=0.05)
+    else:
+        print(f"Получено сообщение: {event.message.text}")
 
-    # Настроим автозапуск
-    setup_autostart()
-    check_for_updates()
+# Настроим автозапуск
+setup_autostart()
+check_for_updates()
 
-    await client.start(phone=PHONE_NUMBER)
-    print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
-    print("Для использования анимации текста используйте команду p ваш текст.")
-    print_autostart_instructions()
-
-    await client.run_until_disconnected()
-
-# Функция main()
 async def main():
-    setup_autostart()
-    check_for_updates()
     await client.start(phone=PHONE_NUMBER)
     print("Скрипт успешно запущен! Вы авторизованы в Telegram.")
-    print("Для использования анимации текста используйте команду p ваш текст.")
-    print_autostart_instructions()
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
