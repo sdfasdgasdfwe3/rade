@@ -4,7 +4,7 @@ import os  # Добавлен импорт модуля os
 import requests
 import json
 from telethon import TelegramClient, events
-import subprocess
+
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -63,14 +63,6 @@ def check_for_updates():
             print(f"Не удалось проверить обновления. Код ответа сервера {response.status_code}")
     except Exception as e:
         print(f"Ошибка при проверке обновлений {e}")
-
-# Главный цикл программы, ждем команду "Magic"
-while True:
-    user_input = input()
-
-    # Если введено слово "Magic", запускаем второй скрипт
-    if "Magic" in user_input:
-        subprocess.run(['python3', 'other_script.py'])
 
 # Функция для настройки автозапуска
 def setup_autostart():
