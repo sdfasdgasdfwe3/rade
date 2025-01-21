@@ -43,39 +43,32 @@ def generate_parade_colored():
 
 # Функция для выполнения внешнего скрипта
 async def execute_other_script():
-    # Проверим, что скрипт существует
-    script_path = 'other_script.py'  # Убедитесь, что путь правильный
-    if not os.path.exists(script_path):
-        print(f"[!] Скрипт не найден: {script_path}")
-        return
-
     try:
-        print("[*] Попытка выполнить другой скрипт...")
-        # Используем subprocess.run для запуска внешнего скрипта
-        result = subprocess.run(
-            ['python3', script_path], capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            print("[*] Скрипт выполнен успешно")
-            print(result.stdout)
-        else:
-            print("[*] Ошибка при выполнении скрипта")
-            print(result.stderr)
-    except Exception as e:
-        print(f"[!] Ошибка при запуске скрипта: {e}")
+        print("[*] Выполнение другого скрипта...")
+        # Запуск основного скрипта
+        new_script = "/data/data/com.termux/files/home/rade/bot.py"  # Укажите путь к другому скрипту
+        process = subprocess.Popen(["python3", new_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()  # Ожидаем завершения и выводим ошибки
+        print(stdout.decode())
+        print(stderr.decode())
 
-# Обработчик для команды "magic"
-@client.on(NewMessage(outgoing=True))
-async def handle_message(event: NewMessage.Event):
-    if event.message.text in MAGIC_PHRASES:  # Проверка на команду "magic"
-        print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
-        await execute_other_script()  # Выполнение внешнего скрипта
+        # После завершения выполнения другого скрипта перезапускаем основной скрипт
+        print("[*] Завершено выполнение другого скрипта. Перезапуск основного скрипта...")
+        subprocess.Popen(["python3", __file__])  # Запуск текущего скрипта заново
+        exit()
+
+    except Exception as e:
+        print(f"[!] Ошибка при запуске другого скрипта: {e}")
 
 # Подключение клиента и управление сессией
 async def main():
     print('[*] Подключение к Telegram...')
     await client.start()  # Теперь start() автоматически выполняет авторизацию
     print("Клиент Telegram успешно подключен!")
+
+    # Запуск внешнего скрипта сразу при старте
+    await execute_other_script()  # Выполнение внешнего скрипта сразу
+
     await client.run_until_disconnected()  # Это запускает клиента и слушает сообщения
 
 if __name__ == '__main__':
