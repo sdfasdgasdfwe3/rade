@@ -15,7 +15,7 @@ SCRIPT_VERSION = "0.0.9"
 
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
-typing_speed = 1.5  # Уменьшенная скорость печатания (в два раза быстрее)
+typing_speed = 0.75  # Уменьшенная скорость печатания (в два раза быстрее)
 pixel_typing_speed = 0.10  # Уменьшенная скорость для пиксельного разрушения (в два раза быстрее)
 cursor_symbol = "▮"  # Символ курсора для анимации
 selected_animation = 1  # Выбранная анимация по умолчанию
@@ -124,7 +124,7 @@ async def pixel_destruction(client, event, text):
     for _ in range(3):  # Количество шагов разрешения
         for i in range(len(pixelated_text)):
             for j in range(len(pixelated_text[i])):
-                if random.random() < 0.1:  # С вероятностью 20% заменяем символ
+                if random.random() < 0.1:  # С вероятностью 10% заменяем символ
                     pixelated_text[i][j] = random.choice([".", "*", "○", "⊙", "%"])
         # Объединяем строки и отправляем
         displayed_text = "\n".join(["".join(line) for line in pixelated_text])
