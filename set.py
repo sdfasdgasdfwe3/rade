@@ -1,4 +1,3 @@
-Давай добавим еще в самом низу 1 строку невидимого шрифта 
 import asyncio
 from random import choice
 
