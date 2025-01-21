@@ -9,7 +9,7 @@ import set  # Импортируем второй файл
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.0.9"
+SCRIPT_VERSION = "0.1.0"
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
