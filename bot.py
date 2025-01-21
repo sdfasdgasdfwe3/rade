@@ -5,6 +5,7 @@ from telethon import TelegramClient, events
 import subprocess
 import sys
 import asyncio
+import set  # Импортируем второй файл с функцией
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -12,8 +13,9 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot
 SCRIPT_VERSION = "0.0.9"
 
 # Глобальная переменная для управления анимацией
+is_typing_enabled = True  # Флаг, включающий анимацию
 typing_speed = 0.2  # Стандартная скорость печатания
-cursor_symbol = "▮"  # Символ курсора для анимации
+cursor_symbol = "▮"  # Символ курсора для анимации текста
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -98,12 +100,12 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
 # Анимация текста
-@client.on(events.NewMessage(pattern='/p'))
+@client.on(events.NewMessage(pattern=r'/(.*)'))
 async def type_text(event):
     """Команда для печатания текста с анимацией."""
-    global typing_speed, cursor_symbol
+    global typing_speed, cursor_symbol, is_typing_enabled
     try:
-        if not event.out:
+        if not event.out or not is_typing_enabled:
             return
 
         text = event.pattern_match.group(1)
@@ -148,6 +150,12 @@ async def set_typing_speed(event):
     except Exception as e:
         print(f"Ошибка при изменении скорости: {e}")
         await event.reply("<b>Произошла ошибка при изменении скорости.</b>", parse_mode='html')
+
+# Новый обработчик для команды /magic
+@client.on(events.NewMessage(pattern='/magic'))
+async def magic_handler(event):
+    # Переход в set.py и вызов функции magic_script
+    await set.magic_script(client, event)
 
 async def main():
     # Авторизация и подключение
