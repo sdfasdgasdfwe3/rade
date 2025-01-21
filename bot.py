@@ -109,14 +109,20 @@ async def type_text(event):
             return
 
         text = event.pattern_match.group(1)
-        typed_text = ""
 
-        for char in text:
-            typed_text += char
-            await event.edit(typed_text + cursor_symbol)
-            await asyncio.sleep(typing_speed)
+        # Проверяем, начинается ли текст с буквы "Р" (регистрозависимо)
+        if text.startswith('Р'):
+            typed_text = ""
 
-        await event.edit(typed_text)
+            for char in text:
+                typed_text += char
+                await event.edit(typed_text + cursor_symbol)
+                await asyncio.sleep(typing_speed)
+
+            await event.edit(typed_text)
+        else:
+            # Если текст не начинается с "Р", просто отправим сообщение без анимации
+            await event.respond(text)
     except Exception as e:
         print(f"Ошибка анимации: {e}")
         await event.reply("<b>Произошла ошибка во время выполнения команды.</b>", parse_mode='html')
