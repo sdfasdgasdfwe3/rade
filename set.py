@@ -6,15 +6,14 @@ COLORED_HEARTS = ['💗', '💓', '💖', '💘', '❤️', '💞']
 EDIT_DELAY = 0.05  # Задержка для более плавной анимации
 
 PARADE_MAP = '''
-00000000000
-00111011100
-01111111110
-01111111110
-00111111100
-00011111000
-00001110000
-00000100000
-00000000000
+000000
+001110
+011111
+011111
+001111
+000111
+000011
+000001
 '''
 
 # Функция для генерации анимации с цветными сердечками
@@ -31,7 +30,6 @@ def generate_parade_colored():
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
-    # Запуск анимации текста
     await client.edit_message(event.chat_id, event.message.id, 'i')
     await asyncio.sleep(1)
     await client.edit_message(event.chat_id, event.message.id, 'i love')
@@ -53,7 +51,6 @@ async def animate_parade(client, event):
 
 # Главная функция, которая управляет всем процессом
 async def main(client, event):
-    # Запускаем анимацию парада и выводим слова любви
     await asyncio.gather(
         animate_parade(client, event),  # Анимация парада сердечек
         process_love_words(client, event)  # Выводим текст "I love you"
@@ -63,7 +60,7 @@ async def process_build_place(client, event):
     output = ''
     for i in range(8):
         output += '\n'
-        for j in range(11):
+        for j in range(6):  # Уменьшаем количество символов в каждой строке
             output += HEART
         await client.edit_message(event.chat_id, event.message.id, output)
         await asyncio.sleep(EDIT_DELAY / 2)
@@ -78,4 +75,3 @@ async def magic_script(client, event):
     await process_build_place(client, event)
     await process_colored_parade(client, event)
     await process_love_words(client, event)
-
