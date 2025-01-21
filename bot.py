@@ -155,6 +155,8 @@ async def falling_text_animation(client, event, text):
         total_letters = len(original_text)
         displayed_letters = 0
 
+        previous_text = ""  # Храним предыдущий текст для сравнения
+
         while displayed_letters < total_letters:
             available_indices = [j for j, char in enumerate(placeholder) if char == " "]
             if available_indices:
@@ -169,10 +171,13 @@ async def falling_text_animation(client, event, text):
             if len(displayed_text) > 4096:
                 displayed_text = displayed_text[:4096]
 
-            try:
-                await client.edit_message(event.chat_id, event.message.id, displayed_text)
-            except ValueError:
-                pass
+            # Если текст не изменился, пропускаем редактирование
+            if displayed_text != previous_text:
+                try:
+                    await client.edit_message(event.chat_id, event.message.id, displayed_text)
+                    previous_text = displayed_text  # Обновляем предыдущий текст
+                except ValueError:
+                    pass
 
             if displayed_letters >= int(0.8 * total_letters) and not progress_event.is_set():
                 progress_event.set()
