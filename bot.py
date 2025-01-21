@@ -121,7 +121,7 @@ async def pixel_destruction(client, event, text):
 
     # Шаг 1: Инициализация (пиксельное разрешение)
     pixelated_text = [list(" " * len(line)) for line in text_lines]
-    for _ in range(3):  # Количество шагов разрешения
+    for _ in range(5):  # Количество шагов разрешения
         for i in range(len(pixelated_text)):
             for j in range(len(pixelated_text[i])):
                 if random.random() < 0.1:  # С вероятностью 10% заменяем символ
@@ -140,7 +140,7 @@ async def pixel_destruction(client, event, text):
         await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
 
     # Шаг 2: Постепенное исчезновение (разрушение)
-    for _ in range(3):  # Количество шагов разрушения
+    for _ in range(5):  # Количество шагов разрушения
         displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "○", "⊙"]) for _ in range(len(line))]) for line in text_lines])
 
         # Проверяем, изменился ли текст и отправляем только если есть изменения
