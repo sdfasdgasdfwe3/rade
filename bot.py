@@ -164,7 +164,7 @@ async def falling_text_animation(client, event, text):
         nonlocal placeholders
 
         # Начальный индекс для падения буквы
-        drop_idx = max(line_idx - drop_start_offset, 0)
+        drop_idx = 0  # Начинаем с самой верхней строки
 
         while drop_idx < line_idx:
             # Поставим символ на текущую строку
