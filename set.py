@@ -1,16 +1,13 @@
 import asyncio
 from random import choice
-
 from telethon import TelegramClient
 from telethon.events import NewMessage
 
-APP_ID = 1252636
-API_HASH = '4037e9f957f6f17d461b0c288ffa50f1'
-
+# Ваши настройки и переменные для анимации
 HEART = '🤍'
 COLORED_HEARTS = ['💗', '💓', '💖', '💘', '❤️', '💞']
 MAGIC_PHRASES = ['magic']
-EDIT_DELAY = 0.05  # Меньшая задержка для более плавной анимации
+EDIT_DELAY = 0.05
 
 PARADE_MAP = '''
 00000000000
@@ -25,6 +22,12 @@ PARADE_MAP = '''
 
 client = TelegramClient('tg-account', APP_ID, API_HASH)
 
+# Функция, которая будет вызываться из bot.py
+async def magic_script(client, event):
+    # Начинаем анимацию
+    await process_build_place(event)
+    await process_colored_parade(event)
+    await process_love_words(event)
 
 def generate_parade_colored():
     output = ''
@@ -39,15 +42,15 @@ def generate_parade_colored():
 
 
 async def process_love_words(event: NewMessage.Event):
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю тебя')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю тебя на всегда')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю тебя на всегда 💗')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever💗')
 
 
 async def process_build_place(event: NewMessage.Event):
@@ -61,22 +64,14 @@ async def process_build_place(event: NewMessage.Event):
 
 
 async def process_colored_parade(event: NewMessage.Event):
-    # Увеличим количество повторений и более плавно отображаем каждый цвет
-    for i in range(50):  # Увеличиваем число итераций для более длительной анимации
+    for i in range(100):
         text = generate_parade_colored()
         await client.edit_message(event.peer_id.user_id, event.message.id, text)
         await asyncio.sleep(EDIT_DELAY)
 
 
+# Обработчик для команды magic
 @client.on(NewMessage(outgoing=True))
 async def handle_message(event: NewMessage.Event):
     if event.message.message in MAGIC_PHRASES:
-        await process_build_place(event)
-        await process_colored_parade(event)
-        await process_love_words(event)
-
-
-if __name__ == '__main__':
-    print('[*] Connect to client...')
-    client.start()
-    client.run_until_disconnected()
+        await magic_script(client, event)
