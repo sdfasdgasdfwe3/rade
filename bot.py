@@ -154,7 +154,7 @@ async def list_animations(event):
         animation_list = "Анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
         await event.reply(animation_list)
 
-@client.on(events.NewMessage(pattern='^\d+$'))
+@client.on(events.NewMessage(pattern='^\\d+$'))
 async def change_animation(event):
     if event.out:  # Обрабатываем только свои сообщения
         global selected_animation
