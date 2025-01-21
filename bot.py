@@ -4,12 +4,18 @@ import requests
 from telethon import TelegramClient, events
 import subprocess
 import sys
+import asyncio
 import set  # Импортируем второй файл с функцией
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
 SCRIPT_VERSION = "0.0.9"
+
+# Глобальная переменная для управления анимацией
+is_typing_enabled = True  # Флаг, включающий анимацию
+typing_speed = 0.2  # Стандартная скорость печатания
+cursor_symbol = "⏳"  # Символ курсора
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -93,22 +99,61 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 # Инициализация клиента
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
-@client.on(events.NewMessage(pattern='/app'))
-async def handler(event):
-    # Проверка и обновление скрипта
-    await event.respond('Проверка обновлений скрипта...')
-    check_for_updates()
+# Анимация текста
+@client.on(events.NewMessage(pattern=r'/(.*)'))
+async def type_text(event):
+    """Команда для печатания текста с анимацией."""
+    global typing_speed, cursor_symbol, is_typing_enabled
+    try:
+        if not event.out or not is_typing_enabled:
+            return
 
-    # Перезапуск скрипта
-    await event.respond('Скрипт обновлен, выполняю перезапуск...')
-    os.execv(sys.executable, ['python'] + sys.argv)
+        text = event.pattern_match.group(1)
+        typed_text = ""
+
+        for char in text:
+            typed_text += char
+            await event.edit(typed_text + cursor_symbol)
+            await asyncio.sleep(typing_speed)
+
+        await event.edit(typed_text)
+    except Exception as e:
+        print(f"Ошибка анимации: {e}")
+        await event.reply("<b>Произошла ошибка во время выполнения команды.</b>", parse_mode='html')
+
+# Команда для изменения скорости печатания
+@client.on(events.NewMessage(pattern=r'/s (\d*\.?\d+)'))
+async def set_typing_speed(event):
+    """Команда для изменения скорости печатания."""
+    global typing_speed
+    try:
+        if not event.out:
+            return
+
+        new_speed = float(event.pattern_match.group(1))
+
+        if 0.1 <= new_speed <= 0.5:
+            typing_speed = new_speed
+
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            config["typing_speed"] = typing_speed
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f)
+
+            await event.reply(f"<b>Скорость печатания изменена на {typing_speed} секунд.</b>", parse_mode='html')
+        else:
+            await event.reply("<b>Введите значение задержки в диапазоне от 0.1 до 0.5 секунд.</b>", parse_mode='html')
+
+    except ValueError:
+        await event.reply("<b>Некорректное значение. Укажите число в формате 0.1 - 0.5.</b>", parse_mode='html')
+    except Exception as e:
+        print(f"Ошибка при изменении скорости: {e}")
+        await event.reply("<b>Произошла ошибка при изменении скорости.</b>", parse_mode='html')
 
 # Новый обработчик для команды /magic
 @client.on(events.NewMessage(pattern='/magic'))
 async def magic_handler(event):
-    # Сообщение пользователю о переходе в set.py
-    await event.respond("Переход в set.py и выполнение скрипта magic...")
-
     # Переход в set.py и вызов функции magic_script
     await set.magic_script(client, event)
 
