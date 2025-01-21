@@ -15,7 +15,7 @@ SCRIPT_VERSION = "0.0.9"
 
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
-typing_speed = 0.1  # Стандартная скорость печатания (уменьшена в 2 раза)
+typing_speed = 0.1  # Уменьшена скорость анимации
 cursor_symbol = "▮"  # Символ курсора для анимации текста
 selected_animation = 1  # Выбранная анимация по умолчанию
 
@@ -115,6 +115,9 @@ async def pixel_destruction(client, event, text):
     chunk_size = len(text) // lines_count
     text_lines = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
+    # Инициализация переменной для предыдущего текста
+    previous_text = ""
+
     # Шаг 1: Инициализация (пиксельное разрешение)
     pixelated_text = [list(" " * len(line)) for line in text_lines]
     for _ in range(10):  # Количество шагов разрешения
@@ -124,13 +127,23 @@ async def pixel_destruction(client, event, text):
                     pixelated_text[i][j] = random.choice([".", "*", "#", "&", "%"])
         # Объединяем строки и отправляем
         displayed_text = "\n".join(["".join(line) for line in pixelated_text])
-        await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
+        # Проверяем, изменился ли текст
+        if displayed_text != previous_text:
+            await client.edit_message(event.chat_id, event.message.id, displayed_text)
+            previous_text = displayed_text
+
         await asyncio.sleep(typing_speed)
 
     # Шаг 2: Постепенное исчезновение (разрушение)
     for _ in range(5):  # Количество шагов разрушения
         displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "#", "&"]) for _ in range(len(line))]) for line in text_lines])
-        await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
+        # Проверяем, изменился ли текст
+        if displayed_text != previous_text:
+            await client.edit_message(event.chat_id, event.message.id, displayed_text)
+            previous_text = displayed_text
+
         await asyncio.sleep(typing_speed)
 
     # Завершаем разрушение пустыми символами
