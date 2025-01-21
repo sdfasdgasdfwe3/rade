@@ -4,12 +4,12 @@ import requests
 from telethon import TelegramClient, events
 import subprocess
 import sys
-import set  # Импортируем второй файл
+import set  # Импортируем второй файл с функцией
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.1.0"
+SCRIPT_VERSION = "0.0.9"
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -102,6 +102,15 @@ async def handler(event):
     # Перезапуск скрипта
     await event.respond('Скрипт обновлен, выполняю перезапуск...')
     os.execv(sys.executable, ['python'] + sys.argv)
+
+# Новый обработчик для команды /magic
+@client.on(events.NewMessage(pattern='/magic'))
+async def magic_handler(event):
+    # Сообщение пользователю о переходе в set.py
+    await event.respond("Переход в set.py и выполнение скрипта magic...")
+
+    # Переход в set.py и вызов функции magic_script
+    await set.magic_script(client, event)
 
 async def main():
     # Авторизация и подключение
