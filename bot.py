@@ -112,8 +112,12 @@ async def animate_text(client, event, text):
 # Обработчик для команды /p
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
-    text_to_animate = "This is animated text!"  # Здесь можно заменить текст на любой другой
-    await animate_text(client, event, text_to_animate)
+    command_text = event.raw_text
+    if len(command_text.split()) > 1:
+        text_to_animate = command_text.partition(' ')[2]
+        await animate_text(client, event, text_to_animate)
+    else:
+        await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
 
 # Новый обработчик для команды /magic
 @client.on(events.NewMessage(pattern='/magic'))
