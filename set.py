@@ -56,7 +56,7 @@ def center_text(text, width=50):
 
 # Функция для анимации парада
 async def animate_parade(client, event):
-    for _ in range(15):  # Сделаем 50 шагов анимации
+    for _ in range(10):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
         centered_text = center_text(text)  # Центрируем текст
         await client.edit_message(event.chat_id, event.message.id, centered_text)  # Обновляем сообщение
