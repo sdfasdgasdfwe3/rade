@@ -147,51 +147,56 @@ async def pixel_destruction(client, event, text):
 # Новая анимация "Падение букв сверху вниз"
 async def falling_text_animation(client, event, text):
     lines = text.split("\n")
-    progress_events = [asyncio.Event() for _ in lines]
+    num_lines = len(lines)
+    line_length = max(len(line) for line in lines)
+    
+    # Подготавливаем placeholder для текста
+    placeholders = [[" "] * line_length for _ in range(num_lines)]
+    
+    # Разделим текст на отдельные символы, которые будут падать
+    characters = [list(line) for line in lines]
 
-    async def animate_line(line, progress_event, next_event=None):
-        original_text = list(line)
-        placeholder = [" " for _ in original_text]
-        total_letters = len(original_text)
-        displayed_letters = 0
+    # Определим, с какой строки начнется падение для каждой буквы
+    drop_start_offset = 3  # Количество строк, на которых буква начнёт падать
 
-        previous_text = ""  # Храним предыдущий текст для сравнения
+    # Функция анимации для одного символа
+    async def animate_falling_letter(line_idx, char_idx):
+        nonlocal placeholders
 
-        while displayed_letters < total_letters:
-            available_indices = [j for j, char in enumerate(placeholder) if char == " "]
-            if available_indices:
-                chosen_index = random.choice(available_indices)
-                placeholder[chosen_index] = original_text[chosen_index]
-                displayed_letters += 1
+        # Начальный индекс для падения буквы
+        drop_idx = max(line_idx - drop_start_offset, 0)
 
-            displayed_text = "\n".join(["".join(placeholder) if i == index else line
-                                        for index, line in enumerate(lines)])
-
+        while drop_idx < line_idx:
+            placeholders[drop_idx][char_idx] = characters[line_idx][char_idx]
+            displayed_text = "\n".join(["".join(placeholder) for placeholder in placeholders])
+            
             # Ограничиваем длину текста для корректной отправки
             if len(displayed_text) > 4096:
                 displayed_text = displayed_text[:4096]
 
-            # Если текст не изменился, пропускаем редактирование
-            if displayed_text != previous_text:
-                try:
-                    await client.edit_message(event.chat_id, event.message.id, displayed_text)
-                    previous_text = displayed_text  # Обновляем предыдущий текст
-                except ValueError:
-                    pass
-
-            if displayed_letters >= int(0.8 * total_letters) and not progress_event.is_set():
-                progress_event.set()
-
+            await client.edit_message(event.chat_id, event.message.id, displayed_text)
             await asyncio.sleep(0.2)
 
-        if next_event:
-            next_event.set()
+            placeholders[drop_idx][char_idx] = " "  # Очистим старое место
 
+            drop_idx += 1  # Падение идет вниз
+
+        # Вставляем символ в конечную позицию
+        placeholders[line_idx][char_idx] = characters[line_idx][char_idx]
+        displayed_text = "\n".join(["".join(placeholder) for placeholder in placeholders])
+        
+        # Ограничиваем длину текста для корректной отправки
+        if len(displayed_text) > 4096:
+            displayed_text = displayed_text[:4096]
+
+        await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
+    # Запускаем анимацию для всех символов
     tasks = []
-    for i in range(len(lines) - 1, -1, -1):
-        next_event = progress_events[i + 1] if i + 1 < len(progress_events) else None
-        tasks.append(animate_line(lines[i], progress_events[i], next_event))
-
+    for i in range(num_lines):
+        for j in range(len(characters[i])):
+            tasks.append(animate_falling_letter(i, j))
+    
     await asyncio.gather(*tasks)
 
 @client.on(events.NewMessage(pattern='/falling'))
