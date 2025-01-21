@@ -6,6 +6,7 @@ import subprocess
 import sys
 import asyncio
 import set
+import random
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -109,11 +110,17 @@ async def animate_text(client, event, text):
     await client.edit_message(event.chat_id, event.message.id, displayed_text)
 
 async def pixel_destruction(client, event, text):
+    # Анимация разрушения текста
     for i in range(len(text), 0, -1):
-        displayed_text = text[:i]
+        displayed_text = text[:i] + " " * (len(text) - i)
         await client.edit_message(event.chat_id, event.message.id, displayed_text)
-        await asyncio.sleep(typing_speed)
-    await client.edit_message(event.chat_id, event.message.id, "")
+        await asyncio.sleep(0.1)
+
+    # Теперь разрушение до символов
+    for i in range(len(text), 0, -1):
+        displayed_text = "".join(random.choice([".", "*", " ", "#", "&"]) for _ in range(len(text)))
+        await client.edit_message(event.chat_id, event.message.id, displayed_text)
+        await asyncio.sleep(0.1)
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
