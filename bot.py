@@ -15,7 +15,7 @@ SCRIPT_VERSION = "0.0.9"
 
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
-typing_speed = 0.2  # Стандартная скорость печатания
+typing_speed = 0.1  # Стандартная скорость печатания (уменьшена в 2 раза)
 cursor_symbol = "▮"  # Символ курсора для анимации текста
 selected_animation = 1  # Выбранная анимация по умолчанию
 
@@ -110,8 +110,10 @@ async def animate_text(client, event, text):
     await client.edit_message(event.chat_id, event.message.id, displayed_text)
 
 async def pixel_destruction(client, event, text):
-    # Преобразуем текст в 2 строки для эффекта
-    text_lines = [text[i:i + len(text) // 2] for i in range(0, len(text), len(text) // 2)]
+    # Преобразуем текст на 4 строки для эффекта
+    lines_count = 4
+    chunk_size = len(text) // lines_count
+    text_lines = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
     # Шаг 1: Инициализация (пиксельное разрешение)
     pixelated_text = [list(" " * len(line)) for line in text_lines]
@@ -123,14 +125,13 @@ async def pixel_destruction(client, event, text):
         # Объединяем строки и отправляем
         displayed_text = "\n".join(["".join(line) for line in pixelated_text])
         await client.edit_message(event.chat_id, event.message.id, displayed_text)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(typing_speed)
 
     # Шаг 2: Постепенное исчезновение (разрушение)
-    for i in range(len(text), 0, -1):
-        # Преобразуем символы на случайные "пиксели"
-        displayed_text = "".join(random.choice([".", "*", " ", "#", "&"]) for _ in range(len(text)))
+    for _ in range(5):  # Количество шагов разрушения
+        displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "#", "&"]) for _ in range(len(line))]) for line in text_lines])
         await client.edit_message(event.chat_id, event.message.id, displayed_text)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(typing_speed)
 
     # Завершаем разрушение пустыми символами
     await client.edit_message(event.chat_id, event.message.id, "")
