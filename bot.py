@@ -5,6 +5,7 @@ from telethon import TelegramClient, events
 import subprocess
 import sys
 import asyncio
+import set
 import random
 
 # Константы
@@ -14,7 +15,7 @@ SCRIPT_VERSION = "0.0.9"
 
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
-typing_speed = 0.1  # Уменьшена скорость анимации
+typing_speed = 0.2  # Стандартная скорость печатания
 cursor_symbol = "▮"  # Символ курсора для анимации текста
 selected_animation = 1  # Выбранная анимация по умолчанию
 
@@ -145,8 +146,8 @@ async def pixel_destruction(client, event, text):
 
         await asyncio.sleep(typing_speed)
 
-    # Завершаем разрушение пустыми символами
-    await client.edit_message(event.chat_id, event.message.id, "")
+    # Завершаем разрушение невидимым текстом (пробел)
+    await client.edit_message(event.chat_id, event.message.id, " ")  # Отправляем пробел вместо пустого сообщения
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
