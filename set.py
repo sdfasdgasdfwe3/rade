@@ -1,11 +1,9 @@
 import asyncio
 from random import choice
-from telethon import TelegramClient
 
 HEART = '🤍'
 COLORED_HEARTS = ['💗', '💓', '💖', '💘', '❤️', '💞']
-MAGIC_PHRASES = ['/magic']
-EDIT_DELAY = 0.05
+EDIT_DELAY = 0.01
 
 PARADE_MAP = '''
 00000000000
@@ -18,31 +16,44 @@ PARADE_MAP = '''
 00000100000
 '''
 
+def generate_parade_colored():
+    output = ''
+    for c in PARADE_MAP:
+        if c == '0':
+            output += HEART
+        elif c == '1':
+            output += choice(COLORED_HEARTS)
+        else:
+            output += c
+    return output
+
+async def process_love_words(client, event):
+    await client.edit_message(event.chat_id, event.message.id, 'i')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'i love')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'i love you')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'i love you forever')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'i love you forever💗')
+
 async def process_build_place(client, event):
     output = ''
     for i in range(8):
         output += '\n'
         for j in range(11):
             output += HEART
-            await client.edit_message(event.peer_id.user_id, event.message.id, output)
+            await client.edit_message(event.chat_id, event.message.id, output)
             await asyncio.sleep(EDIT_DELAY / 2)
 
 async def process_colored_parade(client, event):
-    for _ in range(100):
-        text = ''.join([choice(COLORED_HEARTS) if c == '1' else HEART for c in PARADE_MAP])
-        await client.edit_message(event.peer_id.user_id, event.message.id, text)
+    for i in range(50):
+        text = generate_parade_colored()
+        await client.edit_message(event.chat_id, event.message.id, text)
         await asyncio.sleep(EDIT_DELAY)
 
-async def process_love_words(client, event):
-    messages = ['i', 'i love', 'i love you', 'i love you forever💗']
-    for msg in messages:
-        await client.edit_message(event.peer_id.user_id, event.message.id, msg)
-        await asyncio.sleep(1)
-
 async def magic_script(client, event):
-    print("[INFO] Начало выполнения анимации.")
     await process_build_place(client, event)
     await process_colored_parade(client, event)
     await process_love_words(client, event)
-    print("[INFO] Анимация завершена.")
-
