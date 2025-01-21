@@ -109,17 +109,17 @@ async def animate_text(client, event, text):
     # Убираем курсор после завершения анимации
     await client.edit_message(event.chat_id, event.message.id, displayed_text)
 
+# Обработчик для команды /p
+@client.on(events.NewMessage(pattern='/p'))
+async def animate_handler(event):
+    text_to_animate = "This is animated text!"  # Здесь можно заменить текст на любой другой
+    await animate_text(client, event, text_to_animate)
+
 # Новый обработчик для команды /magic
 @client.on(events.NewMessage(pattern='/magic'))
 async def magic_handler(event):
     # Переход в set.py и вызов функции magic_script
     await set.magic_script(client, event)
-
-# Новый обработчик для текстовой анимации
-@client.on(events.NewMessage(pattern='/animate'))
-async def animate_handler(event):
-    text_to_animate = "This is animated text!"
-    await animate_text(client, event, text_to_animate)
 
 # Главная функция
 async def main():
