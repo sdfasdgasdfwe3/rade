@@ -40,10 +40,14 @@ def generate_parade_colored():
     
     # Центрируем каждую строку, добавляя пробелы с обеих сторон
     for line in lines:
-        # Рассчитываем количество пустых символов для центрирования
-        left_padding = (12 - len(line)) // 2
-        right_padding = 12 - len(line) - left_padding
-        centered_output += '\u200b' * left_padding + line + '\u200b' * right_padding + '\n'
+        # Понимание проблемы: проверяем, если строка короче 12 символов (ожидаемая длина)
+        if len(line) < 12:
+            left_padding = (12 - len(line)) // 2
+            right_padding = 12 - len(line) - left_padding
+            # Центрируем строку
+            centered_output += '\u200b' * left_padding + line + '\u200b' * right_padding + '\n'
+        else:
+            centered_output += line + '\n'
     
     # Убираем лишний невидимый символ перед первой строкой
     return centered_output.strip()
@@ -95,3 +99,4 @@ async def magic_script(client, event):
     await process_build_place(client, event)
     await process_colored_parade(client, event)
     await process_love_words(client, event)
+
