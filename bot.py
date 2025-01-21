@@ -164,7 +164,15 @@ async def falling_text_animation(client, event, text):
 
             displayed_text = "\n".join(["".join(placeholder) if i == index else line
                                         for index, line in enumerate(lines)])
-            await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
+            # Ограничиваем длину текста для корректной отправки
+            if len(displayed_text) > 4096:
+                displayed_text = displayed_text[:4096]
+
+            try:
+                await client.edit_message(event.chat_id, event.message.id, displayed_text)
+            except ValueError:
+                pass
 
             if displayed_letters >= int(0.8 * total_letters) and not progress_event.is_set():
                 progress_event.set()
