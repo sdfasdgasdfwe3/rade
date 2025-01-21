@@ -4,6 +4,7 @@ import requests
 import subprocess
 from telethon import TelegramClient, events
 import asyncio
+import sys
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -96,11 +97,12 @@ client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', ''
 async def magic_command(event):
     # Если пришло сообщение "Magic", то переключаемся на другой скрипт
     print("Получено сообщение Magic, переключаемся на другой скрипт...")
-    
+
     # Запускаем новый скрипт
     new_script_path = "other_script.py"  # Путь к новому скрипту
-    subprocess.run(["python3", other_script.py])  # Запускаем новый скрипт
+    subprocess.run([sys.executable, other_script.py])  # Запускаем новый скрипт с использованием текущего интерпретатора Python
     await event.reply("Переключение на новый скрипт выполнено.")
+    await client.disconnect()  # Отключаем текущий клиент перед выходом
 
 async def main():
     # Проверка и обновление скрипта
