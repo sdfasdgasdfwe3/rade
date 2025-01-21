@@ -98,12 +98,11 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
-# Инициализация клиента с sqlite_memory=True для использования базы данных в памяти
+# Инициализация клиента без использования sqlite_memory
 client = TelegramClient(
     SESSION_FILE,
     API_ID,
-    API_HASH,
-    sqlite_memory=True  # Использование базы данных в памяти
+    API_HASH
 )
 
 @client.on(events.NewMessage(pattern=r'p (.+)'))
