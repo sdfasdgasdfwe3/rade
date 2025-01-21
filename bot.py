@@ -24,6 +24,7 @@ selected_animation = 1  # Выбранная анимация по умолча�
 animations = {
     1: "Стандартная анимация",
     2: "Пиксельное разрушение",
+    3: "Падение букв сверху вниз",  # Новая анимация
 }
 
 # Функция для отмены локальных изменений в git
@@ -111,54 +112,88 @@ async def animate_text(client, event, text):
     await client.edit_message(event.chat_id, event.message.id, displayed_text)
 
 async def pixel_destruction(client, event, text):
-    # Преобразуем текст на 4 строки для эффекта
     lines_count = 4
     chunk_size = len(text) // lines_count
     text_lines = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
-    # Инициализация переменной для предыдущего текста
     previous_text = ""
-
-    # Шаг 1: Инициализация (пиксельное разрешение)
     pixelated_text = [list(" " * len(line)) for line in text_lines]
-    for _ in range(5):  # Количество шагов разрешения
+    for _ in range(5):
         for i in range(len(pixelated_text)):
             for j in range(len(pixelated_text[i])):
-                if random.random() < 0.1:  # С вероятностью 10% заменяем символ
-                    pixelated_text[i][j] = random.choice([".", "◯","⊙ ","◎ ","○"])
-        # Объединяем строки и отправляем
+                if random.random() < 0.1:
+                    pixelated_text[i][j] = random.choice([".", "◯", "⊙ ", "◎ ", "○"])
         displayed_text = "\n".join(["".join(line) for line in pixelated_text])
-
-        # Проверяем, изменился ли текст и отправляем только если есть изменения
         if displayed_text != previous_text and displayed_text.strip() != "":
             try:
                 await client.edit_message(event.chat_id, event.message.id, displayed_text)
                 previous_text = displayed_text
-            except ValueError:  # Обработка ошибки, если текст не может быть отредактирован
+            except ValueError:
                 pass
+        await asyncio.sleep(pixel_typing_speed)
 
-        await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
-
-    # Шаг 2: Постепенное исчезновение (разрушение)
-    for _ in range(5):  # Количество шагов разрушения
-        displayed_text = "\n".join(["".join([random.choice([".", "◯","⊙ ","◎ ","○"]) for _ in range(len(line))]) for line in text_lines])
-
-        # Проверяем, изменился ли текст и отправляем только если есть изменения
+    for _ in range(5):
+        displayed_text = "\n".join(["".join([random.choice([".", "◯", "⊙ ", "◎ ", "○"]) for _ in range(len(line))]) for line in text_lines])
         if displayed_text != previous_text and displayed_text.strip() != "":
             try:
                 await client.edit_message(event.chat_id, event.message.id, displayed_text)
                 previous_text = displayed_text
-            except ValueError:  # Обработка ошибки, если текст не может быть отредактирован
+            except ValueError:
                 pass
+        await asyncio.sleep(pixel_typing_speed)
 
-        await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
+    await client.edit_message(event.chat_id, event.message.id, text)
 
-    # Завершаем разрушение с использованием пустого символа
-    await client.edit_message(event.chat_id, event.message.id, text)  # Оставляем исходное сообщение пользователя
+# Новая анимация "Падение букв сверху вниз"
+async def falling_text_animation(client, event, text):
+    lines = text.split("\n")
+    progress_events = [asyncio.Event() for _ in lines]
+
+    async def animate_line(line, progress_event, next_event=None):
+        original_text = list(line)
+        placeholder = [" " for _ in original_text]
+        total_letters = len(original_text)
+        displayed_letters = 0
+
+        while displayed_letters < total_letters:
+            available_indices = [j for j, char in enumerate(placeholder) if char == " "]
+            if available_indices:
+                chosen_index = random.choice(available_indices)
+                placeholder[chosen_index] = original_text[chosen_index]
+                displayed_letters += 1
+
+            displayed_text = "\n".join(["".join(placeholder) if i == index else line
+                                        for index, line in enumerate(lines)])
+            await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
+            if displayed_letters >= int(0.8 * total_letters) and not progress_event.is_set():
+                progress_event.set()
+
+            await asyncio.sleep(0.2)
+
+        if next_event:
+            next_event.set()
+
+    tasks = []
+    for i in range(len(lines) - 1, -1, -1):
+        next_event = progress_events[i + 1] if i + 1 < len(progress_events) else None
+        tasks.append(animate_line(lines[i], progress_events[i], next_event))
+
+    await asyncio.gather(*tasks)
+
+@client.on(events.NewMessage(pattern='/falling'))
+async def falling_animation_handler(event):
+    if event.out:
+        command_text = event.raw_text
+        if len(command_text.split()) > 1:
+            text_to_animate = command_text.partition(' ')[2]
+            await falling_text_animation(client, event, text_to_animate)
+        else:
+            await event.reply("Пожалуйста, укажите текст для анимации после команды /falling.")
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
-    if event.out:  # Обрабатываем только свои сообщения
+    if event.out:
         command_text = event.raw_text
         if len(command_text.split()) > 1:
             text_to_animate = command_text.partition(' ')[2]
@@ -166,44 +201,32 @@ async def animate_handler(event):
                 await animate_text(client, event, text_to_animate)
             elif selected_animation == 2:
                 await pixel_destruction(client, event, text_to_animate)
+            elif selected_animation == 3:
+                await falling_text_animation(client, event, text_to_animate)
         else:
             await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
 
 @client.on(events.NewMessage(pattern='/1'))
 async def list_animations(event):
-    if event.out:  # Обрабатываем только свои сообщения
+    if event.out:
         animation_list = "Анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
         await event.reply(animation_list)
 
 @client.on(events.NewMessage(pattern='^\\d+$'))
 async def change_animation(event):
-    if event.out:  # Обрабатываем только свои сообщения
+    if event.out:
         global selected_animation
         animation_number = int(event.raw_text)
         if animation_number in animations:
             selected_animation = animation_number
             messages = await client.get_messages(event.chat_id, limit=3)
             for msg in messages:
-                if msg.out:  # Удаляем только свои сообщения
+                if msg.out:
                     await client.delete_messages(event.chat_id, msg.id)
 
 async def main():
     await client.start(phone=PHONE_NUMBER)
     print(f"Успешно авторизованы как {PHONE_NUMBER}")
-    await client.run_until_disconnected()
-# Новый обработчик для команды /magic
-@client.on(events.NewMessage(pattern='/magic'))
-async def magic_handler(event):
-    # Переход в set.py и вызов функции magic_script
-    await set.magic_script(client, event)
-
-# Главная функция
-async def main():
-    # Авторизация и подключение
-    await client.start(phone=PHONE_NUMBER)
-    print(f"Успешно авторизованы как {PHONE_NUMBER}")
-
-    # Запускаем цикл ожидания событий
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
