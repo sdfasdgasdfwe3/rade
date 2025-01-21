@@ -5,7 +5,6 @@ from telethon import TelegramClient, events
 import subprocess
 import sys
 import asyncio
-import set
 import random
 
 # Константы
