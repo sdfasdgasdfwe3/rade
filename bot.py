@@ -99,12 +99,29 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 # Инициализация клиента
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
+# Функция текстовой анимации
+async def animate_text(client, event, text):
+    displayed_text = ""
+    for char in text:
+        displayed_text += char
+        await client.edit_message(event.chat_id, event.message.id, displayed_text + cursor_symbol)
+        await asyncio.sleep(typing_speed)
+    # Убираем курсор после завершения анимации
+    await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
 # Новый обработчик для команды /magic
 @client.on(events.NewMessage(pattern='/magic'))
 async def magic_handler(event):
     # Переход в set.py и вызов функции magic_script
     await set.magic_script(client, event)
 
+# Новый обработчик для текстовой анимации
+@client.on(events.NewMessage(pattern='/animate'))
+async def animate_handler(event):
+    text_to_animate = "This is animated text!"
+    await animate_text(client, event, text_to_animate)
+
+# Главная функция
 async def main():
     # Авторизация и подключение
     await client.start(phone=PHONE_NUMBER)
