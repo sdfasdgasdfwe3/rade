@@ -3,7 +3,7 @@ from random import choice
 
 HEART = '🤍'
 COLORED_HEARTS = ['💗', '💓', '💖', '💘', '❤️', '💞']
-EDIT_DELAY = 0.05  # Задержка между обновлениями
+EDIT_DELAY = 0.05  # Задержка для более плавной анимации
 
 PARADE_MAP = '''
 00000000000
@@ -25,8 +25,8 @@ def generate_parade_colored():
             output += HEART  # Пустое место - обычное сердце
         elif c == '1':
             output += choice(COLORED_HEARTS)  # Цветное сердце
-        else:
-            output += c
+        elif c == '\n':  # Если символ - новая строка, добавляем символ новой строки
+            output += '\n'
     return output
 
 async def animate_parade(client, event):
@@ -41,6 +41,7 @@ async def animate_parade(client, event):
 
 async def main(client, event):
     await animate_parade(client, event)  # Запускаем анимацию парада
+
 
 async def process_build_place(client, event):
     output = ''
