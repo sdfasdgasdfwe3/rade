@@ -117,30 +117,34 @@ async def pixel_destruction(client, event, text):
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
-    command_text = event.raw_text
-    if len(command_text.split()) > 1:
-        text_to_animate = command_text.partition(' ')[2]
-        if selected_animation == 1:
-            await animate_text(client, event, text_to_animate)
-        elif selected_animation == 2:
-            await pixel_destruction(client, event, text_to_animate)
-    else:
-        await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
+    if event.out:  # Обрабатываем только свои сообщения
+        command_text = event.raw_text
+        if len(command_text.split()) > 1:
+            text_to_animate = command_text.partition(' ')[2]
+            if selected_animation == 1:
+                await animate_text(client, event, text_to_animate)
+            elif selected_animation == 2:
+                await pixel_destruction(client, event, text_to_animate)
+        else:
+            await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
 
 @client.on(events.NewMessage(pattern='/1'))
 async def list_animations(event):
-    animation_list = "Анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
-    await event.reply(animation_list)
+    if event.out:  # Обрабатываем только свои сообщения
+        animation_list = "Анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
+        await event.reply(animation_list)
 
 @client.on(events.NewMessage(pattern='^\d+$'))
 async def change_animation(event):
-    global selected_animation
-    animation_number = int(event.raw_text)
-    if animation_number in animations:
-        selected_animation = animation_number
-        messages = await client.get_messages(event.chat_id, limit=3)
-        for msg in messages:
-            await client.delete_messages(event.chat_id, msg.id)
+    if event.out:  # Обрабатываем только свои сообщения
+        global selected_animation
+        animation_number = int(event.raw_text)
+        if animation_number in animations:
+            selected_animation = animation_number
+            messages = await client.get_messages(event.chat_id, limit=3)
+            for msg in messages:
+                if msg.out:  # Удаляем только свои сообщения
+                    await client.delete_messages(event.chat_id, msg.id)
 
 async def main():
     await client.start(phone=PHONE_NUMBER)
