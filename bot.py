@@ -100,7 +100,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
 # Анимация текста
-@client.on(events.NewMessage(pattern=r'^/p (.*)'))
+@client.on(events.NewMessage(pattern=r'/(.*)'))
 async def type_text(event):
     """Команда для печатания текста с анимацией."""
     global typing_speed, cursor_symbol, is_typing_enabled
@@ -108,7 +108,6 @@ async def type_text(event):
         if not event.out or not is_typing_enabled:
             return
 
-        # Получаем текст без команды /p
         text = event.pattern_match.group(1)
         typed_text = ""
 
