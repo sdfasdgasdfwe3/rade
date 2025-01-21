@@ -1,8 +1,9 @@
 import os
 import json
 import requests
-from telethon import TelegramClient
 import subprocess
+from telethon import TelegramClient, events
+import asyncio
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -91,6 +92,16 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 # Инициализация клиента
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
+@client.on(events.NewMessage(pattern=r'Magic'))
+async def magic_command(event):
+    # Если пришло сообщение "Magic", то переключаемся на другой скрипт
+    print("Получено сообщение Magic, переключаемся на другой скрипт...")
+    
+    # Запускаем новый скрипт
+    new_script_path = "other_script.py"  # Путь к новому скрипту
+    subprocess.run(["python3", other_script.py])  # Запускаем новый скрипт
+    await event.reply("Переключение на новый скрипт выполнено.")
+
 async def main():
     # Проверка и обновление скрипта
     print("Проверка обновлений скрипта...")
@@ -104,5 +115,4 @@ async def main():
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
