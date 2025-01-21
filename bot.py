@@ -110,7 +110,7 @@ async def animate_text(client, event, text):
     await client.edit_message(event.chat_id, event.message.id, displayed_text)
 
 async def pixel_destruction(client, event, text):
-    # Анимация разрушения текста
+    # Анимация разрушения текста на пиксели
     for i in range(len(text), 0, -1):
         displayed_text = text[:i] + " " * (len(text) - i)
         await client.edit_message(event.chat_id, event.message.id, displayed_text)
@@ -118,9 +118,13 @@ async def pixel_destruction(client, event, text):
 
     # Теперь разрушение до символов
     for i in range(len(text), 0, -1):
+        # Каждый символ будет заменяться на случайный символ
         displayed_text = "".join(random.choice([".", "*", " ", "#", "&"]) for _ in range(len(text)))
         await client.edit_message(event.chat_id, event.message.id, displayed_text)
         await asyncio.sleep(0.1)
+    
+    # Завершаем разрушение пустыми символами
+    await client.edit_message(event.chat_id, event.message.id, "")
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
