@@ -36,8 +36,15 @@ def generate_parade_colored():
             output += choice(COLORED_HEARTS)  # Цветное сердце или другой смайлик
         elif c == '\n':  # Если символ - новая строка, просто добавляем новую строку
             output += '\n'
-    # Добавляем невидимые символы для сохранения выравнивания
-    return '\u200b' + output.replace('\n', '\n\u200b')
+    
+    # Добавляем невидимые символы для выравнивания по центру
+    lines = output.split('\n')
+    centered_output = ''
+    
+    for line in lines:
+        centered_output += '\u200b' * ((13 - len(line)) // 2) + line + '\u200b' * ((13 - len(line)) // 2) + '\n'
+    
+    return centered_output
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
