@@ -41,3 +41,23 @@ async def animate_parade(client, event):
 
 async def main(client, event):
     await animate_parade(client, event)  # Запускаем анимацию парада
+
+async def process_build_place(client, event):
+    output = ''
+    for i in range(8):
+        output += '\n'
+        for j in range(11):
+            output += HEART
+            await client.edit_message(event.chat_id, event.message.id, output)
+            await asyncio.sleep(EDIT_DELAY / 2)
+
+async def process_colored_parade(client, event):
+    for i in range(50):
+        text = generate_parade_colored()
+        await client.edit_message(event.chat_id, event.message.id, text)
+        await asyncio.sleep(EDIT_DELAY)
+
+async def magic_script(client, event):
+    await process_build_place(client, event)
+    await process_colored_parade(client, event)
+    await process_love_words(client, event)
