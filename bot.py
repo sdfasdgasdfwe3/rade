@@ -136,7 +136,7 @@ async def pixel_destruction(client, event, text):
         await asyncio.sleep(typing_speed)
 
     # Шаг 2: Постепенное исчезновение (разрушение)
-    for _ in range(5):  # Количество шагов разрушения
+    for _ in range(3):  # Количество шагов разрушения
         displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "#", "&"]) for _ in range(len(line))]) for line in text_lines])
 
         # Проверяем, изменился ли текст
