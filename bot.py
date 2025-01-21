@@ -110,7 +110,7 @@ async def main():
     await client.start(phone=PHONE_NUMBER)
     print(f"Успешно авторизованы как {PHONE_NUMBER}")
 
-    # Ожидаем завершения работы
+    # Запускаем цикл ожидания событий
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
