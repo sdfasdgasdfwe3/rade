@@ -1,5 +1,6 @@
 import asyncio
 import subprocess
+import os
 from random import choice
 from telethon import TelegramClient
 from telethon.events import NewMessage
@@ -12,7 +13,6 @@ COLORED_HEARTS = ['💗', '💓', '💖', '💘', '❤️', '💞']
 MAGIC_PHRASES = ['magic']  # Команда для выполнения другого скрипта
 EDIT_DELAY = 0.01
 
-# Обратите внимание на правильное определение PARADE_MAP
 PARADE_MAP = '''
 00000000000
 00111011100
@@ -24,7 +24,10 @@ PARADE_MAP = '''
 00000100000
 '''
 
-client = TelegramClient('tg-account', API_ID, API_HASH)
+# Укажите файл для сессии, чтобы избежать повторной авторизации
+session_file = 'tg-account.session'
+
+client = TelegramClient(session_file, API_ID, API_HASH)
 
 # Функция для генерации "парада" из сердец
 def generate_parade_colored():
@@ -68,7 +71,12 @@ async def handle_message(event: NewMessage.Event):
         print("[*] Команда 'magic' обнаружена. Выполнение скрипта...")
         await execute_other_script()  # Выполнение внешнего скрипта
 
-if __name__ == '__main__':
+# Подключение клиента и управление сессией
+async def main():
     print('[*] Подключение к Telegram...')
-    client.start()
-    client.run_until_disconnected()  # Эта строка будет запускать клиента и слушать сообщения
+    await client.start()  # Теперь start() автоматически выполняет авторизацию
+    print("Клиент Telegram успешно подключен!")
+    await client.run_until_disconnected()  # Это запускает клиента и слушает сообщения
+
+if __name__ == '__main__':
+    asyncio.run(main())
