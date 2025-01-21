@@ -15,7 +15,7 @@ SCRIPT_VERSION = "0.0.9"
 
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
-typing_speed = 0.75  # Уменьшенная скорость печатания (в два раза быстрее)
+typing_speed = 1.5  # Уменьшенная скорость печатания (в два раза быстрее)
 pixel_typing_speed = 0.10  # Уменьшенная скорость для пиксельного разрушения (в два раза быстрее)
 cursor_symbol = "▮"  # Символ курсора для анимации
 selected_animation = 1  # Выбранная анимация по умолчанию
@@ -129,10 +129,13 @@ async def pixel_destruction(client, event, text):
         # Объединяем строки и отправляем
         displayed_text = "\n".join(["".join(line) for line in pixelated_text])
 
-        # Проверяем, изменился ли текст
-        if displayed_text != previous_text:
-            await client.edit_message(event.chat_id, event.message.id, displayed_text)
-            previous_text = displayed_text
+        # Проверяем, изменился ли текст и отправляем только если есть изменения
+        if displayed_text != previous_text and displayed_text.strip() != "":
+            try:
+                await client.edit_message(event.chat_id, event.message.id, displayed_text)
+                previous_text = displayed_text
+            except ValueError:  # Обработка ошибки, если текст не может быть отредактирован
+                pass
 
         await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
 
@@ -140,15 +143,18 @@ async def pixel_destruction(client, event, text):
     for _ in range(3):  # Количество шагов разрушения
         displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "○", "⊙"]) for _ in range(len(line))]) for line in text_lines])
 
-        # Проверяем, изменился ли текст
-        if displayed_text != previous_text:
-            await client.edit_message(event.chat_id, event.message.id, displayed_text)
-            previous_text = displayed_text
+        # Проверяем, изменился ли текст и отправляем только если есть изменения
+        if displayed_text != previous_text and displayed_text.strip() != "":
+            try:
+                await client.edit_message(event.chat_id, event.message.id, displayed_text)
+                previous_text = displayed_text
+            except ValueError:  # Обработка ошибки, если текст не может быть отредактирован
+                pass
 
         await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
 
-    # Завершаем разрушение, просто удалив сообщение
-    await client.delete_messages(event.chat_id, event.message.id)
+    # Завершаем разрушение с использованием пустого символа
+    await client.edit_message(event.chat_id, event.message.id, text)  # Оставляем исходное сообщение пользователя
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
