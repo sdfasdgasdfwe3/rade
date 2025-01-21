@@ -41,22 +41,25 @@ def generate_parade_colored():
 # Функция для выполнения внешнего скрипта
 async def execute_other_script():
     # Проверим, что скрипт существует
+    script_path = 'other_script.py'  # Убедитесь, что путь правильный
+    if not os.path.exists(script_path):
+        print(f"[!] Скрипт не найден: {script_path}")
+        return
+
     try:
-        result = subprocess.run(['python', 'other_script.py'], capture_output=True, text=True)
+        print("[*] Попытка выполнить другой скрипт...")
+        # Используем subprocess.run для запуска внешнего скрипта
+        result = subprocess.run(
+            ['python3', script_path], capture_output=True, text=True
+        )
         if result.returncode == 0:
             print("[*] Скрипт выполнен успешно")
             print(result.stdout)
         else:
             print("[*] Ошибка при выполнении скрипта")
             print(result.stderr)
-        # После выполнения внешнего скрипта вернемся к основному скрипту
-        await resume_main_script()
     except Exception as e:
         print(f"[!] Ошибка при запуске скрипта: {e}")
-
-# Функция, которая "возвращает" управление основному скрипту после выполнения внешнего
-async def resume_main_script():
-    print("[*] Возвращаемся к основному скрипту bot.py...")
 
 # Обработчик для команды "magic"
 @client.on(NewMessage(outgoing=True))
