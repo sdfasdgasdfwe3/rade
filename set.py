@@ -46,8 +46,8 @@ async def process_love_words(client, event):
 async def animate_parade(client, event):
     for _ in range(50):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
-        # Используем невидимый символ (Zero Width Space) для прозрачного пространства
-        text = f"{text}".replace(" ", "\u200B")
+        # Используем <code> для моноширинного шрифта в Telegram
+        text = f"<code>{text}</code>"
         await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
 
@@ -64,16 +64,16 @@ async def process_build_place(client, event):
         output += '\n'
         for j in range(11):  # Уменьшаем количество символов в каждой строке
             output += HEART
-    # Используем невидимый символ для создания прозрачного пространства
-    output = f"{output}".replace(" ", "\u200B")
+    # Используем <code> для моноширинного шрифта в Telegram
+    output = f"<code>{output}</code>"
     await client.edit_message(event.chat_id, event.message.id, output)
     await asyncio.sleep(EDIT_DELAY / 2)
 
 async def process_colored_parade(client, event):
     for i in range(50):
         text = generate_parade_colored()
-        # Используем невидимый символ для создания прозрачного пространства
-        text = f"{text}".replace(" ", "\u200B")
+        # Используем <code> для моноширинного шрифта в Telegram
+        text = f"<code>{text}</code>"
         await client.edit_message(event.chat_id, event.message.id, text)
         await asyncio.sleep(EDIT_DELAY)
 
