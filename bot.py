@@ -4,11 +4,12 @@ import os
 import requests
 import json
 from telethon import TelegramClient, events
+from telethon.sessions import SQLiteSession
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.0.9"
+SCRIPT_VERSION = "0.1.0"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
 
@@ -98,9 +99,9 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
-# Инициализация клиента без использования sqlite_memory
+# Используем SQLite-сессию в памяти (сессия не будет записана в файл)
 client = TelegramClient(
-    SESSION_FILE,
+    SQLiteSession(session=":memory:"),
     API_ID,
     API_HASH
 )
