@@ -25,19 +25,21 @@ def generate_parade_colored():
             output += HEART  # Пустое место - обычное сердце
         elif c == '1':
             output += choice(COLORED_HEARTS)  # Цветное сердце
-        elif c == '\n':  # Если символ - новая строка, просто добавляем новую строку
+        elif c == '\n':  # Если символ - новая строка, добавляем новую строку без лишнего символа
             output += '\n'
     return output
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
-    await client.edit_message(event.chat_id, event.message.id, 'Я')
+    await client.edit_message(event.chat_id, event.message.id, 'i')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'Я тебя')
+    await client.edit_message(event.chat_id, event.message.id, 'i love')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'Я тебя люблю')
+    await client.edit_message(event.chat_id, event.message.id, 'i love you')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'Я тебя люблю TIMKA 💗')
+    await client.edit_message(event.chat_id, event.message.id, 'i love you forever')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'i love you forever💗')
 
 # Функция для анимации парада
 async def animate_parade(client, event):
@@ -53,7 +55,6 @@ async def main(client, event):
     await asyncio.gather(
         animate_parade(client, event),  # Анимация парада сердечек
         process_love_words(client, event)  # Выводим текст "I love you"
-    )
 
 
 async def process_build_place(client, event):
