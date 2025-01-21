@@ -7,7 +7,7 @@ COLORED_HEARTS = [
     '✨', '🌟', '💫', '🌈', '🔥', '🌹',  # Звезды, огонь, роза
     '🌸', '🌺', '💐', '🥰', '😍', '😘'   # Цветы, лица
 ]
-EDIT_DELAY = 0.45  # Задержка для более плавной анимации
+EDIT_DELAY = 0.5  # Задержка для более плавной анимации
 
 # Каркас парада с правильным выравниванием (11 на 13)
 PARADE_MAP = '''
@@ -51,7 +51,8 @@ def generate_parade_colored():
         right_padding = 13 - len(line) - left_padding
         centered_output += '\u200b' * left_padding + line + '\u200b' * right_padding + '\n'
     
-    return centered_output
+    # Убираем лишний невидимый символ перед первой строкой
+    return centered_output.strip()
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
@@ -67,7 +68,7 @@ async def process_love_words(client, event):
 
 # Функция для анимации парада
 async def animate_parade(client, event):
-    for _ in range(20):  # Сделаем 50 шагов анимации
+    for _ in range(50):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
         await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
