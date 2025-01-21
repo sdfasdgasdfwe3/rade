@@ -9,7 +9,7 @@ COLORED_HEARTS = [
 ]
 EDIT_DELAY = 0.6  # Задержка для более плавной анимации
 
-# Каркас парада с правильным выравниванием (11 на 13)
+# Каркас парада с правильным выравниванием (10 на 12)
 PARADE_MAP = '''
 000000000000
 001110011100
@@ -41,8 +41,8 @@ def generate_parade_colored():
     # Центрируем каждую строку, добавляя пробелы с обеих сторон
     for line in lines:
         # Рассчитываем количество пустых символов для центрирования
-        left_padding = (13 - len(line)) // 2
-        right_padding = 13 - len(line) - left_padding
+        left_padding = (12 - len(line)) // 2
+        right_padding = 12 - len(line) - left_padding
         centered_output += '\u200b' * left_padding + line + '\u200b' * right_padding + '\n'
     
     # Убираем лишний невидимый символ перед первой строкой
