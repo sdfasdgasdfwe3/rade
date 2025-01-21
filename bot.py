@@ -99,7 +99,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
-# Создаем клиента без передачи параметра для сессии в памяти, Telethon по умолчанию будет использовать память для сессии.
+# Создание клиента с блокировкой на доступ к базе данных
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
 @client.on(events.NewMessage(pattern=r'p (.+)'))
