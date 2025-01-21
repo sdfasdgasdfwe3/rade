@@ -25,12 +25,13 @@ def generate_parade_colored():
             output += HEART  # Пустое место - обычное сердце
         elif c == '1':
             output += choice(COLORED_HEARTS)  # Цветное сердце
-        elif c == '\n':  # Если символ - новая строка, добавляем новую строку без лишнего символа
+        elif c == '\n':  # Если символ - новая строка, просто добавляем новую строку
             output += '\n'
     return output
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
+    # Запуск анимации текста
     await client.edit_message(event.chat_id, event.message.id, 'i')
     await asyncio.sleep(1)
     await client.edit_message(event.chat_id, event.message.id, 'i love')
@@ -43,9 +44,10 @@ async def process_love_words(client, event):
 
 # Функция для анимации парада
 async def animate_parade(client, event):
-    # Анимация парада: будем генерировать и обновлять картину
     for _ in range(50):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
+        # Ограничиваем длину строки, чтобы она не превышала экран
+        text = '\n'.join(text.splitlines()[:8])  # Например, ограничим 8 строками
         await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
 
@@ -55,7 +57,7 @@ async def main(client, event):
     await asyncio.gather(
         animate_parade(client, event),  # Анимация парада сердечек
         process_love_words(client, event)  # Выводим текст "I love you"
-
+    )
 
 async def process_build_place(client, event):
     output = ''
@@ -63,8 +65,8 @@ async def process_build_place(client, event):
         output += '\n'
         for j in range(11):
             output += HEART
-            await client.edit_message(event.chat_id, event.message.id, output)
-            await asyncio.sleep(EDIT_DELAY / 2)
+        await client.edit_message(event.chat_id, event.message.id, output)
+        await asyncio.sleep(EDIT_DELAY / 2)
 
 async def process_colored_parade(client, event):
     for i in range(50):
@@ -76,3 +78,4 @@ async def magic_script(client, event):
     await process_build_place(client, event)
     await process_colored_parade(client, event)
     await process_love_words(client, event)
+
