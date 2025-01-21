@@ -46,10 +46,8 @@ async def process_love_words(client, event):
 async def animate_parade(client, event):
     for _ in range(50):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
-        # Убираем пробелы и делаем текст более плотным для плавности
-        text = text.replace(' ', '')  # Убираем все пробелы, чтобы не было пустых мест
-        # Используем невидимый символ для точного выравнивания, если нужно
-        # text = text.replace(' ', '\u200B')
+        # Добавляем невидимый символ для выравнивания внутри <code>
+        text = f"<code>{text}</code>"
         await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
 
@@ -66,18 +64,16 @@ async def process_build_place(client, event):
         output += '\n'
         for j in range(11):  # Уменьшаем количество символов в каждой строке
             output += HEART
-    # Используем невидимые символы для выравнивания
-    # output = output.replace(' ', '\u200B')
+    # Добавляем <code> для корректного отображения в Telegram
+    output = f"<code>{output}</code>"
     await client.edit_message(event.chat_id, event.message.id, output)
     await asyncio.sleep(EDIT_DELAY / 2)
 
 async def process_colored_parade(client, event):
     for i in range(50):
         text = generate_parade_colored()
-        # Убираем пробелы
-        text = text.replace(' ', '')  # Убираем пробелы для плотности
-        # Если нужно, добавьте невидимые символы для выравнивания, но они должны быть минимальными
-        # text = text.replace(' ', '\u200B')
+        # Добавляем <code> для корректного отображения в Telegram
+        text = f"<code>{text}</code>"
         await client.edit_message(event.chat_id, event.message.id, text)
         await asyncio.sleep(EDIT_DELAY)
 
@@ -85,3 +81,4 @@ async def magic_script(client, event):
     await process_build_place(client, event)
     await process_colored_parade(client, event)
     await process_love_words(client, event)
+
