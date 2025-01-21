@@ -99,58 +99,6 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 # Инициализация клиента
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
-# Анимация текста
-@client.on(events.NewMessage(pattern=r'/(.*)'))
-async def type_text(event):
-    """Команда для печатания текста с анимацией."""
-    global typing_speed, cursor_symbol, is_typing_enabled
-    try:
-        if not event.out or not is_typing_enabled:
-            return
-
-        text = event.pattern_match.group(1)
-        typed_text = ""
-
-        for char in text:
-            typed_text += char
-            await event.edit(typed_text + cursor_symbol)
-            await asyncio.sleep(typing_speed)
-
-        await event.edit(typed_text)
-    except Exception as e:
-        print(f"Ошибка анимации: {e}")
-        await event.reply("<b>Произошла ошибка во время выполнения команды.</b>", parse_mode='html')
-
-# Команда для изменения скорости печатания
-@client.on(events.NewMessage(pattern=r'/s (\d*\.?\d+)'))
-async def set_typing_speed(event):
-    """Команда для изменения скорости печатания."""
-    global typing_speed
-    try:
-        if not event.out:
-            return
-
-        new_speed = float(event.pattern_match.group(1))
-
-        if 0.1 <= new_speed <= 0.5:
-            typing_speed = new_speed
-
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            config["typing_speed"] = typing_speed
-            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(config, f)
-
-            await event.reply(f"<b>Скорость печатания изменена на {typing_speed} секунд.</b>", parse_mode='html')
-        else:
-            await event.reply("<b>Введите значение задержки в диапазоне от 0.1 до 0.5 секунд.</b>", parse_mode='html')
-
-    except ValueError:
-        await event.reply("<b>Некорректное значение. Укажите число в формате 0.1 - 0.5.</b>", parse_mode='html')
-    except Exception as e:
-        print(f"Ошибка при изменении скорости: {e}")
-        await event.reply("<b>Произошла ошибка при изменении скорости.</b>", parse_mode='html')
-
 # Новый обработчик для команды /magic
 @client.on(events.NewMessage(pattern='/magic'))
 async def magic_handler(event):
