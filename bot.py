@@ -16,7 +16,8 @@ SCRIPT_VERSION = "0.0.9"
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
 typing_speed = 0.2  # Стандартная скорость печатания
-cursor_symbol = "▮"  # Символ курсора для анимации текста
+pixel_typing_speed = 0.1  # Уменьшенная скорость для пиксельного разрушения (в 2 раза быстрее)
+cursor_symbol = "▮"  # Символ курсора для анимации
 selected_animation = 1  # Выбранная анимация по умолчанию
 
 # Список анимаций
@@ -133,10 +134,10 @@ async def pixel_destruction(client, event, text):
             await client.edit_message(event.chat_id, event.message.id, displayed_text)
             previous_text = displayed_text
 
-        await asyncio.sleep(typing_speed)
+        await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
 
     # Шаг 2: Постепенное исчезновение (разрушение)
-    for _ in range(3):  # Количество шагов разрушения
+    for _ in range(5):  # Количество шагов разрушения
         displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "#", "&"]) for _ in range(len(line))]) for line in text_lines])
 
         # Проверяем, изменился ли текст
@@ -144,7 +145,7 @@ async def pixel_destruction(client, event, text):
             await client.edit_message(event.chat_id, event.message.id, displayed_text)
             previous_text = displayed_text
 
-        await asyncio.sleep(typing_speed)
+        await asyncio.sleep(pixel_typing_speed)  # Используем уменьшенную скорость
 
     # Завершаем разрушение невидимым символом (Zero Width Space)
     await client.edit_message(event.chat_id, event.message.id, "\u200B")  # Используем Zero Width Space (невидимый символ)
