@@ -5,7 +5,7 @@ HEART = '🤍'
 COLORED_HEARTS = [ '💗', '💓', '💖', '💘', '❤️', '💞',  # Сердечки
     '✨', '🌟', '💫', '🌈', '🔥', '🌹',  # Звезды, огонь, роза
                  ]
-EDIT_DELAY = 1.5  # Задержка для более плавной анимации
+EDIT_DELAY = 1.0  # Задержка для более плавной анимации
 
 # Каркас парада с правильным выравниванием
 PARADE_MAP = '''
@@ -54,7 +54,7 @@ def center_text(text, width=50):
 
 # Функция для анимации парада
 async def animate_parade(client, event):
-    for _ in range(10):  # Сделаем 50 шагов анимации
+    for _ in range(7):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
         centered_text = center_text(text)  # Центрируем текст
         await client.edit_message(event.chat_id, event.message.id, centered_text)  # Обновляем сообщение
