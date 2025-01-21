@@ -77,7 +77,7 @@ else:
 
 if not API_ID or not API_HASH or not PHONE_NUMBER:
     try:
-        print("Пожалуйста, введите данные для авторизации в Telegram:")
+        print("Пожалуйста, введите данные для авторизации в Telegram: ")
         API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
@@ -105,9 +105,12 @@ async def switch_script(event):
     # Останавливаем текущий клиент
     await client.disconnect()
 
-    # Запускаем новый скрипт
+    # Запускаем новый скрипт асинхронно с помощью subprocess.Popen
     new_script = "/data/data/com.termux/files/home/rade/other_script.py"  # Путь к новому скрипту
-    subprocess.run(["python3", new_script])
+    process = subprocess.Popen(["python3", new_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()  # Выводим stdout и stderr для отладки
+    print(stdout.decode())
+    print(stderr.decode())
 
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
