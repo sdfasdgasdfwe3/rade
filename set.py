@@ -46,8 +46,10 @@ async def process_love_words(client, event):
 async def animate_parade(client, event):
     for _ in range(50):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
-        # Заменяем все пробелы на невидимый символ для выравнивания
-        text = text.replace(' ', '\u200B')  # Используем Zero Width Space для выравнивания
+        # Убираем пробелы и делаем текст более плотным для плавности
+        text = text.replace(' ', '')  # Убираем все пробелы, чтобы не было пустых мест
+        # Используем невидимый символ для точного выравнивания, если нужно
+        # text = text.replace(' ', '\u200B')
         await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
 
@@ -65,15 +67,17 @@ async def process_build_place(client, event):
         for j in range(11):  # Уменьшаем количество символов в каждой строке
             output += HEART
     # Используем невидимые символы для выравнивания
-    output = output.replace(' ', '\u200B')
+    # output = output.replace(' ', '\u200B')
     await client.edit_message(event.chat_id, event.message.id, output)
     await asyncio.sleep(EDIT_DELAY / 2)
 
 async def process_colored_parade(client, event):
     for i in range(50):
         text = generate_parade_colored()
-        # Заменяем пробелы на невидимый символ
-        text = text.replace(' ', '\u200B')
+        # Убираем пробелы
+        text = text.replace(' ', '')  # Убираем пробелы для плотности
+        # Если нужно, добавьте невидимые символы для выравнивания, но они должны быть минимальными
+        # text = text.replace(' ', '\u200B')
         await client.edit_message(event.chat_id, event.message.id, text)
         await asyncio.sleep(EDIT_DELAY)
 
