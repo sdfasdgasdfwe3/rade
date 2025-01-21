@@ -146,8 +146,8 @@ async def pixel_destruction(client, event, text):
 
         await asyncio.sleep(typing_speed)
 
-    # Завершаем разрушение видимым пробелом
-    await client.edit_message(event.chat_id, event.message.id, " ")  # Используем пробел вместо невидимого символа
+    # Завершаем разрушение невидимым символом (Zero Width Space)
+    await client.edit_message(event.chat_id, event.message.id, "\u200B")  # Используем Zero Width Space (невидимый символ)
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
