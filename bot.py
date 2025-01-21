@@ -123,7 +123,7 @@ async def animate_handler(event):
 @client.on(events.NewMessage(pattern='/magic'))
 async def magic_handler(event):
     # Переход в set.py и вызов функции magic_script
-    await set.py.magic_script(client, event)
+    await set.magic_script(client, event)
 
 # Главная функция
 async def main():
