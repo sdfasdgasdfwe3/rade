@@ -4,6 +4,7 @@ import requests
 from telethon import TelegramClient, events
 import subprocess
 import sys
+import set  # Импортируем второй файл
 
 # Константы
 CONFIG_FILE = "config.json"
