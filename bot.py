@@ -86,7 +86,7 @@ else:
 
 if not API_ID or not API_HASH or not PHONE_NUMBER:
     try:
-        print("Пожалуйста, введите данные для авторизации в Telegram:")
+        print("Пожалуйста, введите данные для авторизации в Telegram:")        
         API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
@@ -146,62 +146,40 @@ async def pixel_destruction(client, event, text):
 
 # Новая анимация "Падение букв сверху вниз"
 async def falling_text_animation(client, event, text):
-    lines = text.split("\n")  # Разделим текст на строки
-    num_lines = len(lines)  # Количество строк
-    line_length = max(len(line) for line in lines)  # Длинна самой длинной строки
+    lines = text.split("\n")
+    progress_events = [asyncio.Event() for _ in lines]
 
-    # Подготовим список с placeholders для текста, где буквы будут падать
-    placeholders = [[" "] * line_length for _ in range(num_lines)]
-    
-    # Разделим текст на символы, которые будут падать
-    characters = [list(line) for line in lines]
+    async def animate_line(line, progress_event, next_event=None):
+        original_text = list(line)
+        placeholder = [" " for _ in original_text]
+        total_letters = len(original_text)
+        displayed_letters = 0
 
-    # Сколько строк выше будет начинаться падение
-    drop_start_offset = 3  # Количество строк, на которых будет начинаться падение каждого символа
+        while displayed_letters < total_letters:
+            available_indices = [j for j, char in enumerate(placeholder) if char == " "]
+            if available_indices:
+                chosen_index = random.choice(available_indices)
+                placeholder[chosen_index] = original_text[chosen_index]
+                displayed_letters += 1
 
-    # Функция анимации для одного символа
-    async def animate_falling_letter(line_idx, char_idx):
-        nonlocal placeholders
+            displayed_text = "\n".join(["".join(placeholder) if i == index else line
+                                        for index, line in enumerate(lines)])
 
-        # Начальный индекс для падения буквы
-        drop_idx = 0  # Начинаем с самой верхней строки
 
-        while drop_idx < line_idx:
-            # Поставим символ на текущую строку
-            placeholders[drop_idx][char_idx] = characters[line_idx][char_idx]
-            # Создадим строку для отображения
-            displayed_text = "\n".join(["".join(placeholder) for placeholder in placeholders])
+            if displayed_letters >= int(0.8 * total_letters) and not progress_event.is_set():
+                progress_event.set()
 
-            # Ограничиваем длину текста для корректной отправки
-            if len(displayed_text) > 4096:
-                displayed_text = displayed_text[:4096]
+            await asyncio.sleep(0.2)
 
-            # Обновляем сообщение
-            await client.edit_message(event.chat_id, event.message.id, displayed_text)
-            await asyncio.sleep(0.2)  # Пауза для анимации
+        if next_event:
+            next_event.set()
 
-            # Очистим символ на текущем месте
-            placeholders[drop_idx][char_idx] = " "
-            drop_idx += 1  # Падение продолжается вниз
-
-        # После того как символ упал на нужную строку, оставляем его на месте
-        placeholders[line_idx][char_idx] = characters[line_idx][char_idx]
-        displayed_text = "\n".join(["".join(placeholder) for placeholder in placeholders])
-        
-        # Ограничиваем длину текста для корректной отправки
-        if len(displayed_text) > 4096:
-            displayed_text = displayed_text[:4096]
-
-        # Финальный результат
-        await client.edit_message(event.chat_id, event.message.id, displayed_text)
-
-    # Запускаем анимацию для всех символов
     tasks = []
-    for i in range(num_lines):
-        for j in range(len(characters[i])):
-            tasks.append(animate_falling_letter(i, j))
-    
-    await asyncio.gather(*tasks)  # Ожидаем завершения всех задач
+    for i in range(len(lines) - 1, -1, -1):
+        next_event = progress_events[i + 1] if i + 1 < len(progress_events) else None
+        tasks.append(animate_line(lines[i], progress_events[i], next_event))
+
+    await asyncio.gather(*tasks)
 
 @client.on(events.NewMessage(pattern='/falling'))
 async def falling_animation_handler(event):
@@ -245,6 +223,16 @@ async def change_animation(event):
             for msg in messages:
                 if msg.out:
                     await client.delete_messages(event.chat_id, msg.id)
+
+async def main():
+    await client.start(phone=PHONE_NUMBER)
+    print(f"Успешно авторизованы как {PHONE_NUMBER}")
+    await client.run_until_disconnected()
+# Новый обработчик для команды /magic
+@client.on(events.NewMessage(pattern='/magic'))
+async def magic_handler(event):
+    # Переход в set.py и вызов функции magic_script
+    await set.magic_script(client, event)
 
 async def main():
     await client.start(phone=PHONE_NUMBER)
