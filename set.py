@@ -25,10 +25,21 @@ def generate_parade_colored():
             output += HEART  # Пустое место - обычное сердце
         elif c == '1':
             output += choice(COLORED_HEARTS)  # Цветное сердце
-        elif c == '\n':  # Если символ - новая строка, добавляем символ новой строки
+        elif c == '\n':  # Если символ - новая строка, просто добавляем новую строку
             output += '\n'
     return output
 
+# Функция для вывода слов "Я люблю тебя"
+async def process_love_words(client, event):
+    await client.edit_message(event.chat_id, event.message.id, 'Я')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'Я тебя')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'Я тебя люблю')
+    await asyncio.sleep(1)
+    await client.edit_message(event.chat_id, event.message.id, 'Я тебя люблю TIMKA 💗')
+
+# Функция для анимации парада
 async def animate_parade(client, event):
     # Анимация парада: будем генерировать и обновлять картину
     for _ in range(50):  # Сделаем 50 шагов анимации
@@ -36,11 +47,13 @@ async def animate_parade(client, event):
         await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
 
-# Важно, чтобы этот код работал в асинхронной среде с библиотеками для Telegram
-# Например, Telethon или aiogram. Вот пример запуска с Telethon:
-
+# Главная функция, которая управляет всем процессом
 async def main(client, event):
-    await animate_parade(client, event)  # Запускаем анимацию парада
+    # Запускаем анимацию парада и выводим слова любви
+    await asyncio.gather(
+        animate_parade(client, event),  # Анимация парада сердечек
+        process_love_words(client, event)  # Выводим текст "I love you"
+    )
 
 
 async def process_build_place(client, event):
