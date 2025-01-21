@@ -39,15 +39,15 @@ def generate_parade_colored():
 
 
 async def process_love_words(event: NewMessage.Event):
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю тебя')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю тебя на всегда')
     await asyncio.sleep(0.5)
-    await client.edit_message(event.peer_id.user_id, event.message.id, 'i love you forever💗')
+    await client.edit_message(event.peer_id.user_id, event.message.id, 'Я люблю тебя на всегда 💗')
 
 
 async def process_build_place(event: NewMessage.Event):
