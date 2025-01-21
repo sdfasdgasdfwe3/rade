@@ -15,7 +15,7 @@ SCRIPT_VERSION = "0.0.9"
 # Глобальная переменная для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
 typing_speed = 0.2  # Стандартная скорость печатания
-cursor_symbol = "▮"  # Символ курсора для анимации текста
+cursor_symbol = "▮"  # Символ курсора для анимации
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -100,29 +100,28 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
 # Анимация текста
-@client.on(events.NewMessage(pattern=r'/(.*)'))
+@client.on(events.NewMessage())
 async def type_text(event):
     """Команда для печатания текста с анимацией."""
     global typing_speed, cursor_symbol, is_typing_enabled
     try:
-        if not event.out or not is_typing_enabled:
-            return
+        # Игнорируем сообщение, если анимация выключена или если это исходящее сообщение
+        if not event.out and is_typing_enabled:
+            text = event.text.strip()
 
-        text = event.pattern_match.group(1)
+            # Проверка на начало текста с буквы "Р"
+            if text.startswith('Р'):
+                typed_text = ""
 
-        # Проверяем, начинается ли текст с буквы "Р" (регистрозависимо)
-        if text.startswith('Р'):
-            typed_text = ""
+                for char in text:
+                    typed_text += char
+                    await event.edit(typed_text + cursor_symbol)
+                    await asyncio.sleep(typing_speed)
 
-            for char in text:
-                typed_text += char
-                await event.edit(typed_text + cursor_symbol)
-                await asyncio.sleep(typing_speed)
-
-            await event.edit(typed_text)
-        else:
-            # Если текст не начинается с "Р", просто отправим сообщение без анимации
-            await event.respond(text)
+                await event.edit(typed_text)
+            else:
+                # Если текст не начинается с "Р", не отправляем его вообще
+                await event.delete()  # Удаляем сообщение
     except Exception as e:
         print(f"Ошибка анимации: {e}")
         await event.reply("<b>Произошла ошибка во время выполнения команды.</b>", parse_mode='html')
