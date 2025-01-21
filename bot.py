@@ -1,8 +1,9 @@
 import os
 import json
 import requests
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 import subprocess
+import sys
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -52,7 +53,7 @@ def check_for_updates():
     except Exception as e:
         print(f"Ошибка при проверке обновлений {e}")
 
-# Проверяем наличие файла конфигурации
+# Проверка конфигурации
 if os.path.exists(CONFIG_FILE):
     try:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
@@ -76,7 +77,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
         API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
-        
+
         # Сохраняем данные в файл конфигурации
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump({
@@ -91,11 +92,17 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 # Инициализация клиента
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
-async def main():
+@client.on(events.NewMessage(pattern='/app'))
+async def handler(event):
     # Проверка и обновление скрипта
-    print("Проверка обновлений скрипта...")
+    await event.respond('Проверка обновлений скрипта...')
     check_for_updates()
 
+    # Перезапуск скрипта
+    await event.respond('Скрипт обновлен, выполняю перезапуск...')
+    os.execv(sys.executable, ['python'] + sys.argv)
+
+async def main():
     # Авторизация и подключение
     await client.start(phone=PHONE_NUMBER)
     print(f"Успешно авторизованы как {PHONE_NUMBER}")
