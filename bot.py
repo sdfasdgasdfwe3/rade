@@ -9,7 +9,7 @@ from telethon.sessions import SQLiteSession
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Исправленный URL
-SCRIPT_VERSION = "0.1.0"
+SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
 
@@ -99,12 +99,8 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
-# Используем SQLite-сессию в памяти (сессия не будет записана в файл)
-client = TelegramClient(
-    SQLiteSession(session=":memory:"),
-    API_ID,
-    API_HASH
-)
+# Создаем клиента без передачи параметра для сессии в памяти, Telethon по умолчанию будет использовать память для сессии.
+client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
