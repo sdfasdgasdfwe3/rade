@@ -1,3 +1,4 @@
+Давай добавим еще в самом низу 1 строку невидимого шрифта 
 import asyncio
 from random import choice
 
@@ -32,15 +33,15 @@ def generate_parade_colored():
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
-    await client.edit_message(event.chat_id, event.message.id, 'i')
+    await client.edit_message(event.chat_id, event.message.id, 'Ты')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love')
+    await client.edit_message(event.chat_id, event.message.id, 'Ты пошел')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you')
+    await client.edit_message(event.chat_id, event.message.id, 'Ты пошел нахуй')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you forever')
+    await client.edit_message(event.chat_id, event.message.id, 'Ты пошел нахуй долбаеб')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you forever💗')
+    await client.edit_message(event.chat_id, event.message.id, 'Ты пошел нахуй долбаеб ебаный💗')
 
 # Функция для анимации парада
 async def animate_parade(client, event):
