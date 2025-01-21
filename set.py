@@ -46,9 +46,9 @@ async def process_love_words(client, event):
 async def animate_parade(client, event):
     for _ in range(50):  # Сделаем 50 шагов анимации
         text = generate_parade_colored()  # Генерируем новый вариант парада
-        # Добавляем невидимый символ для выравнивания внутри <code>
-        text = f"<code>{text}</code>"
-        await client.edit_message(event.chat_id, event.message.id, text)  # Обновляем сообщение
+        # Добавляем невидимый символ для выравнивания
+        invisible_text = '\u200B' + text  # Невидимый символ перед текстом
+        await client.edit_message(event.chat_id, event.message.id, invisible_text)  # Обновляем сообщение
         await asyncio.sleep(EDIT_DELAY)  # Задержка для анимации
 
 # Главная функция, которая управляет всем процессом
@@ -64,21 +64,20 @@ async def process_build_place(client, event):
         output += '\n'
         for j in range(11):  # Уменьшаем количество символов в каждой строке
             output += HEART
-    # Добавляем <code> для корректного отображения в Telegram
-    output = f"<code>{output}</code>"
-    await client.edit_message(event.chat_id, event.message.id, output)
+    # Добавляем невидимые пробелы для выравнивания
+    invisible_output = '\u200B' + output  # Добавляем невидимый символ перед текстом
+    await client.edit_message(event.chat_id, event.message.id, invisible_output)
     await asyncio.sleep(EDIT_DELAY / 2)
 
 async def process_colored_parade(client, event):
     for i in range(50):
         text = generate_parade_colored()
-        # Добавляем <code> для корректного отображения в Telegram
-        text = f"<code>{text}</code>"
-        await client.edit_message(event.chat_id, event.message.id, text)
+        # Добавляем невидимые пробелы для выравнивания
+        invisible_text = '\u200B' + text  # Невидимый символ перед текстом
+        await client.edit_message(event.chat_id, event.message.id, invisible_text)
         await asyncio.sleep(EDIT_DELAY)
 
 async def magic_script(client, event):
     await process_build_place(client, event)
     await process_colored_parade(client, event)
     await process_love_words(client, event)
-
