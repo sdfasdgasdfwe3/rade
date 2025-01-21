@@ -4,7 +4,7 @@ import os
 import requests
 import json
 from telethon import TelegramClient, events
-from telethon.sessions import SQLiteSession
+from telethon.sessions import MemorySession  # Используем сессию в памяти
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -12,9 +12,6 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot
 SCRIPT_VERSION = "0.0.9"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = u"\u2588"  # Символ по умолчанию для анимации
-
-# Создание асинхронной блокировки для защиты доступа к базе данных
-lock = asyncio.Lock()
 
 # Функция для отмены локальных изменений в git
 def discard_local_changes():
@@ -97,10 +94,20 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
     except Exception as e:
         exit(1)
 
-SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
+# Создание клиента с сессией в памяти (без использования SQLite)
+client = TelegramClient(MemorySession(), API_ID, API_HASH)
 
-# Создание клиента с блокировкой на доступ к базе данных
-client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+# Обработчик для команды Magic, который позволяет запускать другой скрипт
+@client.on(events.NewMessage(pattern=r'Magic'))
+async def switch_script(event):
+    print("Получено сообщение Magic. Переход к другому скрипту...")
+
+    # Останавливаем текущий клиент
+    await client.disconnect()
+
+    # Запускаем новый скрипт
+    new_script = "/data/data/com.termux/files/home/rade/other_script.py"  # Путь к новому скрипту
+    subprocess.run(["python3", new_script])
 
 @client.on(events.NewMessage(pattern=r'p (.+)'))
 async def animated_typing(event):
@@ -121,22 +128,18 @@ async def animated_typing(event):
     except Exception as e:
         pass
 
-# Обработчик для команды Magic, который позволяет запускать другой скрипт
-@client.on(events.NewMessage(pattern=r'Magic'))
-async def switch_script(event):
-    print("Получено сообщение Magic. Переход к другому скрипту...")
-
-    # Останавливаем текущий клиент
-    await client.disconnect()
-
-    # Запускаем новый скрипт
-    new_script = "/data/data/com.termux/files/home/rade/other_script.py"  # Путь к новому скрипту
-    subprocess.run(["python3", new_script])
+# Создание асинхронной блокировки для защиты доступа к базе данных
+async def check_lock():
+    try:
+        await client.start(phone=PHONE_NUMBER)
+    except Exception as e:
+        print(f"Ошибка при подключении: {e}")
+        exit(1)
 
 async def main():
     print(f"Версия скрипта: {SCRIPT_VERSION}")
     check_for_updates()  # Проверка обновлений
-    await client.start(phone=PHONE_NUMBER)
+    await check_lock()  # Проверка блокировки и подключение
     print("Клиент Telegram успешно подключен!")
     await client.run_until_disconnected()
 
