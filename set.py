@@ -23,10 +23,10 @@ def generate_parade_colored():
     output = ''
     for c in PARADE_MAP:
         if c == '0':
-            output += HEART  # Пустое место - обычное сердце
+            output += ' '  # Пустое место
         elif c == '1':
             output += choice(COLORED_HEARTS)  # Цветное сердце
-        elif c == '\n':  # Если символ - новая строка, просто добавляем новую строку
+        elif c == '\n':  # Если символ - новая строка, добавляем новую строку
             output += '\n'
     return output
 
