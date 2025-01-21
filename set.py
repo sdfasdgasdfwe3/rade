@@ -32,15 +32,11 @@ def generate_parade_colored():
 
 # Функция для вывода слов "Я люблю тебя"
 async def process_love_words(client, event):
-    await client.edit_message(event.chat_id, event.message.id, 'i')
+    await client.edit_message(event.chat_id, event.message.id, 'Я')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love')
+    await client.edit_message(event.chat_id, event.message.id, 'Я люблю')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you')
-    await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you forever')
-    await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you forever💗')
+    await client.edit_message(event.chat_id, event.message.id, 'Я люблю тебя💗')
 
 # Функция для выравнивания текста по центру
 def center_text(text, width=50):
