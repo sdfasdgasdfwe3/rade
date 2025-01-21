@@ -58,7 +58,7 @@ async def process_love_words(client, event):
     await asyncio.sleep(1)
     await client.edit_message(event.chat_id, event.message.id, 'i love you forever')
     await asyncio.sleep(1)
-    await client.edit_message(event.chat_id, event.message.id, 'i love you forever💗')
+    await client.edit_message(event.chat_id, event.message.id, 'i love you forever🤍')  # Обновим на белое сердце
 
 # Функция для анимации парада
 async def animate_parade(client, event):
