@@ -16,8 +16,6 @@ PARADE_MAP = '''
 0111111111110
 0111111111110
 0111111111110
-0111111111110
-0111111111110
 0011111111100
 0001111111000
 0000111110000
@@ -44,11 +42,11 @@ def generate_parade_colored():
     # Центрируем каждую строку, добавляя пробелы с обеих сторон
     for line in lines:
         # Добавляем недостающие пробелы справа, чтобы длина строки была ровно 13
-        if len(line) < 13:
-            line = line + ' ' * (13 - len(line))  # Заполняем пробелами справа
+        if len(line) < 11:
+            line = line + ' ' * (11 - len(line))  # Заполняем пробелами справа
         # Рассчитываем количество пустых символов для центрирования
-        left_padding = (13 - len(line)) // 2
-        right_padding = 13 - len(line) - left_padding
+        left_padding = (11 - len(line)) // 2
+        right_padding = 11 - len(line) - left_padding
         centered_output += '\u200b' * left_padding + line + '\u200b' * right_padding + '\n'
     
     # Убираем лишний невидимый символ перед первой строкой
