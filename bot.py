@@ -125,7 +125,7 @@ async def pixel_destruction(client, event, text):
         for i in range(len(pixelated_text)):
             for j in range(len(pixelated_text[i])):
                 if random.random() < 0.1:  # С вероятностью 10% заменяем символ
-                    pixelated_text[i][j] = random.choice([".","◯"◢ "○", "⊙", "%"])
+                    pixelated_text[i][j] = random.choice([".","◯"◢" "○", "⊙", "%"])
         # Объединяем строки и отправляем
         displayed_text = "\n".join(["".join(line) for line in pixelated_text])
 
@@ -141,7 +141,7 @@ async def pixel_destruction(client, event, text):
 
     # Шаг 2: Постепенное исчезновение (разрушение)
     for _ in range(5):  # Количество шагов разрушения
-        displayed_text = "\n".join(["".join([random.choice([".", "◯"," "◢ "○", "⊙"]) for _ in range(len(line))]) for line in text_lines])
+        displayed_text = "\n".join(["".join([random.choice([".", "◯"," "◢" "○", "⊙"]) for _ in range(len(line))]) for line in text_lines])
 
         # Проверяем, изменился ли текст и отправляем только если есть изменения
         if displayed_text != previous_text and displayed_text.strip() != "":
