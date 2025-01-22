@@ -8,6 +8,8 @@ import asyncio
 import set
 import random
 import importlib
+import animation_1  # Модуль для анимации 1
+import animation_2  # Модуль для анимации 2
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -23,6 +25,7 @@ selected_animation = 1  # Выбранная анимация по умолча�
 # Список анимаций
 animations = {
     1: "Стандартная анимация",
+    2: "Анимация 2"
 }
 
 # Функция для отмены локальных изменений в git
@@ -102,34 +105,45 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
 
 async def animate_text(client, event, text):
-    displayed_text = ""
-    for char in text:
-        displayed_text += char
-        await client.edit_message(event.chat_id, event.message.id, displayed_text + cursor_symbol)
-        await asyncio.sleep(typing_speed)
-    await client.edit_message(event.chat_id, event.message.id, displayed_text)
+    """Вызывает соответствующую анимацию в зависимости от выбора пользователя."""
+    global selected_animation
+    if selected_animation == 1:
+        # Стандартная анимация
+        displayed_text = ""
+        for char in text:
+            displayed_text += char
+            await client.edit_message(event.chat_id, event.message.id, displayed_text + cursor_symbol)
+            await asyncio.sleep(typing_speed)
+        await client.edit_message(event.chat_id, event.message.id, displayed_text)
+    elif selected_animation == 2:
+        # Анимация 2
+        await animation_2.run_animation(client, event, text)
+    else:
+        await event.reply("Выбранная анимация недоступна.")
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
+    """Обрабатывает текст для анимации."""
     if event.out:
         command_text = event.raw_text
         if len(command_text.split()) > 1:
             text_to_animate = command_text.partition(' ')[2]
-            if selected_animation == 1:
-                await animate_text(client, event, text_to_animate)
+            await animate_text(client, event, text_to_animate)
         else:
             await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
 
 @client.on(events.NewMessage(pattern='/1'))
 async def list_animations(event):
+    """Отправляет список доступных анимаций."""
     if event.out:
         animation_list = "Анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
         await event.reply(animation_list)
 
 @client.on(events.NewMessage(pattern='^\\d+$'))
 async def change_animation(event):
+    """Меняет текущую анимацию и сохраняет выбор."""
+    global selected_animation
     if event.out:
-        global selected_animation
         animation_number = int(event.raw_text)
         if animation_number in animations:
             selected_animation = animation_number
