@@ -6,6 +6,10 @@ import sys
 import requests
 from telethon import TelegramClient, events
 import asyncio
+import shutil
+
+# Папка для модулей в Termux
+MODULES_PATH = "/data/data/com.termux/files/home/modules"
 
 # Имя файла конфигурации
 CONFIG_FILE = "config.json"
@@ -31,8 +35,6 @@ if os.path.exists(CONFIG_FILE):
         API_ID = config.get("API_ID")
         API_HASH = config.get("API_HASH")
         PHONE_NUMBER = config.get("PHONE_NUMBER")
-        typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
-        cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
     except (json.JSONDecodeError, KeyError) as e:
         print(f"Ошибка чтения конфигурации: {e}. Попробуем запросить данные заново.")
         API_ID = None
@@ -57,9 +59,7 @@ if not API_ID or not API_HASH or not PHONE_NUMBER:
             json.dump({
                 "API_ID": API_ID,
                 "API_HASH": API_HASH,
-                "PHONE_NUMBER": PHONE_NUMBER,
-                "typing_speed": DEFAULT_TYPING_SPEED,
-                "cursor_symbol": DEFAULT_CURSOR
+                "PHONE_NUMBER": PHONE_NUMBER
             }, f)
         print("Данные успешно сохранены в конфигурации.")
     except Exception as e:
@@ -71,19 +71,6 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 
 # Создаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
-
-# Функция установки зависимостей
-def install_dependencies():
-    print("Проверяем зависимости...")
-    DEPENDENCIES = ["telethon", "tinydb", "requests"]
-    for package in DEPENDENCIES:
-        try:
-            __import__(package)
-            print(f"Библиотека '{package}' уже установлена.")
-        except ImportError:
-            print(f"Устанавливаем библиотеку '{package}'...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-    print("Все зависимости установлены.")
 
 # Функция для принудительного обновления скрипта из GitHub
 def update_script():
@@ -105,33 +92,42 @@ def update_script():
     except Exception as e:
         print(f"Ошибка при обновлении скрипта: {e}")
 
-# Пример команды для анимированного ввода текста
-@client.on(events.NewMessage(pattern=r'p (.+)'))
-async def animated_typing(event):
-    """
-    Команда для печатания текста с анимацией.
-    """
-    global typing_speed, cursor_symbol
+# Обрабатываем событие загрузки файла
+@client.on(events.NewMessage(pattern='/upload_module'))
+async def handle_file(event):
+    if event.file:
+        # Получаем путь к загруженному файлу
+        file_name = event.file.name
+        file_path = f'/tmp/{file_name}'
+
+        # Скачиваем файл
+        await event.download(file_path)
+        print(f"Файл {file_name} загружен.")
+
+        # Перемещаем файл в папку с модулями
+        target_path = os.path.join(MODULES_PATH, file_name)
+        shutil.move(file_path, target_path)
+        print(f"Модуль {file_name} перемещен в {MODULES_PATH}.")
+
+        # Перезагружаем бота
+        await client.send_message(event.chat_id, "Модуль установлен. Бот перезагружается...")
+        os.execv(sys.executable, ['python'] + sys.argv)
+
+# Отображение списка установленных модулей
+@client.on(events.NewMessage(pattern='/list_modules'))
+async def list_modules(event):
     try:
-        if not event.out:
-            return
-
-        text = event.pattern_match.group(1)
-        typed_text = ""
-
-        for char in text:
-            typed_text += char
-            await event.edit(typed_text + cursor_symbol)
-            await asyncio.sleep(typing_speed)
+        modules = os.listdir(MODULES_PATH)
+        if modules:
+            await event.reply("Установленные модули:\n" + "\n".join(modules))
+        else:
+            await event.reply("Нет установленных модулей.")
     except Exception as e:
-        print(f"Ошибка в обработчике текста: {e}")
+        await event.reply(f"Ошибка при получении списка модулей: {e}")
 
 # Основная логика
 async def main():
-    # Устанавливаем зависимости
-    install_dependencies()
-
-    # Принудительное обновление скрипта
+    # Обновление скрипта из GitHub
     update_script()
 
     # Если сессия не существует, проходим авторизацию
