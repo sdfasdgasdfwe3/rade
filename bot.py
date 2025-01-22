@@ -126,6 +126,10 @@ async def main():
 
     except Exception as e:
         print(f"Произошла ошибка в main: {e}")
+        # Логируем ошибку, чтобы она была видна
 
 if __name__ == "__main__":
-    client.loop.run_until_complete(main())
+    try:
+        client.loop.run_until_complete(main())
+    except Exception as e:
+        print(f"Ошибка при запуске бота: {e}")
