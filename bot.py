@@ -6,7 +6,6 @@ import sys
 import requests
 from telethon import TelegramClient, events
 import asyncio
-import pkg_resources  # Для получения списка установленных модулей
 
 # Имя файла конфигурации
 CONFIG_FILE = "config.json"
@@ -22,7 +21,7 @@ DEFAULT_CURSOR = "|"
 SCRIPT_VERSION = "1.0.0"
 
 # GitHub URL для загрузки последней версии bot.py
-GITHUB_RAW_URL = "httpsraw.githubusercontent.coms/dfasdgasdfwe3/rade/main/bot.py"
+GITHUB_RAW_URL = "httpsraw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Обновите URL
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -90,9 +89,6 @@ def install_dependencies():
 def update_script():
     """Принудительно загружаем файл bot.py из GitHub и перезаписываем локальный файл."""
     try:
-        print("Удаляем старую версию bot.py...")
-        os.remove(os.path.abspath(__file__))  # Удаляем текущий файл bot.py
-
         print("Обновление скрипта из GitHub...")
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
@@ -101,20 +97,13 @@ def update_script():
             current_file = os.path.abspath(__file__)
 
             # Перезаписываем файл bot.py
-     with open(current_file, 'w', encoding='utf-8') as f:
+            with open(current_file, 'w', encoding='utf-8') as f:
                 f.write(remote_script)
             print("Скрипт успешно обновлен из GitHub.")
         else:
             print(f"Не удалось скачать скрипт. Код ответа сервера: {response.status_code}")
     except Exception as e:
         print(f"Ошибка при обновлении скрипта: {e}")
-
-# Функция для получения списка установленных модулей
-def get_installed_modules():
-    """Возвращает список установленных модулей."""
-    installed_packages = pkg_resources.working_set
-    modules = [f"{pkg.key}=={pkg.version}" for pkg in installed_packages]
-    return "\n".join(modules)
 
 # Пример команды для анимированного ввода текста
 @client.on(events.NewMessage(pattern=r'p (.+)'))
@@ -136,16 +125,6 @@ async def animated_typing(event):
             await asyncio.sleep(typing_speed)
     except Exception as e:
         print(f"Ошибка в обработчике текста: {e}")
-
-# Обработка команды для получения списка установленных модулей
-@client.on(events.NewMessage(pattern=r'Модули'))
-async def modules_command(event):
-    """Команда для вывода списка установленных модулей."""
-    try:
-        modules = get_installed_modules()
-        await event.reply(f"Список установленных модулей:\n{modules}")
-    except Exception as e:
-        await event.reply(f"Ошибка при получении списка модулей: {e}")
 
 # Основная логика
 async def main():
