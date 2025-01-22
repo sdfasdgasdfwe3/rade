@@ -1,0 +1,44 @@
+import os
+import shutil
+import subprocess
+import sys
+
+# Путь к файлу в Downloads
+download_path = "/storage/emulated/0/Download/install_module.py"
+# Путь к домашней папке Termux
+termux_path = os.path.expanduser("~") + "/install_module.py"
+
+# Функция для перемещения файла
+def move_file():
+    try:
+        # Проверяем, существует ли файл в папке Downloads
+        if os.path.exists(download_path):
+            # Перемещаем файл в папку Termux
+            shutil.move(download_path, termux_path)
+            print(f"File moved to {termux_path}")
+        else:
+            print(f"File not found at {download_path}")
+    except Exception as e:
+        print(f"Error moving file: {e}")
+
+# Функция для установки модуля
+def install_module():
+    try:
+        # Попытаться импортировать модуль
+        import requests
+        print(f"Module 'requests' is already installed.")
+    except ImportError:
+        # Если модуль не найден, установить его
+        print(f"Module 'requests' not found. Installing...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", 'requests'])
+        print(f"Module 'requests' installed successfully.")
+
+# Основная логика
+def main():
+    # Перемещаем файл в домашнюю папку Termux
+    move_file()
+    # Устанавливаем модуль
+    install_module()
+
+if __name__ == "__main__":
+    main()
