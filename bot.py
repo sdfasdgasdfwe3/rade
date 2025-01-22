@@ -137,6 +137,11 @@ async def change_animation(event):
                 if msg.out:
                     await client.delete_messages(event.chat_id, msg.id)
 
+@client.on(events.NewMessage(pattern='/magic'))
+async def magic_handler(event):
+    # Переход в set.py и вызов функции magic_script
+    await set.magic_script(client, event)
+
 async def main():
     await client.start(phone=PHONE_NUMBER)
     print(f"Успешно авторизованы как {PHONE_NUMBER}")
