@@ -8,8 +8,8 @@ import asyncio
 import set
 import random
 import importlib
-import an_1.py
-import an_2.py
+import an_1
+import an_2
 
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
