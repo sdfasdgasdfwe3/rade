@@ -3,7 +3,7 @@
 import asyncio
 import random
 
-async def pixel_destruction(client, event, text):
+async def run_animation(client, event, text):
     # Преобразуем текст на 4 строки для эффекта
     lines_count = 4
     chunk_size = len(text) // lines_count
