@@ -108,10 +108,10 @@ async def animate_text(client, event, text):
     global selected_animation
     if selected_animation == 1:
         # Стандартная анимация
-        await an_2.run_animation(client, event, text)
+        await an_1.run_animation(client, event, text)  # Вызываем анимацию из an_1
     elif selected_animation == 2:
         # Анимация 2
-        await an_2.run_animation(client, event, text)
+        await an_2.run_animation(client, event, text)  # Вызываем анимацию из an_2
     else:
         await event.reply("Выбранная анимация недоступна.")
 
