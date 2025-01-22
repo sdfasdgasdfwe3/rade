@@ -2,94 +2,60 @@ import os
 import shutil
 import subprocess
 import sys
-from telethon import TelegramClient
-from telethon.errors import SessionPasswordNeededError
 
-# Путь к файлу в Downloads
-download_path = "/storage/emulated/0/Download/install_module.py"
-# Путь к домашней папке Termux
-termux_path = os.path.expanduser("~") + "/install_module.py"
-# Путь для хранения данных авторизации
-auth_file_path = os.path.expanduser("~") + "/telegram_auth.session"
+# Путь, где файл должен находиться (домашняя директория Termux)
+target_path = os.path.expanduser("~") + "/Mer.py"
 
-# Ваши данные Telegram API (получите на https://my.telegram.org)
-API_ID = "your_api_id"
-API_HASH = "your_api_hash"
+# Проверка текущего местоположения файла
+current_path = os.path.abspath(__file__)
 
-# Функция для перемещения файла
-def move_file():
+# Функция для перемещения файла в целевую директорию
+def move_self():
     try:
-        # Проверяем, существует ли файл в папке Downloads
-        if os.path.exists(download_path):
-            # Перемещаем файл в папку Termux
-            shutil.move(download_path, termux_path)
-            print(f"File moved to {termux_path}")
+        if current_path != target_path:
+            print(f"Перемещаем файл из {current_path} в {target_path}...")
+            shutil.move(current_path, target_path)
+            print("Файл успешно перемещён. Пожалуйста, запустите его снова из Termux.")
+            sys.exit()  # Завершаем выполнение после перемещения
         else:
-            print(f"File not found at {download_path}")
+            print("Файл уже находится в целевой директории.")
     except Exception as e:
-        print(f"Error moving file: {e}")
+        print(f"Ошибка при перемещении файла: {e}")
 
-# Функция для установки модуля
-def install_module():
+# Функция для установки зависимостей
+def install_dependencies():
     try:
-        # Попытаться импортировать модуль
+        print("Проверяем наличие библиотеки 'requests'...")
         import requests
-        print(f"Module 'requests' is already installed.")
+        print("Библиотека 'requests' уже установлена.")
     except ImportError:
-        # Если модуль не найден, установить его
-        print(f"Module 'requests' not found. Installing...")
+        print("Библиотека 'requests' не найдена. Устанавливаем...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-        print(f"Module 'requests' installed successfully.")
+        print("Библиотека 'requests' успешно установлена.")
 
-# Функция для авторизации в Telegram
-def telegram_auth():
-    # Создаём TelegramClient
-    client = TelegramClient(auth_file_path, API_ID, API_HASH)
-
+# Основная задача
+def main_task():
+    print("Запускаем основную логику скрипта...")
     try:
-        # Подключаемся к Telegram
-        client.connect()
-
-        # Если пользователь не авторизован
-        if not client.is_user_authorized():
-            print("You are not authorized in Telegram.")
-            phone_number = input("Enter your phone number (with country code): ")
-
-            # Отправляем код подтверждения
-            client.send_code_request(phone_number)
-
-            # Вводим код подтверждения
-            code = input("Enter the code you received: ")
-
-            # Входим в аккаунт
-            try:
-                client.sign_in(phone_number, code)
-            except SessionPasswordNeededError:
-                # Если Telegram запрашивает пароль 2FA
-                password = input("Your 2FA password: ")
-                client.sign_in(password=password)
-
-            print("Authorization successful!")
+        import requests
+        response = requests.get("https://www.google.com", timeout=5)
+        if response.status_code == 200:
+            print("Интернет соединение активно.")
         else:
-            print("Already authorized in Telegram.")
-
-        # Возвращаем клиента для дальнейшего использования
-        return client
-    except Exception as e:
-        print(f"Error during Telegram authorization: {e}")
-    finally:
-        client.disconnect()
+            print("Не удалось подключиться к интернету.")
+    except requests.ConnectionError:
+        print("Нет подключения к интернету.")
 
 # Основная логика
 def main():
-    # Перемещаем файл в домашнюю папку Termux
-    move_file()
+    # Перемещаем файл, если требуется
+    move_self()
 
-    # Устанавливаем модуль
-    install_module()
+    # Устанавливаем зависимости
+    install_dependencies()
 
-    # Авторизация в Telegram
-    telegram_auth()
+    # Выполняем основную задачу
+    main_task()
 
 if __name__ == "__main__":
     main()
