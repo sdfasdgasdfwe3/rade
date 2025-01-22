@@ -2,7 +2,7 @@ import asyncio
 
 async def run_animation(client, event, text):
     """Стандартная анимация текста"""
-    typing_speed = 1.5  # скорость печатания
+    typing_speed = 0.5  # скорость печатания
     cursor_symbol = "▮"  # Символ курсора
 
     displayed_text = ""
