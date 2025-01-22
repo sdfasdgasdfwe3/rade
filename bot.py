@@ -8,24 +8,23 @@ import asyncio
 import set
 import random
 import importlib
-import animation_1  # Модуль для анимации 1
-import animation_2  # Модуль для анимации 2
+import an_1.py
+import an_2.py
 
-# Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 SCRIPT_VERSION = "0.0.9"
 
-# Глобальные переменные для управления анимацией
-is_typing_enabled = True  # Флаг, включающий анимацию
-typing_speed = 1.5  # Уменьшенная скорость печатания (в два раза быстрее)
-cursor_symbol = "▮"  # Символ курсора для анимации
-selected_animation = 1  # Выбранная анимация по умолчанию
+
+is_typing_enabled = True
+typing_speed = 1.5  
+cursor_symbol = "▮"  
+selected_animation = 1  
 
 # Список анимаций
 animations = {
-    1: "Стандартная анимация",
-    2: "Анимация 2"
+    1: "Курсор анимации ▮",
+    2: "Рандомные кругляшки"
 }
 
 # Функция для отмены локальных изменений в git
@@ -109,10 +108,10 @@ async def animate_text(client, event, text):
     global selected_animation
     if selected_animation == 1:
         # Стандартная анимация
-        await animation_1.run_animation(client, event, text)
+        await an_2.run_animation(client, event, text)
     elif selected_animation == 2:
         # Анимация 2
-        await animation_2.run_animation(client, event, text)
+        await an_2.run_animation(client, event, text)
     else:
         await event.reply("Выбранная анимация недоступна.")
 
