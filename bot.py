@@ -15,7 +15,6 @@ SESSION_FILE = None
 
 # Значения по умолчанию для дополнительных параметров
 DEFAULT_TYPING_SPEED = 0.1
-DEFAULT_CURSOR = "|"
 
 # Текущая версия скрипта
 SCRIPT_VERSION = "1.0.0"
@@ -104,27 +103,6 @@ def update_script():
             print(f"Не удалось скачать скрипт. Код ответа сервера: {response.status_code}")
     except Exception as e:
         print(f"Ошибка при обновлении скрипта: {e}")
-
-# Пример команды для анимированного ввода текста
-@client.on(events.NewMessage(pattern=r'p (.+)'))
-async def animated_typing(event):
-    """
-    Команда для печатания текста с анимацией.
-    """
-    global typing_speed, cursor_symbol
-    try:
-        if not event.out:
-            return
-
-        text = event.pattern_match.group(1)
-        typed_text = ""
-
-        for char in text:
-            typed_text += char
-            await event.edit(typed_text + cursor_symbol)
-            await asyncio.sleep(typing_speed)
-    except Exception as e:
-        print(f"Ошибка в обработчике текста: {e}")
 
 # Основная логика
 async def main():
