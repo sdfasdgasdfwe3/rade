@@ -31,7 +31,6 @@ if os.path.exists(CONFIG_FILE):
         API_HASH = config.get("API_HASH")
         PHONE_NUMBER = config.get("PHONE_NUMBER")
         typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
-        cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
     except (json.JSONDecodeError, KeyError) as e:
         print(f"Ошибка чтения конфигурации: {e}. Попробуем запросить данные заново.")
         API_ID = None
