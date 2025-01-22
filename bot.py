@@ -141,7 +141,7 @@ async def change_animation(event):
         animation_number = int(event.raw_text)
         if animation_number in animations:
             selected_animation = animation_number
-            messages = await client.get_messages(event.chat_id, limit=3)
+            messages = await client.get_messages(event.chat_id, limit=4)
             for msg in messages:
                 if msg.out:
                     await client.delete_messages(event.chat_id, msg.id)
