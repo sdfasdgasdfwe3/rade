@@ -17,7 +17,7 @@ SCRIPT_VERSION = "0.0.9"
 
 
 is_typing_enabled = True
-typing_speed = 1.5  
+typing_speed = 5  
 cursor_symbol = "▮"  
 selected_animation = 1  
 
