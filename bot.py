@@ -72,16 +72,23 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Создаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция для принудительного обновления скрипта из GitHub
 def update_script():
     """Принудительно загружаем файл bot.py из GitHub и перезаписываем локальный файл."""
     try:
         print("Обновление скрипта из GitHub...")
+
+        # Получаем текущий путь скрипта
+        current_file = os.path.abspath(__file__)
+
+        # Проверка, что обновляем именно bot.py, а не другие файлы
+        if not current_file.endswith("bot.py"):
+            print("Этот файл не является bot.py, обновление не выполнено.")
+            return
+
+        # Загрузка последней версии скрипта с GitHub
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
-            # Получаем текст скрипта с GitHub
             remote_script = response.text
-            current_file = os.path.abspath(__file__)
 
             # Перезаписываем файл bot.py
             with open(current_file, 'w', encoding='utf-8') as f:
@@ -89,6 +96,7 @@ def update_script():
             print("Скрипт успешно обновлен из GitHub.")
         else:
             print(f"Не удалось скачать скрипт. Код ответа сервера: {response.status_code}")
+
     except Exception as e:
         print(f"Ошибка при обновлении скрипта: {e}")
 
