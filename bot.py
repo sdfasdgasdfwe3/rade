@@ -1,6 +1,7 @@
 import os
 import importlib
 import subprocess
+import sys
 import requests
 from telethon import TelegramClient, events
 
@@ -21,21 +22,31 @@ bot_file = "bot.py"
 # GitHub URL для загрузки последней версии bot.py
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/yourusername/yourrepo/main/bot.py"  # Обновите URL
 
+# Список зависимостей
+DEPENDENCIES = ["telethon", "tinydb", "requests"]
+
 # Создаем клиента с указанием имени сессии
 client = TelegramClient(session_file, api_id, api_hash)
+
+# Установка зависимостей
+def install_dependencies():
+    print("Проверяем зависимости...")
+    for package in DEPENDENCIES:
+        try:
+            __import__(package)
+            print(f"Библиотека '{package}' уже установлена.")
+        except ImportError:
+            print(f"Устанавливаем библиотеку '{package}'...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+    print("Все зависимости установлены.")
 
 # Функция для обновления репозитория и перезаписи главного файла, но с сохранением сессии
 def update_repository():
     try:
-        # Сохраняем текущие изменения в рабочем каталоге
         print("Обновление репозитория...")
 
-        # Обновляем репозиторий (сделаем git pull)
+        # Обновляем репозиторий (git pull)
         subprocess.run(["git", "pull", "origin", "main"], check=True)
-
-        # Перезаписываем все файлы, кроме сессии
-        print("Перезаписываем файлы... (исключая сессию авторизации)")
-        subprocess.run(["git", "checkout", "origin/main", "--", "."], check=True)
 
         # Убедимся, что файл сессии не будет перезаписан
         if os.path.exists(session_file):
@@ -44,7 +55,6 @@ def update_repository():
             print("Ошибка: файл сессии не найден!")
 
         print("Репозиторий успешно обновлен!")
-
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при обновлении репозитория: {e}")
 
@@ -95,6 +105,9 @@ async def on_new_message(event):
 
 # Основная логика
 async def main():
+    # Устанавливаем зависимости
+    install_dependencies()
+
     # Обновляем файл bot.py с GitHub
     update_bot_file_from_github()
 
