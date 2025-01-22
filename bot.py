@@ -101,7 +101,7 @@ def update_script():
             current_file = os.path.abspath(__file__)
 
             # Перезаписываем файл bot.py
-            with open(current_file, 'w', encoding='utf-8') as f:
+     with open(current_file, 'w', encoding='utf-8') as f:
                 f.write(remote_script)
             print("Скрипт успешно обновлен из GitHub.")
         else:
