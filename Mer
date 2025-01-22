@@ -4,9 +4,9 @@ import subprocess
 import sys
 
 # Путь к файлу в Downloads
-download_path = "/storage/emulated/0/Download/install_module.py"
+download_path = "/storage/emulated/0/Download/Mer.py"
 # Путь к домашней папке Termux
-termux_path = os.path.expanduser("~") + "/install_module.py"
+termux_path = os.path.expanduser("~") + "/Mer.py"
 
 # Функция для перемещения файла
 def move_file():
@@ -22,7 +22,7 @@ def move_file():
         print(f"Error moving file: {e}")
 
 # Функция для установки модуля
-def install_module():
+def Mer():
     try:
         # Попытаться импортировать модуль
         import requests
