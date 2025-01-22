@@ -135,17 +135,21 @@ async def list_animations(event):
 
 @client.on(events.NewMessage(pattern='^\\d+$'))
 async def change_animation(event):
-    """Меняет текущую анимацию и сохраняет выбор."""
-    global selected_animation
-    if event.out:
+    if event.out:  # Обрабатываем только свои сообщения
+        global selected_animation
         animation_number = int(event.raw_text)
         if animation_number in animations:
             selected_animation = animation_number
-            messages = await client.get_messages(event.chat_id, limit=4)
-            for msg in messages:
-                if msg.out:
-                    await client.delete_messages(event.chat_id, msg.id)
-
+            
+            # Получаем все сообщения из чата
+            messages = await client.get_messages(event.chat_id, limit=10)  # Получаем последние 10 сообщений
+            # Фильтруем сообщения, отправленные ботом
+            bot_messages = [msg for msg in messages if msg.out]
+            
+            # Удаляем последние 3 сообщения бота
+            for msg in bot_messages[:3]:  # Удаляем только первые 3 из списка
+                await client.delete_messages(event.chat_id, msg.id)
+            
 @client.on(events.NewMessage(pattern='/magic'))
 async def magic_handler(event):
     # Переход в set.py и вызов функции magic_script
