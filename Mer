@@ -3,42 +3,55 @@ import shutil
 import subprocess
 import sys
 
-# Путь к файлу в Downloads
-download_path = "/storage/emulated/0/Download/Mer.py"
-# Путь к домашней папке Termux
-termux_path = os.path.expanduser("~") + "/Mer.py"
+# Путь, где файл должен находиться (домашняя директория Termux)
+target_path = os.path.expanduser("~") + "/Mer.py"
 
-# Функция для перемещения файла
-def move_file():
+# Проверка текущего местоположения файла
+current_path = os.path.abspath(__file__)
+
+# Функция для перемещения файла в целевую директорию
+def move_self():
     try:
-        # Проверяем, существует ли файл в папке Downloads
-        if os.path.exists(download_path):
-            # Перемещаем файл в папку Termux
-            shutil.move(download_path, termux_path)
-            print(f"File moved to {termux_path}")
+        if current_path != target_path:
+            print(f"Перемещаем файл из {current_path} в {target_path}...")
+            shutil.move(current_path, target_path)
+            print("Файл успешно перемещён. Пожалуйста, запустите его снова из Termux.")
+            sys.exit()  # Завершаем выполнение после перемещения
         else:
-            print(f"File not found at {download_path}")
+            print("Файл уже находится в целевой директории.")
     except Exception as e:
-        print(f"Error moving file: {e}")
+        print(f"Ошибка при перемещении файла: {e}")
 
-# Функция для установки модуля
-def Mer():
+# Функция для установки библиотек
+def install_dependencies():
     try:
-        # Попытаться импортировать модуль
+        print("Проверяем необходимые библиотеки...")
         import requests
-        print(f"Module 'requests' is already installed.")
+        print("Библиотека 'requests' уже установлена.")
     except ImportError:
-        # Если модуль не найден, установить его
-        print(f"Module 'requests' not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", 'requests'])
-        print(f"Module 'requests' installed successfully.")
+        print("Устанавливаем библиотеку 'requests'...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+        print("Библиотека 'requests' успешно установлена.")
+
+# Основная функция выполнения задач
+def main_task():
+    print("Запускаем основную логику скрипта...")
+    # Пример работы — проверка подключения к интернету
+    try:
+        import requests
+        response = requests.get("https://www.google.com", timeout=5)
+        if response.status_code == 200:
+            print("Интернет соединение активно.")
+        else:
+            print("Не удалось подключиться к интернету.")
+    except requests.ConnectionError:
+        print("Нет подключения к интернету.")
 
 # Основная логика
 def main():
-    # Перемещаем файл в домашнюю папку Termux
-    move_file()
-    # Устанавливаем модуль
-    install_module()
+    move_self()  # Перемещаем файл, если требуется
+    install_dependencies()  # Устанавливаем зависимости
+    main_task()  # Выполняем основную задачу
 
 if __name__ == "__main__":
     main()
