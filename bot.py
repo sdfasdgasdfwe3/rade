@@ -22,7 +22,7 @@ DEFAULT_CURSOR = "|"
 SCRIPT_VERSION = "1.0.0"
 
 # GitHub URL для загрузки последней версии bot.py
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/johndoe/myproject/main/bot.py"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -90,6 +90,9 @@ def install_dependencies():
 def update_script():
     """Принудительно загружаем файл bot.py из GitHub и перезаписываем локальный файл."""
     try:
+        print("Удаляем старую версию bot.py...")
+        os.remove(os.path.abspath(__file__))  # Удаляем текущий файл bot.py
+
         print("Обновление скрипта из GitHub...")
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
