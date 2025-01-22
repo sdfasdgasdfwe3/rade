@@ -33,7 +33,7 @@ async def run_animation(client, event, text):
         await asyncio.sleep(0.10)  # Используем уменьшенную скорость
 
     # Шаг 2: Постепенное исчезновение (разрушение)
-    for _ in range(3):  # Количество шагов разрушения
+    for _ in range(5):  # Количество шагов разрушения
         displayed_text = "\n".join(["".join([random.choice([".", "*", " ", "○", "⊙"]) for _ in range(len(line))]) for line in text_lines])
 
         # Проверяем, изменился ли текст и отправляем только если есть изменения
