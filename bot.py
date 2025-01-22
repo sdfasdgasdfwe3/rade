@@ -16,16 +16,12 @@ SCRIPT_VERSION = "0.0.9"
 # Глобальные переменные для управления анимацией
 is_typing_enabled = True  # Флаг, включающий анимацию
 typing_speed = 1.5  # Уменьшенная скорость печатания (в два раза быстрее)
-pixel_typing_speed = 0.10  # Уменьшенная скорость для пиксельного разрушения (в два раза быстрее)
 cursor_symbol = "▮"  # Символ курсора для анимации
 selected_animation = 1  # Выбранная анимация по умолчанию
 
 # Список анимаций
 animations = {
     1: "Стандартная анимация",
-    2: "Пиксельное разрушение",
-    4: "Текст с вибрацией",  # Новая анимация
-    5: "Слово-каскад",  # Новая анимация
 }
 
 # Функция для отмены локальных изменений в git
@@ -112,56 +108,6 @@ async def animate_text(client, event, text):
         await asyncio.sleep(typing_speed)
     await client.edit_message(event.chat_id, event.message.id, displayed_text)
 
-async def pixel_destruction(client, event, text):
-    lines_count = 4
-    chunk_size = len(text) // lines_count
-    text_lines = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
-
-    previous_text = ""
-    pixelated_text = [list(" " * len(line)) for line in text_lines]
-    for _ in range(5):
-        for i in range(len(pixelated_text)):
-            for j in range(len(pixelated_text[i])):
-                if random.random() < 0.1:
-                    pixelated_text[i][j] = random.choice([".", "◯", "⊙ ", "◎ ", "○"])
-        displayed_text = "\n".join(["".join(line) for line in pixelated_text])
-        if displayed_text != previous_text and displayed_text.strip() != "":
-            try:
-                await client.edit_message(event.chat_id, event.message.id, displayed_text)
-                previous_text = displayed_text
-            except ValueError:
-                pass
-        await asyncio.sleep(pixel_typing_speed)
-
-    for _ in range(5):
-        displayed_text = "\n".join(["".join([random.choice([".", "◯", "⊙ ", "◎ ", "○"]) for _ in range(len(line))]) for line in text_lines])
-        if displayed_text != previous_text and displayed_text.strip() != "":
-            try:
-                await client.edit_message(event.chat_id, event.message.id, displayed_text)
-                previous_text = displayed_text
-            except ValueError:
-                pass
-        await asyncio.sleep(pixel_typing_speed)
-
-    await client.edit_message(event.chat_id, event.message.id, text)
-
-# Новая анимация "Текст с вибрацией"
-async def vibrating_text(client, event, text):
-    vibration_patterns = ["", "  ", "   ", "    ", "     "]  # Разные смещения
-    displayed_text = ""
-    for char in text:
-        displayed_text += char
-        vibration = random.choice(vibration_patterns)  # Случайное вибрирование
-        await client.edit_message(event.chat_id, event.message.id, displayed_text + vibration)
-        await asyncio.sleep(0.05)
-
-# Новая анимация "Слово-каскад"
-async def cascading_text(client, event, text):
-    for i in range(len(text)):
-        displayed_text = "\n" * i + text[i:]  # Начинаем с одной буквы и добавляем новые
-        await client.edit_message(event.chat_id, event.message.id, displayed_text)
-        await asyncio.sleep(0.1)
-
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
     if event.out:
@@ -170,12 +116,6 @@ async def animate_handler(event):
             text_to_animate = command_text.partition(' ')[2]
             if selected_animation == 1:
                 await animate_text(client, event, text_to_animate)
-            elif selected_animation == 2:
-                await pixel_destruction(client, event, text_to_animate)
-            elif selected_animation == 4:
-                await vibrating_text(client, event, text_to_animate)
-            elif selected_animation == 5:
-                await cascading_text(client, event, text_to_animate)
         else:
             await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
 
@@ -201,12 +141,6 @@ async def main():
     await client.start(phone=PHONE_NUMBER)
     print(f"Успешно авторизованы как {PHONE_NUMBER}")
     await client.run_until_disconnected()
-
-# Новый обработчик для команды /magic
-@client.on(events.NewMessage(pattern='/magic'))
-async def magic_handler(event):
-    # Переход в set.py и вызов функции magic_script
-    await set.magic_script(client, event)
 
 if __name__ == "__main__":
     import asyncio
