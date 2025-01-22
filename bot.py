@@ -21,7 +21,7 @@ DEFAULT_CURSOR = "|"
 SCRIPT_VERSION = "1.0.0"
 
 # GitHub URL для загрузки последней версии bot.py
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/yourusername/yourrepo/main/bot.py"  # Обновите URL
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Обновите URL
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
