@@ -7,6 +7,7 @@ import sys
 import asyncio
 import set
 import random
+import importlib
 
 # Константы
 CONFIG_FILE = "config.json"
