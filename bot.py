@@ -1,36 +1,74 @@
 import os
+import json
 import importlib
 import subprocess
 import sys
 import requests
 from telethon import TelegramClient, events
 
-# Данные авторизации
-api_id = 123456  # Замените на свой API ID
-api_hash = "your_api_hash"  # Замените на свой API Hash
-phone = "your_phone_number"  # Замените на свой номер телефона
+# Имя файла конфигурации
+CONFIG_FILE = "config.json"
 
-# Папка для хранения модулей
-modules_path = "modules"
+# Имя файла сессии будет формироваться на основе номера телефона
+SESSION_FILE = None
 
-# Путь к файлу сессии
-session_file = "user_session"  # Уникальное имя сессии (можно добавить номер телефона или имя пользователя)
+# Значения по умолчанию для дополнительных параметров
+DEFAULT_TYPING_SPEED = 0.1
+DEFAULT_CURSOR = "|"
 
-# Путь к главному файлу (bot.py)
-bot_file = "bot.py"
+# Проверяем наличие файла конфигурации
+if os.path.exists(CONFIG_FILE):
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        API_ID = config.get("API_ID")
+        API_HASH = config.get("API_HASH")
+        PHONE_NUMBER = config.get("PHONE_NUMBER")
+        typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
+        cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Ошибка чтения конфигурации: {e}. Попробуем запросить данные заново.")
+        API_ID = None
+        API_HASH = None
+        PHONE_NUMBER = None
+else:
+    # Если файл не существует, запрашиваем данные у пользователя
+    API_ID = None
+    API_HASH = None
+    PHONE_NUMBER = None
 
-# GitHub URL для загрузки последней версии bot.py
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/yourusername/yourrepo/main/bot.py"  # Обновите URL
+# Если данные конфигурации не заданы, запрашиваем их у пользователя
+if not API_ID or not API_HASH or not PHONE_NUMBER:
+    try:
+        print("Пожалуйста, введите данные для авторизации в Telegram.")
+        API_ID = int(input("Введите ваш API ID: "))
+        API_HASH = input("Введите ваш API Hash: ").strip()
+        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
 
-# Список зависимостей
-DEPENDENCIES = ["telethon", "tinydb", "requests"]
+        # Сохраняем данные в файл конфигурации
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({
+                "API_ID": API_ID,
+                "API_HASH": API_HASH,
+                "PHONE_NUMBER": PHONE_NUMBER,
+                "typing_speed": DEFAULT_TYPING_SPEED,
+                "cursor_symbol": DEFAULT_CURSOR
+            }, f)
+        print("Данные успешно сохранены в конфигурации.")
+    except Exception as e:
+        print(f"Ошибка сохранения конфигурации: {e}")
+        exit(1)
 
-# Создаем клиента с указанием имени сессии
-client = TelegramClient(session_file, api_id, api_hash)
+# Уникальное имя файла для сессии
+SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 
-# Установка зависимостей
+# Создаем клиента Telegram
+client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+
+# Функция установки зависимостей
 def install_dependencies():
     print("Проверяем зависимости...")
+    DEPENDENCIES = ["telethon", "tinydb", "requests"]
     for package in DEPENDENCIES:
         try:
             __import__(package)
@@ -40,92 +78,36 @@ def install_dependencies():
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
     print("Все зависимости установлены.")
 
-# Функция для обновления репозитория и перезаписи главного файла, но с сохранением сессии
-def update_repository():
+# Пример команды для анимированного ввода текста
+@client.on(events.NewMessage(pattern=r'p (.+)'))
+async def animated_typing(event):
+    """
+    Команда для печатания текста с анимацией.
+    """
+    global typing_speed, cursor_symbol
     try:
-        print("Обновление репозитория...")
+        if not event.out:
+            return
 
-        # Обновляем репозиторий (git pull)
-        subprocess.run(["git", "pull", "origin", "main"], check=True)
+        text = event.pattern_match.group(1)
+        typed_text = ""
 
-        # Убедимся, что файл сессии не будет перезаписан
-        if os.path.exists(session_file):
-            print("Сессия авторизации сохранена.")
-        else:
-            print("Ошибка: файл сессии не найден!")
-
-        print("Репозиторий успешно обновлен!")
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при обновлении репозитория: {e}")
-
-# Функция для скачивания файла с GitHub и замены локальной копии
-def update_bot_file_from_github():
-    try:
-        print(f"Загружаем {bot_file} из GitHub...")
-        
-        # Скачать файл с указанного URL
-        response = requests.get(GITHUB_RAW_URL)
-        
-        # Проверка успешности загрузки
-        if response.status_code == 200:
-            with open(bot_file, "wb") as f:
-                f.write(response.content)
-            print(f"{bot_file} успешно обновлен из GitHub!")
-        else:
-            print(f"Ошибка загрузки файла: {response.status_code}")
-    
+        for char in text:
+            typed_text += char
+            await event.edit(typed_text + cursor_symbol)
+            await asyncio.sleep(typing_speed)
     except Exception as e:
-        print(f"Ошибка при обновлении файла с GitHub: {e}")
-
-# Функция для загрузки доступных модулей
-def load_modules():
-    modules = []
-    if not os.path.exists(modules_path):
-        os.makedirs(modules_path)
-    for file in os.listdir(modules_path):
-        if file.endswith(".py"):
-            module_name = file[:-3]  # Убираем .py
-            modules.append(module_name)
-    return modules
-
-# Загрузка и выполнение команд
-async def handle_message(event):
-    text = event.raw_text
-    modules = load_modules()
-
-    for module_name in modules:
-        module = importlib.import_module(f"{modules_path}.{module_name}")
-        if hasattr(module, "handle_command"):
-            await module.handle_command(client, event, text)
-
-# Обработчик сообщений
-@client.on(events.NewMessage)
-async def on_new_message(event):
-    await handle_message(event)
+        print(f"Ошибка в обработчике текста: {e}")
 
 # Основная логика
 async def main():
-    # Устанавливаем зависимости
     install_dependencies()
-
-    # Обновляем файл bot.py с GitHub
-    update_bot_file_from_github()
-
-    # Обновляем репозиторий и перезаписываем файлы
-    update_repository()
-
-    # Проверяем, что номер телефона указан
-    if not phone or not isinstance(phone, str):
-        print("Ошибка: номер телефона не указан или имеет неверный формат. Пожалуйста, укажите его в переменной 'phone'.")
-        return
-
-    # Если сессия не существует, нужно пройти авторизацию
-    await client.start(phone)
+    # Если сессия не существует, проходим авторизацию
+    await client.start(PHONE_NUMBER)
     print("Бот запущен и авторизация завершена!")
 
     # Запуск бота и ожидание новых сообщений
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    # Запуск асинхронного метода
     client.loop.run_until_complete(main())
