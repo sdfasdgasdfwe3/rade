@@ -125,10 +125,27 @@ async def list_modules(event):
     except Exception as e:
         await event.reply(f"Ошибка при получении списка модулей: {e}")
 
-# Основная логика
 async def main():
-    # Обновление скрипта из GitHub
-    update_script()
+    print("Запуск бота...")
+    try:
+        # Устанавливаем зависимости
+        print("Установка зависимостей...")
+        install_dependencies()
+
+        # Принудительное обновление скрипта
+        print("Обновление скрипта...")
+        update_script()
+
+        # Если сессия не существует, проходим авторизацию
+        print("Авторизация в Telegram...")
+        await client.start(PHONE_NUMBER)
+        print("Авторизация завершена!")
+
+        print("Запуск бота...")
+        await client.run_until_disconnected()
+
+    except Exception as e:
+        print(f"Произошла ошибка в main: {e}")
 
     # Если сессия не существует, проходим авторизацию
     await client.start(PHONE_NUMBER)
