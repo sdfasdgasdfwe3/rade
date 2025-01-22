@@ -73,10 +73,9 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Создаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция установки зависимостей
-def install_dependencies():
+ef install_dependencies():
     print("Проверяем зависимости...")
-    DEPENDENCIES = ["telethon", "tinydb", "requests"]
+    DEPENDENCIES = ["telethon", "tinydb", "requests", "setuptools"]
     for package in DEPENDENCIES:
         try:
             __import__(package)
@@ -84,7 +83,6 @@ def install_dependencies():
         except ImportError:
             print(f"Устанавливаем библиотеку '{package}'...")
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-    print("Все зависимости установлены.")
 
 # Функция для принудительного обновления скрипта из GitHub
 def update_script():
