@@ -8,7 +8,7 @@ from telethon import TelegramClient, events
 # Данные авторизации
 api_id = 123456  # Замените на свой API ID
 api_hash = "your_api_hash"  # Замените на свой API Hash
-phone = "your_phone_number"  # Замените на свой номер телефона или оставьте пустым
+phone = "your_phone_number"  # Замените на свой номер телефона
 
 # Папка для хранения модулей
 modules_path = "modules"
@@ -40,17 +40,40 @@ def install_dependencies():
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
     print("Все зависимости установлены.")
 
+# Функция для обновления репозитория и перезаписи главного файла, но с сохранением сессии
+def update_repository():
+    try:
+        print("Обновление репозитория...")
+
+        # Обновляем репозиторий (git pull)
+        subprocess.run(["git", "pull", "origin", "main"], check=True)
+
+        # Убедимся, что файл сессии не будет перезаписан
+        if os.path.exists(session_file):
+            print("Сессия авторизации сохранена.")
+        else:
+            print("Ошибка: файл сессии не найден!")
+
+        print("Репозиторий успешно обновлен!")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при обновлении репозитория: {e}")
+
 # Функция для скачивания файла с GitHub и замены локальной копии
 def update_bot_file_from_github():
     try:
         print(f"Загружаем {bot_file} из GitHub...")
+        
+        # Скачать файл с указанного URL
         response = requests.get(GITHUB_RAW_URL)
+        
+        # Проверка успешности загрузки
         if response.status_code == 200:
             with open(bot_file, "wb") as f:
                 f.write(response.content)
             print(f"{bot_file} успешно обновлен из GitHub!")
         else:
             print(f"Ошибка загрузки файла: {response.status_code}")
+    
     except Exception as e:
         print(f"Ошибка при обновлении файла с GitHub: {e}")
 
@@ -69,6 +92,7 @@ def load_modules():
 async def handle_message(event):
     text = event.raw_text
     modules = load_modules()
+
     for module_name in modules:
         module = importlib.import_module(f"{modules_path}.{module_name}")
         if hasattr(module, "handle_command"):
@@ -87,9 +111,12 @@ async def main():
     # Обновляем файл bot.py с GitHub
     update_bot_file_from_github()
 
-    # Проверяем, что номер телефона задан
-    if not phone:
-        print("Ошибка: номер телефона не указан в коде. Пожалуйста, укажите его в переменной 'phone'.")
+    # Обновляем репозиторий и перезаписываем файлы
+    update_repository()
+
+    # Проверяем, что номер телефона указан
+    if not phone or not isinstance(phone, str):
+        print("Ошибка: номер телефона не указан или имеет неверный формат. Пожалуйста, укажите его в переменной 'phone'.")
         return
 
     # Если сессия не существует, нужно пройти авторизацию
