@@ -109,12 +109,7 @@ async def animate_text(client, event, text):
     global selected_animation
     if selected_animation == 1:
         # Стандартная анимация
-        displayed_text = ""
-        for char in text:
-            displayed_text += char
-            await client.edit_message(event.chat_id, event.message.id, displayed_text + cursor_symbol)
-            await asyncio.sleep(typing_speed)
-        await client.edit_message(event.chat_id, event.message.id, displayed_text)
+        await animation_1.run_animation(client, event, text)
     elif selected_animation == 2:
         # Анимация 2
         await animation_2.run_animation(client, event, text)
