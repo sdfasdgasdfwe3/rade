@@ -22,7 +22,8 @@ DEFAULT_CURSOR = "|"
 SCRIPT_VERSION = "1.0.0"
 
 # GitHub URL для загрузки последней версии bot.py
-GITHUB_RAW_URL = "https://github.com/sdfasdgasdfwe3/rade/blob/main/bot.py"  # Обновите URL
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/johndoe/myproject/main/bot.py"
+
 
 # Проверяем наличие файла конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -73,9 +74,10 @@ SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 # Создаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-ef install_dependencies():
+# Функция установки зависимостей
+def install_dependencies():
     print("Проверяем зависимости...")
-    DEPENDENCIES = ["telethon", "tinydb", "requests", "setuptools"]
+    DEPENDENCIES = ["telethon", "tinydb", "requests"]
     for package in DEPENDENCIES:
         try:
             __import__(package)
@@ -83,6 +85,7 @@ ef install_dependencies():
         except ImportError:
             print(f"Устанавливаем библиотеку '{package}'...")
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+    print("Все зависимости установлены.")
 
 # Функция для принудительного обновления скрипта из GitHub
 def update_script():
