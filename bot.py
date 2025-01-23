@@ -1,6 +1,6 @@
 import os
 import sys
-import time
+import requests
 import git
 import subprocess
 import importlib
@@ -34,6 +34,38 @@ def setup_project_structure():
             f.write("gitpython\n")  # Добавьте другие зависимости по мере необходимости
     print("Проект настроен!")
 
+# Функция для скачивания файла с GitHub
+def download_file_from_github(url, dest_path):
+    try:
+        print(f"Скачиваю файл с {url}...")
+        response = requests.get(url)
+        response.raise_for_status()  # Проверка на ошибки HTTP
+        with open(dest_path, 'wb') as f:
+            f.write(response.content)
+        print(f"Файл успешно скачан по адресу: {dest_path}")
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"Ошибка при скачивании файла: {e}")
+        return False
+
+# Функция для обновления бота с GitHub
+def update_script_from_github():
+    file_url = "https://raw.githubusercontent.com/username/repository/main/bot.py"  # Вставьте свою ссылку на файл
+    dest_file = "bot.py"  # Путь, куда вы хотите сохранить файл (например, заменим текущий bot.py)
+
+    # Скачиваем новый файл и сохраняем его
+    if download_file_from_github(file_url, dest_file):
+        print("Обновление прошло успешно. Перезагружаю бота...")
+        restart_bot()
+    else:
+        print("Не удалось обновить файл.")
+
+# Перезапуск бота
+def restart_bot():
+    print("Перезагружаю бота...")
+    subprocess.Popen([sys.executable, os.path.abspath(__file__)])  # Запуск нового процесса
+    sys.exit()  # Завершаем старый процесс
+
 # Проверка наличия обновлений на GitHub
 def update_script():
     try:
@@ -55,12 +87,6 @@ def update_script():
     except Exception as e:
         print(f"Ошибка при обновлении: {e}")
         return False
-
-# Перезапуск бота
-def restart_bot():
-    print("Перезагружаю бота...")
-    subprocess.Popen([sys.executable, os.path.abspath(__file__)])  # Запуск нового процесса
-    sys.exit()  # Завершаем старый процесс
 
 # Загрузка модуля
 def load_module(module_name):
@@ -94,6 +120,9 @@ async def main():
     if update_script():
         restart_bot()
 
+    # Получение списка установленных модулей
+    get_installed_modules()
+
     # Проверка и установка модулей
     @client.on(events.NewMessage(pattern='/install_module'))
     async def install_module(event):
@@ -112,7 +141,6 @@ async def main():
 
     # Основной цикл бота
     while True:
-        # Код для обработки сообщений и команд
         pass
 
 # Запуск бота
