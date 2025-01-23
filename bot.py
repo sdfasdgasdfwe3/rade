@@ -6,8 +6,6 @@ import requests
 import importlib
 from telethon import TelegramClient, events
 import asyncio
-import time
-import threading
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -34,7 +32,28 @@ SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 # Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция для обновления главного файла
+# Функция для установки модуля
+def install_module(file_path):
+    """
+    Устанавливает Python-модуль из .py файла.
+    """
+    try:
+        module_name = os.path.basename(file_path).replace('.py', '')
+        destination = os.path.join(os.getcwd(), module_name + '.py')
+        
+        if os.path.exists(destination):
+            os.remove(destination)
+
+        os.rename(file_path, destination)
+        sys.path.append(os.getcwd())
+        importlib.import_module(module_name)
+        print(f"Модуль {module_name} успешно установлен.")
+        return True
+    except Exception as e:
+        print(f"Ошибка установки модуля: {e}")
+        return False
+
+# Функция для проверки и обновления главного файла
 def update_main_file():
     try:
         response = requests.get(GITHUB_RAW_URL)
@@ -45,6 +64,8 @@ def update_main_file():
                 with open(main_file_path, 'w', encoding='utf-8') as f:
                     f.write(response.text)
                 print("Главный файл bot.py обновлен.")
+                # Перезапуск бота после обновления главного файла
+                restart_bot()
             else:
                 print("Игнорируем обновление для не-основного файла.")
         else:
@@ -52,63 +73,35 @@ def update_main_file():
     except Exception as e:
         print(f"Ошибка обновления файла: {e}")
 
-# Функция для установки модуля
-def install_module(file_path):
-    """
-    Устанавливает Python-модуль из .py файла.
-    """
-    try:
-        # Получаем имя модуля и путь назначения
-        module_name = os.path.basename(file_path).replace('.py', '')
-        destination = os.path.join(os.getcwd(), module_name + '.py')
+# Функция для перезапуска бота
+def restart_bot():
+    print("Перезапуск бота после обновления...")
+    os.execv(sys.executable, ['python'] + sys.argv)
 
-        # Если файл с таким именем уже существует, перезаписываем его
-        if os.path.exists(destination):
-            print(f"Модуль {module_name} уже существует, перезаписываем...")
-            os.remove(destination)
+# Обработчик реакций на сообщения
+@client.on(events.Reaction)
+async def reaction_handler(event):
+    # Определяем, на какую реакцию реагировать, например на 👍
+    if event.emoji == "👍":
+        # Путь к файлу модуля
+        file_name = "your_module.py"  # Название модуля
+        file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
 
-        # Перемещаем файл в папку с ботом
-        os.rename(file_path, destination)
-        sys.path.append(os.getcwd())
-
-        # Импортируем модуль
-        importlib.import_module(module_name)
-        print(f"Модуль {module_name} успешно установлен.")
-        return True
-    except Exception as e:
-        print(f"Ошибка установки модуля: {e}")
-        return False
-
-# Функция для проверки новых файлов в папке загрузок
-def check_for_new_modules():
-    while True:
-        # Получаем список файлов в папке загрузок
-        files_in_downloads = os.listdir(DOWNLOADS_FOLDER)
-
-        # Фильтруем только Python файлы
-        py_files = [f for f in files_in_downloads if f.endswith('.py')]
-
-        if py_files:
-            for file_name in py_files:
-                file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
-                print(f"Найден новый файл модуля: {file_path}")
-
-                # Устанавливаем найденный модуль
-                if install_module(file_path):
-                    print(f"Модуль {file_name} успешно установлен.")
-                else:
-                    print(f"Не удалось установить модуль {file_name}.")
-
-                # Удаляем файл после установки (если нужно)
-                os.remove(file_path)
-                print(f"Файл {file_name} удален после установки.")
-
-        # Ожидаем 10 секунд перед следующей проверкой
-        time.sleep(10)
+        # Проверяем, существует ли файл в папке загрузок
+        if os.path.exists(file_path):
+            print(f"Модуль найден: {file_path}")
+            
+            # Устанавливаем модуль
+            if install_module(file_path):
+                await event.reply("Модуль установлен и активирован!")
+            else:
+                await event.reply("Не удалось установить модуль.")
+        else:
+            await event.reply("Модуль не найден в папке загрузок.")
 
 # Основная логика бота
 async def main():
-    # Обновляем главный файл
+    # Обновляем главный файл перед запуском бота
     update_main_file()
 
     # Начинаем авторизацию
@@ -118,13 +111,5 @@ async def main():
     # Запуск бота
     await client.run_until_disconnected()
 
-# Запускаем цикл проверки файлов в отдельном потоке
-def start_file_checking():
-    check_for_new_modules()
-
 if __name__ == "__main__":
-    # Запускаем проверку файлов в фоновом потоке
-    threading.Thread(target=start_file_checking, daemon=True).start()
-
-    # Запускаем асинхронную основную логику бота
     asyncio.run(main())
