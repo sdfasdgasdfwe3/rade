@@ -12,7 +12,7 @@ from inotify.constants import IN_CLOSE_WRITE  # Импортируем прав�
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/"  # Папка загрузок на Android
+DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/Download/"  # Папка загрузок на Android
 
 # Получаем данные конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -64,14 +64,16 @@ def install_module(file_path):
     try:
         module_name = os.path.basename(file_path).replace('.py', '')
         destination = os.path.join(os.getcwd(), module_name + '.py')
-        
+
         # Перемещаем файл из папки загрузок в рабочую директорию
+        print(f"Перемещаем файл из {file_path} в {destination}")
         os.rename(file_path, destination)
 
         # Добавляем путь в sys.path
         sys.path.append(os.getcwd())
 
         # Попытка импорта модуля
+        print(f"Пытаемся импортировать модуль {module_name}...")
         importlib.import_module(module_name)
         print(f"Модуль {module_name} установлен успешно.")
         return True
@@ -85,12 +87,15 @@ def monitor_downloads():
     Периодически проверяет папку загрузок на наличие новых файлов .py
     """
     inotify = Inotify()
+    print(f"Начат мониторинг папки: {DOWNLOADS_FOLDER}")
     inotify.add_watch(DOWNLOADS_FOLDER, mask=IN_CLOSE_WRITE)  # Используем правильную константу IN_CLOSE_WRITE
-    
+
     print("Начат мониторинг загрузок...")
 
     for event in inotify.event_gen(yield_nones=False):
         (_, event_type, path, _) = event
+        print(f"Обработано событие: {event_type}, файл: {path}")
+
         if event_type == 'IN_CLOSE_WRITE' and path.endswith('.py'):
             print(f"Найден новый файл: {path}")
             if install_module(path):
@@ -98,6 +103,8 @@ def monitor_downloads():
                 os.remove(path)  # Удаляем файл после установки
             else:
                 print(f"Ошибка установки модуля {path}")
+        else:
+            print(f"Пропущен файл: {path}, не является .py или не IN_CLOSE_WRITE")
 
 # Основная логика бота
 async def main():
