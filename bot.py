@@ -7,6 +7,7 @@ import time
 import asyncio
 from telethon import TelegramClient, events
 from inotify.adapters import Inotify
+from inotify.constants import IN_CLOSE_WRITE  # Импортируем правильную константу
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -84,7 +85,7 @@ def monitor_downloads():
     Периодически проверяет папку загрузок на наличие новых файлов .py
     """
     inotify = Inotify()
-    inotify.add_watch(DOWNLOADS_FOLDER, mask=Inotify.IN_CLOSE_WRITE)
+    inotify.add_watch(DOWNLOADS_FOLDER, mask=IN_CLOSE_WRITE)  # Используем правильную константу IN_CLOSE_WRITE
     
     print("Начат мониторинг загрузок...")
 
