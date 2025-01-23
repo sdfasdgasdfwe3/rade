@@ -116,14 +116,19 @@ async def handler(event):
 async def file_handler(event):
     if event.file and event.file.name.endswith(".py"):
         # Скачиваем файл в папку загрузок
+        print(f"Получен файл: {event.file.name}")
+        
+        # Путь для скачивания файла
         file_path = await event.download_media(DOWNLOADS_FOLDER)
-        print(f"Получен файл {file_path}")
+        print(f"Файл скачан в папку: {file_path}")
 
         # Устанавливаем модуль
         if install_module(file_path):
+            print(f"Модуль {file_path} успешно установлен.")
             # Перезапускаем бота после установки модуля
             restart_bot()
         else:
+            print("Ошибка при установке модуля.")
             await event.reply("Ошибка при установке модуля.")
 
 # Основная логика бота
