@@ -6,13 +6,13 @@ import importlib
 import time
 import asyncio
 from telethon import TelegramClient, events
-from inotify.adapters import Inotify
-from inotify.constants import IN_CLOSE_WRITE  # Импортируем правильную константу
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/Download/"  # Папка загрузок на Android
+DOWNLOADS_FOLDER = "/storage/emulated/0/Download/"  # Папка загрузок на Android
 
 # Получаем данные конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -81,30 +81,38 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Функция для мониторинга загрузок с использованием inotify
+# Обработчик событий для watchdog
+class DownloadHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        # Проверяем, что это файл с расширением .py
+        if event.is_directory:
+            return
+        if event.src_path.endswith('.py'):
+            print(f"Найден новый файл: {event.src_path}")
+            if install_module(event.src_path):
+                print(f"Модуль {event.src_path} установлен успешно.")
+                os.remove(event.src_path)  # Удаляем файл после установки
+            else:
+                print(f"Ошибка установки модуля {event.src_path}")
+
+# Функция для мониторинга загрузок с использованием watchdog
 def monitor_downloads():
     """
     Периодически проверяет папку загрузок на наличие новых файлов .py
     """
-    inotify = Inotify()
+    event_handler = DownloadHandler()
+    observer = Observer()
+    observer.schedule(event_handler, DOWNLOADS_FOLDER, recursive=False)
+    observer.start()
+
     print(f"Начат мониторинг папки: {DOWNLOADS_FOLDER}")
-    inotify.add_watch(DOWNLOADS_FOLDER, mask=IN_CLOSE_WRITE)  # Используем правильную константу IN_CLOSE_WRITE
 
-    print("Начат мониторинг загрузок...")
-
-    for event in inotify.event_gen(yield_nones=False):
-        (_, event_type, path, _) = event
-        print(f"Обработано событие: {event_type}, файл: {path}")
-
-        if event_type == 'IN_CLOSE_WRITE' and path.endswith('.py'):
-            print(f"Найден новый файл: {path}")
-            if install_module(path):
-                print(f"Модуль {path} установлен успешно.")
-                os.remove(path)  # Удаляем файл после установки
-            else:
-                print(f"Ошибка установки модуля {path}")
-        else:
-            print(f"Пропущен файл: {path}, не является .py или не IN_CLOSE_WRITE")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
 
 # Основная логика бота
 async def main():
