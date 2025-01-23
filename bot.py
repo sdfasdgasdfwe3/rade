@@ -79,7 +79,7 @@ def restart_bot():
     os.execv(sys.executable, ['python'] + sys.argv)
 
 # Обработчик реакции на сообщения
-@client.on(events.Reaction)
+@client.on(events.MessageReactions)
 async def reaction_handler(event):
     """
     Реагируем на реакции, например, на реакцию 👍 на сообщение с файлом.
