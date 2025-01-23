@@ -1,6 +1,6 @@
 # config.py
 
-api_id = 'YOUR_API_ID'  # Замените на ваш API ID
-api_hash = 'YOUR_API_HASH'  # Замените на ваш API Hash
-phone_number = 'YOUR_PHONE_NUMBER'  # Замените на ваш номер телефона
-repo_path = '/path/to/your/repo'  # Путь к репозиторию бота (если нужно обновление через Git)
+api_id = 123456  # Ваш реальный API ID (это число, а не строка)
+api_hash = 'your_api_hash'  # Ваш реальный API Hash
+phone_number = '+1234567890'  # Ваш номер телефона (с кодом страны)
+repo_path = '/path/to/your/repo'  # Путь к репозиторию, если используете Git
