@@ -7,6 +7,7 @@ import importlib
 from telethon import TelegramClient, events
 import asyncio
 import time
+import threading
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -114,11 +115,16 @@ async def main():
     await client.start(PHONE_NUMBER)
     print("Бот авторизован и запущен!")
 
-    # Запуск проверки новых файлов
-    check_for_new_modules()
-
     # Запуск бота
     await client.run_until_disconnected()
 
+# Запускаем цикл проверки файлов в отдельном потоке
+def start_file_checking():
+    check_for_new_modules()
+
 if __name__ == "__main__":
+    # Запускаем проверку файлов в фоновом потоке
+    threading.Thread(target=start_file_checking, daemon=True).start()
+
+    # Запускаем асинхронную основную логику бота
     asyncio.run(main())
