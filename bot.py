@@ -78,27 +78,24 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Функция для скачивания файла и установки
-async def download_and_install_module():
-    # Здесь вы можете добавить любой источник для скачивания файла. Например, скачивание с URL.
-    file_url = "https://raw.githubusercontent.com/your-repo/your-module.py"
-    file_name = "module.py"
+# Функция для проверки новых файлов
+def check_new_modules():
+    # Получаем список файлов в папке загрузок
+    files_in_downloads = os.listdir(DOWNLOADS_FOLDER)
     
-    # Скачиваем файл в нужную папку
-    file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
-    try:
-        response = requests.get(file_url)
-        with open(file_path, 'wb') as f:
-            f.write(response.content)
-        print(f"Файл успешно скачан в {file_path}")
-        
-        # После скачивания устанавливаем модуль
-        if install_module(file_path):
-            print(f"Модуль {file_name} успешно установлен.")
-        else:
-            print("Ошибка при установке модуля.")
-    except Exception as e:
-        print(f"Ошибка при скачивании файла: {e}")
+    # Фильтруем только Python файлы
+    py_files = [f for f in files_in_downloads if f.endswith('.py')]
+    
+    if py_files:
+        for file_name in py_files:
+            file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
+            print(f"Найден файл модуля: {file_path}")
+            
+            # Устанавливаем найденный модуль
+            if install_module(file_path):
+                print(f"Модуль {file_name} успешно установлен.")
+            else:
+                print(f"Не удалось установить модуль {file_name}.")
 
 # Обработчик команды для обновления главного файла
 @client.on(events.NewMessage(pattern="/update"))
@@ -131,6 +128,9 @@ def restart_bot():
 async def main():
     # Обновляем главный файл
     update_main_file()
+    
+    # Проверка наличия новых модулей в папке загрузок
+    check_new_modules()
     
     # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
