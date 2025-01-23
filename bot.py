@@ -1,59 +1,77 @@
 import os
-import asyncio
+import json
+import sys
+import importlib
+import subprocess
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaDocument
+import asyncio
 
 # Конфигурация
-API_ID = 'your_api_id'  # Ваш API_ID
-API_HASH = 'your_api_hash'  # Ваш API_HASH
-PHONE_NUMBER = 'your_phone_number'  # Ваш номер телефона
+API_ID = 'YOUR_API_ID'  # Замените на ваш API_ID
+API_HASH = 'YOUR_API_HASH'  # Замените на ваш API_HASH
+PHONE_NUMBER = 'YOUR_PHONE_NUMBER'  # Замените на ваш номер телефона
+DOWNLOADS_FOLDER = '/storage/emulated/0/Download/Telegram/'  # Папка для сохранения файлов
+MODULES_FOLDER = '/data/data/com.termux/files/home/rade/'  # Папка для модулей, где будут храниться скачанные файлы
 
-# Папка для загрузки файлов
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/"
-
-# Путь для сессии
-SESSION_FILE = 'session'
-
-# Устанавливаем клиента Telegram
+# Создаем сессию Telegram
+SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Обработчик реакции на сообщение
-@client.on(events.MessageReactions)
-async def reaction_handler(event):
-    """
-    Реагируем на реакции, например, на реакцию 👍 на сообщение с файлом.
-    """
-    if event.emoji == "👍":  # Проверка на нужную реакцию
-        print(f"Реакция {event.emoji} на сообщение от {event.sender_id}")
-        
-        # Получаем информацию о сообщении, на которое поставлена реакция
-        message = event.message
-        print(f"Реакция поставлена под сообщением ID {message.id} от {message.sender_id}")
+# Обработчик скачанных файлов
+def install_module(file_path):
+    """ Устанавливает Python-модуль из .py файла """
+    try:
+        module_name = os.path.basename(file_path).replace('.py', '')
+        destination = os.path.join(MODULES_FOLDER, module_name + '.py')
 
-        # Проверяем, есть ли файл в сообщении
-        if message.media:
-            if isinstance(message.media, MessageMediaDocument):
-                # Если это файл, то получаем его
-                file = message.media.document
-                file_name = file.attributes[0].file_name  # Получаем имя файла
-                print(f"Имя файла: {file_name}")
-                
-                # Скачиваем файл в папку загрузок
-                file_path = await event.download_media(DOWNLOADS_FOLDER)
-                print(f"Файл {file_name} скачан в папку {DOWNLOADS_FOLDER}")
-            else:
-                print("Сообщение не содержит файл.")
-        else:
-            print("Сообщение не содержит файла.")
+        # Перемещаем файл в нужную папку
+        os.rename(file_path, destination)
 
-# Основная логика бота
+        # Загружаем модуль
+        sys.path.append(MODULES_FOLDER)
+        importlib.import_module(module_name)
+        print(f"Модуль {module_name} установлен успешно.")
+        return True
+    except Exception as e:
+        print(f"Ошибка установки модуля: {e}")
+        return False
+
+# Обработчик событий для watchdog
+class DownloadHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        """ Когда появляется новый файл, скачиваем и устанавливаем его как модуль """
+        if event.is_directory:
+            return
+        if event.src_path.endswith('.py'):
+            print(f"Обнаружен новый файл: {event.src_path}")
+            # Устанавливаем новый модуль
+            install_module(event.src_path)
+
+# Мониторим папку для скачанных файлов
+def start_watching():
+    event_handler = DownloadHandler()
+    observer = Observer()
+    observer.schedule(event_handler, DOWNLOADS_FOLDER, recursive=False)
+    observer.start()
+    print(f"Мониторинг папки {DOWNLOADS_FOLDER} для новых файлов...")
+    
+    try:
+        while True:
+            # Бот будет работать и проверять изменения
+            asyncio.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
+
+# Основная логика
 async def main():
-    # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
-    print("Бот авторизован и запущен!")
+    print("Бот авторизован и отслеживает новые файлы...")
 
-    # Запуск бота
-    await client.run_until_disconnected()
+    # Запускаем мониторинг папки загрузок
+    start_watching()
 
 if __name__ == "__main__":
     asyncio.run(main())
