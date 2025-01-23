@@ -1,177 +1,121 @@
 import os
-import sys
 import json
 import requests
-import subprocess
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError
-from telethon.sessions import StringSession  # Используем StringSession вместо SQLite
+import subprocess
+import sys
+import asyncio
+import random
 
-# Конфигурация
-CONFIG_FILE = "config.json"  # Файл конфигурации
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/"  # Папка загрузок на Android
+# Константы
+CONFIG_FILE = "config.json"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
+SCRIPT_VERSION = "0.0.9"
 
-# Функция для создания необходимых файлов и папок при отсутствии
-def setup_project_structure():
-    if not os.path.exists('modules'):
-        os.makedirs('modules')
-
-    if not os.path.exists('installed_modules.txt'):
-        with open('installed_modules.txt', 'w') as f:
-            f.write("")
-
-    if not os.path.exists(CONFIG_FILE):
-        API_ID = input("Введите API_ID: ")
-        API_HASH = input("Введите API_HASH: ")
-        PHONE_NUMBER = input("Введите номер телефона: ")
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump({"API_ID": API_ID, "API_HASH": API_HASH, "PHONE_NUMBER": PHONE_NUMBER}, f)
-    print("Проект настроен!")
-
-# Загрузка конфигурации из файла
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        return config.get("API_ID"), config.get("API_HASH"), config.get("PHONE_NUMBER")
-    else:
-        print(f"Ошибка: файл конфигурации {CONFIG_FILE} не найден.")
-        sys.exit(1)
-
-# Функция для скачивания файла с GitHub
-def download_file_from_github(url, dest_path):
+# Функция для отмены локальных изменений в git
+def discard_local_changes():
     try:
-        print(f"Скачиваю файл с {url}...")
-        response = requests.get(url)
-        response.raise_for_status()
-        with open(dest_path, 'wb') as f:
-            f.write(response.content)
-        print(f"Файл успешно скачан по адресу: {dest_path}")
-        return True
-    except requests.exceptions.RequestException as e:
-        print(f"Ошибка при скачивании файла: {e}")
-        return False
-
-# Функция для обновления бота с GitHub
-def update_script_from_github():
-    file_url = GITHUB_RAW_URL  # Ссылка на ваш файл
-    dest_file = "bot.py"  # Путь к файлу
-
-    if download_file_from_github(file_url, dest_file):
-        print("Обновление прошло успешно. Перезагружаю бота...")
-        restart_bot()
-    else:
-        print("Не удалось обновить файл.")
-
-# Перезапуск бота
-def restart_bot():
-    print("Перезагружаю бота...")
-    subprocess.Popen([sys.executable, os.path.abspath(__file__)])  # Запуск нового процесса
-    sys.exit()  # Завершаем старый процесс
-
-# Проверка наличия обновлений на GitHub
-def update_script():
-    try:
-        repo = git.Repo(repo_path)
-        origin = repo.remotes.origin
-        origin.fetch()
-
-        current_commit = repo.head.commit.hexsha
-        origin.pull()
-
-        updated_commit = repo.head.commit.hexsha
-
-        if current_commit != updated_commit:
-            print("Код был обновлен! Перезагружаю бота...")
-            return True
-        else:
-            print("Обновлений нет.")
-            return False
-    except Exception as e:
-        print(f"Ошибка при обновлении: {e}")
-        return False
-
-# Загрузка модуля
-def load_module(module_name):
-    try:
-        importlib.import_module(module_name)
-        print(f"Модуль {module_name} подключен.")
-    except ImportError:
-        print(f"Ошибка при подключении модуля {module_name}.")
-
-# Получение списка установленных модулей
-def get_installed_modules():
-    installed = subprocess.check_output([sys.executable, "-m", "pip", "freeze"]).decode("utf-8").split("\n")
-    modules = [module.split("==")[0] for module in installed if module]
-    
-    with open("installed_modules.txt", "w") as f:
-        for module in modules:
-            f.write(module + '\n')
-
-# Основная функция бота
-async def main():
-    # Загрузка конфигурации
-    API_ID, API_HASH, PHONE_NUMBER = load_config()
-
-    # Создаем уникальное имя сессии
-    session_name = StringSession()  # Используем StringSession вместо SQLite
-    client = TelegramClient(session_name, API_ID, API_HASH)
-
-    try:
-        await client.start(PHONE_NUMBER)
-    except Exception as e:
-        print(f"Ошибка при старте клиента: {e}")
-        return
-
-    # Проверка авторизации
-    if not await client.is_user_authorized():
-        print("Необходимо пройти авторизацию!")
-        await client.send_code_request(PHONE_NUMBER)
-        await client.sign_in(PHONE_NUMBER, input('Введите код из SMS: '))
-
-        try:
-            await client.sign_in(password=input('Введите ваш 2FA пароль: '))
-        except SessionPasswordNeededError:
-            print("Пароль 2FA не требуется.")
-        print("Авторизация прошла успешно!")
-
-    print("Бот успешно запущен!")
-
-    # Настройка структуры проекта
-    setup_project_structure()
-
-    # Проверка обновлений и перезапуск, если необходимо
-    if update_script():
-        restart_bot()
-
-    # Получение списка установленных модулей
-    get_installed_modules()
-
-    # Проверка и установка модулей
-    @client.on(events.NewMessage(pattern='/install_module'))
-    async def install_module(event):
-        if event.document:
-            file_path = await event.download_media()
-            print(f"Файл сохранен по пути: {file_path}")
-            os.system(f"pip install {file_path}")
-            await event.reply("Модуль успешно установлен!")
-
-    # Команда для установки модуля через pip
-    @client.on(events.NewMessage(pattern='^/up (.+)$'))
-    async def download_module(event):
-        module_name = event.pattern_match.group(1)
-        os.system(f"pip install {module_name}")
-        await event.reply(f"Модуль {module_name} успешно установлен!")
-
-    # Основной цикл бота
-    while True:
+        subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
+    except subprocess.CalledProcessError as e:
         pass
 
-# Запуск бота
+# Функция для проверки обновлений скрипта на GitHub
+def check_for_updates():
+    try:
+        response = requests.get(GITHUB_RAW_URL)
+        if response.status_code == 200:
+            remote_script = response.text
+            current_file = os.path.abspath(__file__)
+
+            with open(current_file, 'r', encoding='utf-8') as f:
+                current_script = f.read()
+
+            if SCRIPT_VERSION in remote_script and SCRIPT_VERSION in current_script:
+                remote_version_line = [
+                    line for line in remote_script.splitlines() if SCRIPT_VERSION in line
+                ]
+                if remote_version_line:
+                    remote_version = remote_version_line[0].split('=')[1].strip().strip('"')
+                    if SCRIPT_VERSION != remote_version:
+                        print(f"Доступна новая версия скрипта {remote_version} (текущая {SCRIPT_VERSION})")
+                        with open(current_file, 'w', encoding='utf-8') as f:
+                            f.write(remote_script)
+                        print("Скрипт обновлен. Перезапустите программу.")
+                        exit()
+                    else:
+                        print("У вас уже установлена последняя версия скрипта.")
+                else:
+                    print("Не удалось найти информацию о версии в загруженном скрипте.")
+            else:
+                print("Не удалось определить версии для сравнения.")
+        else:
+            print(f"Не удалось проверить обновления. Код ответа сервера {response.status_code}")
+    except Exception as e:
+        print(f"Ошибка при проверке обновлений {e}")
+
+# Проверка и получение данных авторизации
+if os.path.exists(CONFIG_FILE):
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        API_ID = config.get("API_ID")
+        API_HASH = config.get("API_HASH")
+        PHONE_NUMBER = config.get("PHONE_NUMBER")
+    except (json.JSONDecodeError, KeyError) as e:
+        API_ID = None
+        API_HASH = None
+        PHONE_NUMBER = None
+else:
+    API_ID = None
+    API_HASH = None
+    PHONE_NUMBER = None
+
+if not API_ID or not API_HASH or not PHONE_NUMBER:
+    try:
+        print("Пожалуйста, введите данные для авторизации в Telegram:")        
+        API_ID = int(input("Введите ваш API ID: "))
+        API_HASH = input("Введите ваш API Hash: ").strip()
+        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
+
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({
+                "API_ID": API_ID,
+                "API_HASH": API_HASH,
+                "PHONE_NUMBER": PHONE_NUMBER
+            }, f)
+    except Exception as e:
+        print(f"Ошибка при сохранении данных: {e}")
+        exit(1)
+
+# Создание клиента Telegram
+client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
+
+# Пример анимации текста
+async def animate_text(client, event, text):
+    displayed_text = ""
+    for char in text:
+        displayed_text += char
+        await client.edit_message(event.chat_id, event.message.id, displayed_text + "▮")
+        await asyncio.sleep(1.5)
+    await client.edit_message(event.chat_id, event.message.id, displayed_text)
+
+# Обработчики событий
+@client.on(events.NewMessage(pattern='/p'))
+async def animate_handler(event):
+    if event.out:
+        command_text = event.raw_text
+        if len(command_text.split()) > 1:
+            text_to_animate = command_text.partition(' ')[2]
+            await animate_text(client, event, text_to_animate)
+        else:
+            await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
+
+# Основной цикл
+async def main():
+    await client.start(phone=PHONE_NUMBER)
+    print(f"Успешно авторизованы как {PHONE_NUMBER}")
+    await client.run_until_disconnected()
+
 if __name__ == "__main__":
-    # Загрузка конфигурации
-    API_ID, API_HASH, PHONE_NUMBER = load_config()
-    session_name = StringSession()  # Используем StringSession
-    client = TelegramClient(session_name, API_ID, API_HASH)
-    client.loop.run_until_complete(main())
+    check_for_updates()  # Проверка обновлений при запуске
+    asyncio.run(main())  # Запуск клиента Telegram
