@@ -1,46 +1,51 @@
 import os
 import sys
+import json
 import requests
 import git
 import subprocess
 import importlib
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
-from config import api_id, api_hash, phone_number, repo_path
+
+# Конфигурация
+CONFIG_FILE = "config.json"  # Файл конфигурации
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
+DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/"  # Папка загрузок на Android
 
 # Функция для создания необходимых файлов и папок при отсутствии
 def setup_project_structure():
-    # Создание папки для модулей, если она отсутствует
     if not os.path.exists('modules'):
         os.makedirs('modules')
 
-    # Создание файла с установленными модулями, если он отсутствует
     if not os.path.exists('installed_modules.txt'):
         with open('installed_modules.txt', 'w') as f:
-            f.write("")  # Пустой файл, который позже будет обновляться
+            f.write("")
 
-    # Создание конфигурационного файла, если он отсутствует
-    if not os.path.exists('config.py'):
-        with open('config.py', 'w') as f:
-            f.write("# config.py\n")
-            f.write("api_id = 'YOUR_API_ID'\n")
-            f.write("api_hash = 'YOUR_API_HASH'\n")
-            f.write("phone_number = 'YOUR_PHONE_NUMBER'\n")
-            f.write("repo_path = '/path/to/your/repo'\n")
-
-    # Создание файла зависимостей, если его нет
-    if not os.path.exists('requirements.txt'):
-        with open('requirements.txt', 'w') as f:
-            f.write("telethon\n")
-            f.write("gitpython\n")  # Добавьте другие зависимости по мере необходимости
+    if not os.path.exists(CONFIG_FILE):
+        API_ID = input("Введите API_ID: ")
+        API_HASH = input("Введите API_HASH: ")
+        PHONE_NUMBER = input("Введите номер телефона: ")
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({"API_ID": API_ID, "API_HASH": API_HASH, "PHONE_NUMBER": PHONE_NUMBER}, f)
     print("Проект настроен!")
+
+# Загрузка конфигурации из файла
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        return config.get("API_ID"), config.get("API_HASH"), config.get("PHONE_NUMBER")
+    else:
+        print(f"Ошибка: файл конфигурации {CONFIG_FILE} не найден.")
+        sys.exit(1)
 
 # Функция для скачивания файла с GitHub
 def download_file_from_github(url, dest_path):
     try:
         print(f"Скачиваю файл с {url}...")
         response = requests.get(url)
-        response.raise_for_status()  # Проверка на ошибки HTTP
+        response.raise_for_status()
         with open(dest_path, 'wb') as f:
             f.write(response.content)
         print(f"Файл успешно скачан по адресу: {dest_path}")
@@ -51,10 +56,9 @@ def download_file_from_github(url, dest_path):
 
 # Функция для обновления бота с GitHub
 def update_script_from_github():
-    file_url = "https://raw.githubusercontent.com/username/repository/main/bot.py"  # Вставьте свою ссылку на файл
-    dest_file = "bot.py"  # Путь, куда вы хотите сохранить файл (например, заменим текущий bot.py)
+    file_url = GITHUB_RAW_URL  # Ссылка на ваш файл
+    dest_file = "bot.py"  # Путь к файлу
 
-    # Скачиваем новый файл и сохраняем его
     if download_file_from_github(file_url, dest_file):
         print("Обновление прошло успешно. Перезагружаю бота...")
         restart_bot()
@@ -72,10 +76,10 @@ def update_script():
     try:
         repo = git.Repo(repo_path)
         origin = repo.remotes.origin
-        origin.fetch()  # Получаем обновления с удаленного репозитория
+        origin.fetch()
 
         current_commit = repo.head.commit.hexsha
-        origin.pull()  # Скачиваем последние изменения
+        origin.pull()
 
         updated_commit = repo.head.commit.hexsha
 
@@ -108,16 +112,27 @@ def get_installed_modules():
 
 # Основная функция бота
 async def main():
-    client = TelegramClient('session_name', api_id, api_hash)
+    # Загрузка конфигурации
+    API_ID, API_HASH, PHONE_NUMBER = load_config()
 
-    # Авторизация
-    await client.start(phone_number)
+    session_name = 'session_name'  # Уникальное имя сессии
+    client = TelegramClient(session_name, API_ID, API_HASH)
 
-    # Проверка, если сессия не авторизована, то запросить код и пароль
+    # Удаляем старую сессию, если она существует
+    if os.path.exists(f"{session_name}.session"):
+        os.remove(f"{session_name}.session")
+
+    try:
+        await client.start(PHONE_NUMBER)
+    except Exception as e:
+        print(f"Ошибка при старте клиента: {e}")
+        return
+
+    # Проверка авторизации
     if not await client.is_user_authorized():
         print("Необходимо пройти авторизацию!")
-        await client.send_code_request(phone_number)
-        await client.sign_in(phone_number, input('Введите код из SMS: '))
+        await client.send_code_request(PHONE_NUMBER)
+        await client.sign_in(PHONE_NUMBER, input('Введите код из SMS: '))
 
         try:
             await client.sign_in(password=input('Введите ваш 2FA пароль: '))
@@ -159,5 +174,5 @@ async def main():
 
 # Запуск бота
 if __name__ == "__main__":
-    client = TelegramClient('session_name', api_id, api_hash)
+    client = TelegramClient('session_name', API_ID, API_HASH)
     client.loop.run_until_complete(main())
