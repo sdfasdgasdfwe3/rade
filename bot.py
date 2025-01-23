@@ -2,9 +2,7 @@ import os
 import sys
 import json
 import requests
-import git
 import subprocess
-import importlib
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 
@@ -115,12 +113,9 @@ async def main():
     # Загрузка конфигурации
     API_ID, API_HASH, PHONE_NUMBER = load_config()
 
+    # Уникальное имя для каждой сессии
     session_name = 'session_name'  # Уникальное имя сессии
     client = TelegramClient(session_name, API_ID, API_HASH)
-
-    # Удаляем старую сессию, если она существует
-    if os.path.exists(f"{session_name}.session"):
-        os.remove(f"{session_name}.session")
 
     try:
         await client.start(PHONE_NUMBER)
