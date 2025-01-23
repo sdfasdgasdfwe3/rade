@@ -8,7 +8,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 # Ваши настройки
 API_ID = 'your_api_id'  # Ваш API ID
 API_HASH = 'your_api_hash'  # Ваш API Hash
-GITHUB_REPO = 'https://api.github.com/repos/your_user/your_repo/commits'  # API для получения информации об обновлениях
+GITHUB_REPO = 'https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py'  # API для получения информации об обновлениях
 AUTHORIZED_PHONE = 'your_phone_number'  # Номер телефона для авторизации
 TOKEN = 'your_telegram_bot_token'  # Токен вашего бота
 
