@@ -4,6 +4,7 @@ import requests
 from telethon import TelegramClient, events
 import subprocess
 import shutil
+import sys
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -71,6 +72,7 @@ async def upload_handler(event):
     if event.reply_to_msg_id:
         replied_message = await event.get_reply_message()
         if replied_message.file:
+            # Скачиваем файл
             file_path = await replied_message.download_media()
             await event.reply(f"Файл {os.path.basename(file_path)} загружен. Обрабатываю...")
             result = handle_file(file_path)
@@ -83,8 +85,8 @@ async def upload_handler(event):
 # Автоматическая обработка файла, отправленного в избранное
 @client.on(events.NewMessage)
 async def auto_install_handler(event):
-    # Проверяем, что сообщение отправлено в избранное
     if event.is_channel and event.chat_id == event.sender_id and event.file:
+        # Скачиваем файл
         file_path = await event.download_media()
         await event.reply(f"Обнаружен файл в избранном: {os.path.basename(file_path)}. Обрабатываю...")
         result = handle_file(file_path)
@@ -96,6 +98,5 @@ async def main():
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    import sys
     import asyncio
     asyncio.run(main())
