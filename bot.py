@@ -12,7 +12,7 @@ from watchdog.events import FileSystemEventHandler
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/"  # Папка загрузок на Android
+DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/Download"  # Папка загрузок на Android
 
 # Получаем данные конфигурации
 if os.path.exists(CONFIG_FILE):
