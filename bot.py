@@ -1,107 +1,121 @@
 import os
-import requests
+import sys
+import time
+import git
 import subprocess
-import json
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import importlib
+from telethon import TelegramClient, events
+from config import api_id, api_hash, phone_number, repo_path
 
-# Ваши настройки
-API_ID = 'your_api_id'  # Ваш API ID
-API_HASH = 'your_api_hash'  # Ваш API Hash
-GITHUB_REPO = 'https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py'  # API для получения информации об обновлениях
-AUTHORIZED_PHONE = 'your_phone_number'  # Номер телефона для авторизации
-TOKEN = 'your_telegram_bot_token'  # Токен вашего бота
+# Функция для создания необходимых файлов и папок при отсутствии
+def setup_project_structure():
+    # Создание папки для модулей, если она отсутствует
+    if not os.path.exists('modules'):
+        os.makedirs('modules')
 
-# Путь к файлу для хранения авторизованных пользователей (на устройстве пользователя)
-USER_DATA_FILE = os.path.expanduser('~/.my_telegram_bot_data.json')  # Пример хранения в домашней папке пользователя
+    # Создание файла с установленными модулями, если он отсутствует
+    if not os.path.exists('installed_modules.txt'):
+        with open('installed_modules.txt', 'w') as f:
+            f.write("")  # Пустой файл, который позже будет обновляться
 
-# Загрузка авторизованных пользователей из файла
-def load_authorized_users():
-    if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, 'r') as f:
-            return json.load(f)
-    return {}
+    # Создание конфигурационного файла, если он отсутствует
+    if not os.path.exists('config.py'):
+        with open('config.py', 'w') as f:
+            f.write("# config.py\n")
+            f.write("api_id = 'YOUR_API_ID'\n")
+            f.write("api_hash = 'YOUR_API_HASH'\n")
+            f.write("phone_number = 'YOUR_PHONE_NUMBER'\n")
+            f.write("repo_path = '/path/to/your/repo'\n")
 
-# Сохранение авторизованных пользователей в файл
-def save_authorized_users(users):
-    with open(USER_DATA_FILE, 'w') as f:
-        json.dump(users, f)
+    # Создание файла зависимостей, если его нет
+    if not os.path.exists('requirements.txt'):
+        with open('requirements.txt', 'w') as f:
+            f.write("telethon\n")
+            f.write("gitpython\n")  # Добавьте другие зависимости по мере необходимости
+    print("Проект настроен!")
 
-# Функция для авторизации
-def authenticate(update: Update, context: CallbackContext):
-    authorized_users = load_authorized_users()
-    user_id = update.message.from_user.id
+# Проверка наличия обновлений на GitHub
+def update_script():
+    try:
+        repo = git.Repo(repo_path)
+        origin = repo.remotes.origin
+        origin.fetch()  # Получаем обновления с удаленного репозитория
 
-    # Проверка, авторизован ли пользователь
-    if user_id in authorized_users:
-        update.message.reply_text("Вы уже авторизованы!")
-    elif update.message.text.startswith(AUTHORIZED_PHONE):
-        # Если номер телефона правильный, авторизуем пользователя
-        authorized_users[user_id] = update.message.text
-        save_authorized_users(authorized_users)
-        update.message.reply_text("Вы успешно авторизованы!")
-    else:
-        update.message.reply_text("Неверный номер телефона!")
+        current_commit = repo.head.commit.hexsha
+        origin.pull()  # Скачиваем последние изменения
 
-# Функция для проверки обновлений на GitHub
-def check_updates():
-    response = requests.get(GITHUB_REPO)
-    if response.status_code == 200:
-        commits = response.json()
-        latest_commit = commits[0]['commit']['message']
-        return f"Последнее обновление: {latest_commit}"
-    else:
-        return "Не удалось проверить обновления."
+        updated_commit = repo.head.commit.hexsha
 
-# Функция для обработки пересылки файлов и их установки
-def handle_file(update: Update, context: CallbackContext):
-    if update.message.document:
-        file = update.message.document
-        file_name = file.file_name
-        file_id = file.file_id
+        if current_commit != updated_commit:
+            print("Код был обновлен! Перезагружаю бота...")
+            return True
+        else:
+            print("Обновлений нет.")
+            return False
+    except Exception as e:
+        print(f"Ошибка при обновлении: {e}")
+        return False
 
-        # Получаем файл с Telegram
-        new_file = update.message.bot.get_file(file_id)
-        new_file.download(file_name)
+# Перезапуск бота
+def restart_bot():
+    print("Перезагружаю бота...")
+    subprocess.Popen([sys.executable, os.path.abspath(__file__)])  # Запуск нового процесса
+    sys.exit()  # Завершаем старый процесс
 
-        # Пример команды для установки файла (можно подстроить под вашу задачу)
-        try:
-            subprocess.run(["pip", "install", file_name], check=True)
-            update.message.reply_text(f"Модуль {file_name} успешно установлен.")
-        except subprocess.CalledProcessError:
-            update.message.reply_text(f"Ошибка установки модуля {file_name}.")
-    else:
-        update.message.reply_text("Пожалуйста, отправьте файл для установки.")
+# Загрузка модуля
+def load_module(module_name):
+    try:
+        importlib.import_module(module_name)
+        print(f"Модуль {module_name} подключен.")
+    except ImportError:
+        print(f"Ошибка при подключении модуля {module_name}.")
 
-# Функция для обработки команды /start
-def start(update: Update, context: CallbackContext):
-    # Проверка, если файл с авторизацией существует
-    if not os.path.exists(USER_DATA_FILE):
-        update.message.reply_text("Пожалуйста, пройдите авторизацию, отправив свой номер телефона.")
-    else:
-        update.message.reply_text("Привет! Я бот для установки обновлений и модулей. Вы уже авторизованы.")
+# Получение списка установленных модулей
+def get_installed_modules():
+    installed = subprocess.check_output([sys.executable, "-m", "pip", "freeze"]).decode("utf-8").split("\n")
+    modules = [module.split("==")[0] for module in installed if module]
+    
+    with open("installed_modules.txt", "w") as f:
+        for module in modules:
+            f.write(module + '\n')
 
-# Функция для проверки обновлений
-def check_for_updates(update: Update, context: CallbackContext):
-    updates = check_updates()
-    update.message.reply_text(updates)
+# Основная функция бота
+async def main():
+    client = TelegramClient('session_name', api_id, api_hash)
 
-# Основная функция для запуска бота
-def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+    # Авторизация
+    await client.start(phone_number)
+    print("Бот успешно запущен!")
 
-    # Команды
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("check_updates", check_for_updates))
+    # Настройка структуры проекта
+    setup_project_structure()
 
-    # Обработка сообщений и файлов
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, authenticate))
-    dp.add_handler(MessageHandler(Filters.document.mime_type("application/octet-stream"), handle_file))
+    # Проверка обновлений и перезапуск, если необходимо
+    if update_script():
+        restart_bot()
 
-    # Запуск бота
-    updater.start_polling()
-    updater.idle()
+    # Проверка и установка модулей
+    @client.on(events.NewMessage(pattern='/install_module'))
+    async def install_module(event):
+        if event.document:
+            file_path = await event.download_media()
+            print(f"Файл сохранен по пути: {file_path}")
+            os.system(f"pip install {file_path}")
+            await event.reply("Модуль успешно установлен!")
 
-if __name__ == '__main__':
-    main()
+    # Команда для установки модуля через pip
+    @client.on(events.NewMessage(pattern='^/up (.+)$'))
+    async def download_module(event):
+        module_name = event.pattern_match.group(1)
+        os.system(f"pip install {module_name}")
+        await event.reply(f"Модуль {module_name} успешно установлен!")
+
+    # Основной цикл бота
+    while True:
+        # Код для обработки сообщений и команд
+        pass
+
+# Запуск бота
+if __name__ == "__main__":
+    client = TelegramClient('session_name', api_id, api_hash)
+    client.loop.run_until_complete(main())
