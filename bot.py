@@ -6,8 +6,8 @@ import requests
 import importlib
 from telethon import TelegramClient, events
 import asyncio
-import importlib.util
 import time
+import importlib.util
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -106,23 +106,17 @@ def check_for_new_modules():
         # Ожидаем 10 секунд перед следующей проверкой
         time.sleep(10)
 
-# Обработчик команды для обновления главного файла
-@client.on(events.NewMessage(pattern="/update"))
-async def handler(event):
-    update_main_file()
-    await event.reply("Главный файл был обновлен.")
-
 # Основная логика бота
 async def main():
     # Обновляем главный файл
     update_main_file()
 
-    # Проверка наличия новых модулей в папке загрузок
-    check_for_new_modules()
-
     # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
     print("Бот авторизован и запущен!")
+
+    # Запуск проверки новых файлов
+    check_for_new_modules()
 
     # Запуск бота
     await client.run_until_disconnected()
