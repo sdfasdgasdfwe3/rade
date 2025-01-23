@@ -4,7 +4,6 @@ import subprocess
 import sys
 import requests
 import importlib
-import shutil  # Для копирования файлов
 from telethon import TelegramClient, events
 import asyncio
 import importlib.util
@@ -34,7 +33,31 @@ SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 # Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Модуль для установки модуля
+# Функция для отмены локальных изменений
+def reset_local_changes():
+    """
+    Отменяет все локальные изменения в репозитории.
+    """
+    try:
+        print("Отмена локальных изменений...")
+        subprocess.check_call(['git', 'checkout', '--', '.'])
+        print("Локальные изменения отменены.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при отмене изменений: {e}")
+
+# Функция для обновления репозитория
+def update_repository():
+    """
+    Обновляет репозиторий, выполняет 'git pull'.
+    """
+    try:
+        print("Обновление репозитория...")
+        subprocess.check_call(['git', 'pull'])
+        print("Репозиторий обновлен.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при обновлении репозитория: {e}")
+
+# Функция для установки модулей из скачанных файлов
 def install_module(file_path):
     """
     Устанавливает Python-модуль из .py файла.
@@ -42,12 +65,8 @@ def install_module(file_path):
     try:
         module_name = os.path.basename(file_path).replace('.py', '')
         destination = os.path.join(os.getcwd(), module_name + '.py')
-
-        # Копируем файл в текущую директорию
-        shutil.copy(file_path, destination)
+        os.rename(file_path, destination)
         sys.path.append(os.getcwd())
-
-        # Импортируем модуль
         importlib.import_module(module_name)
         print(f"Модуль {module_name} установлен успешно.")
         return True
@@ -109,9 +128,15 @@ async def file_handler(event):
 
 # Основная логика бота
 async def main():
+    # Отменяем локальные изменения
+    reset_local_changes()
+    
+    # Обновляем репозиторий
+    update_repository()
+    
     # Обновляем главный файл
     update_main_file()
-    
+
     # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
     print("Бот авторизован и запущен!")
