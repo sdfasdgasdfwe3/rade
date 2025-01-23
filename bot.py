@@ -3,6 +3,7 @@ import subprocess
 import time
 import json
 import asyncio
+import requests  # Добавим импорт библиотеки requests
 from telethon import TelegramClient, events
 
 # Конфигурация
@@ -79,7 +80,7 @@ def move_telegram_files():
 
         # Сканируем папку с загрузками Telegram
         for file in "$SOURCE_DIR"/*; do
-          if [[ -f "$file" ]]; then
+          if [ -f "$file" ]; then
             mv "$file" "$DEST_DIR"
           fi
         done
