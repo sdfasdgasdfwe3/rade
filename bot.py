@@ -174,5 +174,7 @@ async def main():
 
 # Запуск бота
 if __name__ == "__main__":
-    client = TelegramClient('session_name', *load_config())  # Передаем API_ID, API_HASH, PHONE_NUMBER
+    # Загрузка конфигурации
+    API_ID, API_HASH, PHONE_NUMBER = load_config()
+    client = TelegramClient('session_name', API_ID, API_HASH)  # Передаем API_ID и API_HASH напрямую
     client.loop.run_until_complete(main())
