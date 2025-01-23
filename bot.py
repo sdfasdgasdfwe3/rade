@@ -6,6 +6,7 @@ import importlib
 import time
 import asyncio
 from telethon import TelegramClient, events
+from inotify.adapters import Inotify
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -28,6 +29,7 @@ else:
 
 # Путь для сессии
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
+
 
 # Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -76,28 +78,25 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Функция для мониторинга загрузок
+# Функция для мониторинга загрузок с использованием inotify
 def monitor_downloads():
     """
     Периодически проверяет папку загрузок на наличие новых файлов .py
     """
-    while True:
-        # Получаем список файлов в папке загрузок
-        files = os.listdir(DOWNLOADS_FOLDER)
-        for file_name in files:
-            file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
+    inotify = Inotify()
+    inotify.add_watch(DOWNLOADS_FOLDER, mask=Inotify.IN_CLOSE_WRITE)
+    
+    print("Начат мониторинг загрузок...")
 
-            # Если файл .py, то пытаемся установить его как модуль
-            if file_name.endswith('.py'):
-                print(f"Найден новый файл: {file_name}")
-                if install_module(file_path):
-                    print(f"Модуль {file_name} установлен успешно.")
-                    os.remove(file_path)  # Удаляем файл после установки
-                else:
-                    print(f"Ошибка установки модуля {file_name}")
-
-        # Ожидаем 10 секунд перед следующей проверкой
-        time.sleep(10)
+    for event in inotify.event_gen(yield_nones=False):
+        (_, event_type, path, _) = event
+        if event_type == 'IN_CLOSE_WRITE' and path.endswith('.py'):
+            print(f"Найден новый файл: {path}")
+            if install_module(path):
+                print(f"Модуль {path} установлен успешно.")
+                os.remove(path)  # Удаляем файл после установки
+            else:
+                print(f"Ошибка установки модуля {path}")
 
 # Основная логика бота
 async def main():
