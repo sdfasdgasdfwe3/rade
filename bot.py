@@ -1,11 +1,11 @@
 import os
-import json
 import sys
+import json
 import requests
 import importlib
-from telethon import TelegramClient, events
-import asyncio
 import time
+import asyncio
+from telethon import TelegramClient, events
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -61,8 +61,14 @@ def install_module(file_path):
     try:
         module_name = os.path.basename(file_path).replace('.py', '')
         destination = os.path.join(os.getcwd(), module_name + '.py')
+        
+        # Перемещаем файл из папки загрузок в рабочую директорию
         os.rename(file_path, destination)
+
+        # Добавляем путь в sys.path
         sys.path.append(os.getcwd())
+
+        # Попытка импорта модуля
         importlib.import_module(module_name)
         print(f"Модуль {module_name} установлен успешно.")
         return True
@@ -70,7 +76,7 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Функция для проверки папки на новые файлы
+# Функция для мониторинга загрузок
 def monitor_downloads():
     """
     Периодически проверяет папку загрузок на наличие новых файлов .py
