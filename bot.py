@@ -1,23 +1,12 @@
 import os
 import json
 import requests
-from telethon import TelegramClient, events
-import subprocess
-import sys
-import asyncio
-import random
+from telethon import TelegramClient
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 SCRIPT_VERSION = "0.0.9"
-
-# Функция для отмены локальных изменений в git
-def discard_local_changes():
-    try:
-        subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
-    except subprocess.CalledProcessError as e:
-        pass
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
@@ -51,7 +40,7 @@ def check_for_updates():
         else:
             print(f"Не удалось проверить обновления. Код ответа сервера {response.status_code}")
     except Exception as e:
-        print(f"Ошибка при проверке обновлений {e}")
+        print(f"Ошибка при проверке обновлений: {e}")
 
 # Проверка и получение данных авторизации
 if os.path.exists(CONFIG_FILE):
@@ -61,61 +50,60 @@ if os.path.exists(CONFIG_FILE):
         API_ID = config.get("API_ID")
         API_HASH = config.get("API_HASH")
         PHONE_NUMBER = config.get("PHONE_NUMBER")
-    except (json.JSONDecodeError, KeyError) as e:
-        API_ID = None
-        API_HASH = None
-        PHONE_NUMBER = None
-else:
-    API_ID = None
-    API_HASH = None
-    PHONE_NUMBER = None
+        typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
+        cursor_symbol = config.get("cursor_symbol", DEFAULT_CURSOR)
 
-if not API_ID or not API_HASH or not PHONE_NUMBER:
+        if not all([API_ID, API_HASH, PHONE_NUMBER]):
+            raise ValueError("Файл конфигурации содержит неполные данные.")
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        print(f"Ошибка чтения конфигурации: {e}. Удалите {CONFIG_FILE} и попробуйте снова.")
+        exit(1)
+else:
+    # Запрашиваем данные у пользователя
     try:
-        print("Пожалуйста, введите данные для авторизации в Telegram:")        
         API_ID = int(input("Введите ваш API ID: "))
         API_HASH = input("Введите ваш API Hash: ").strip()
         PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
 
+        if not API_ID or not API_HASH or not PHONE_NUMBER.startswith('+'):
+            raise ValueError("Некорректные данные. Проверьте ваш API ID, API Hash и номер телефона.")
+
+        typing_speed = DEFAULT_TYPING_SPEED
+        cursor_symbol = DEFAULT_CURSOR
+
+        # Сохраняем данные в файл конфигурации
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump({
                 "API_ID": API_ID,
                 "API_HASH": API_HASH,
                 "PHONE_NUMBER": PHONE_NUMBER
             }, f)
+        print(f"Данные сохранены в {CONFIG_FILE}.")
+    except ValueError as ve:
+        print(f"Ошибка: {ve}")
+        exit(1)
     except Exception as e:
-        print(f"Ошибка при сохранении данных: {e}")
+        print(f"Ошибка сохранения конфигурации: {e}")
         exit(1)
 
-# Создание клиента Telegram
-client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}", API_ID, API_HASH)
+# Уникальное имя файла для сессии
+SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
 
-# Пример анимации текста
-async def animate_text(client, event, text):
-    displayed_text = ""
-    for char in text:
-        displayed_text += char
-        await client.edit_message(event.chat_id, event.message.id, displayed_text + "▮")
-        await asyncio.sleep(1.5)
-    await client.edit_message(event.chat_id, event.message.id, displayed_text)
+# Инициализация клиента Telegram
+try:
+    check_for_updates()  # Проверка обновлений перед запуском клиента
+    client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+    print(f"Клиент Telegram успешно инициализирован. Используется сессия: {SESSION_FILE}")
+except Exception as e:
+    print(f"Ошибка инициализации Telegram клиента: {e}")
+    exit(1)
 
-# Обработчики событий
-@client.on(events.NewMessage(pattern='/p'))
-async def animate_handler(event):
-    if event.out:
-        command_text = event.raw_text
-        if len(command_text.split()) > 1:
-            text_to_animate = command_text.partition(' ')[2]
-            await animate_text(client, event, text_to_animate)
-        else:
-            await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
-
-# Основной цикл
+# Пример вызова основного потока для клиента
 async def main():
     await client.start(phone=PHONE_NUMBER)
     print(f"Успешно авторизованы как {PHONE_NUMBER}")
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    check_for_updates()  # Проверка обновлений при запуске
-    asyncio.run(main())  # Запуск клиента Telegram
+    import asyncio
+    asyncio.run(main())
