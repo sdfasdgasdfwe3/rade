@@ -4,6 +4,7 @@ import subprocess
 import sys
 import requests
 import importlib
+import shutil  # Для копирования файлов
 from telethon import TelegramClient, events
 import asyncio
 import importlib.util
@@ -41,8 +42,12 @@ def install_module(file_path):
     try:
         module_name = os.path.basename(file_path).replace('.py', '')
         destination = os.path.join(os.getcwd(), module_name + '.py')
-        os.rename(file_path, destination)
+
+        # Копируем файл в текущую директорию
+        shutil.copy(file_path, destination)
         sys.path.append(os.getcwd())
+
+        # Импортируем модуль
         importlib.import_module(module_name)
         print(f"Модуль {module_name} установлен успешно.")
         return True
