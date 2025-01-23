@@ -7,6 +7,7 @@ import importlib
 from telethon import TelegramClient, events
 import asyncio
 import importlib.util
+import time
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -78,24 +79,32 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Функция для проверки новых файлов
-def check_new_modules():
-    # Получаем список файлов в папке загрузок
-    files_in_downloads = os.listdir(DOWNLOADS_FOLDER)
-    
-    # Фильтруем только Python файлы
-    py_files = [f for f in files_in_downloads if f.endswith('.py')]
-    
-    if py_files:
-        for file_name in py_files:
-            file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
-            print(f"Найден файл модуля: {file_path}")
-            
-            # Устанавливаем найденный модуль
-            if install_module(file_path):
-                print(f"Модуль {file_name} успешно установлен.")
-            else:
-                print(f"Не удалось установить модуль {file_name}.")
+# Функция для проверки новых файлов в папке загрузок
+def check_for_new_modules():
+    while True:
+        # Получаем список файлов в папке загрузок
+        files_in_downloads = os.listdir(DOWNLOADS_FOLDER)
+
+        # Фильтруем только Python файлы
+        py_files = [f for f in files_in_downloads if f.endswith('.py')]
+
+        if py_files:
+            for file_name in py_files:
+                file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
+                print(f"Найден новый файл модуля: {file_path}")
+
+                # Устанавливаем найденный модуль
+                if install_module(file_path):
+                    print(f"Модуль {file_name} успешно установлен.")
+                else:
+                    print(f"Не удалось установить модуль {file_name}.")
+
+                # Удаляем файл после установки (если нужно)
+                os.remove(file_path)
+                print(f"Файл {file_name} удален после установки.")
+
+        # Ожидаем 10 секунд перед следующей проверкой
+        time.sleep(10)
 
 # Обработчик команды для обновления главного файла
 @client.on(events.NewMessage(pattern="/update"))
@@ -103,39 +112,18 @@ async def handler(event):
     update_main_file()
     await event.reply("Главный файл был обновлен.")
 
-# Обработчик нового файла
-@client.on(events.NewMessage)
-async def file_handler(event):
-    if event.file and event.file.name.endswith(".py"):
-        # Скачиваем файл в папку загрузок
-        file_path = await event.download_media(DOWNLOADS_FOLDER)
-        print(f"Получен файл {file_path}")
-
-        # Устанавливаем модуль
-        if install_module(file_path):
-            # Перезапускаем бота после установки модуля
-            await event.reply("Модуль успешно установлен и перезапущен.")
-            restart_bot()
-        else:
-            await event.reply("Ошибка при установке модуля.")
-
-# Функция для перезапуска бота
-def restart_bot():
-    print("Перезапуск бота...")
-    os.execv(sys.executable, ['python'] + sys.argv)
-
 # Основная логика бота
 async def main():
     # Обновляем главный файл
     update_main_file()
-    
+
     # Проверка наличия новых модулей в папке загрузок
-    check_new_modules()
-    
+    check_for_new_modules()
+
     # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
     print("Бот авторизован и запущен!")
-    
+
     # Запуск бота
     await client.run_until_disconnected()
 
