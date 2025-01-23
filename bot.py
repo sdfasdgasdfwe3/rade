@@ -66,36 +66,30 @@ async def authorize():
         return False
     return True
 
-# Функция для запуска Bash-скрипта
+# Функция для перемещения файлов с проверкой
 def move_telegram_files():
     """
-    Перемещает файлы из папки Telegram в папку Termux.
+    Перемещает файлы из папки Telegram в папку Termux и проверяет успешность перемещения.
     """
     try:
-        # Путь к Bash-скрипту
-        script = """
-        #!/bin/bash
-        SOURCE_DIR="/storage/emulated/0/Android/data/org.telegram.messenger/files/"
-        DEST_DIR="~/storage/downloads/"
+        # Указываем исходную и целевую директории
+        SOURCE_DIR = "/storage/emulated/0/Android/data/org.telegram.messenger/files/"
+        DEST_DIR = "~/storage/downloads/"
 
         # Сканируем папку с загрузками Telegram
-        for file in "$SOURCE_DIR"/*; do
-          if [ -f "$file" ]; then
-            mv "$file" "$DEST_DIR"
-          fi
-        done
-        """
-        
-        # Создание временного скрипта для выполнения
-        with open("/data/data/com.termux/files/home/move_telegram_files.sh", "w") as file:
-            file.write(script)
-        
-        # Даем права на выполнение
-        os.chmod("/data/data/com.termux/files/home/move_telegram_files.sh", 0o755)
+        for file in os.listdir(SOURCE_DIR):
+            file_path = os.path.join(SOURCE_DIR, file)
+            dest_path = os.path.join(DEST_DIR, file)
 
-        # Запускаем скрипт
-        subprocess.run("/data/data/com.termux/files/home/move_telegram_files.sh", shell=True)
-        print("Файлы из Telegram перемещены в папку Termux.")
+            # Перемещаем файл
+            if os.path.isfile(file_path):
+                os.rename(file_path, dest_path)
+
+                # Проверяем, был ли файл перемещен
+                if os.path.exists(dest_path) and not os.path.exists(file_path):
+                    print(f"Файл {file} успешно перемещен.")
+                else:
+                    print(f"Ошибка при перемещении файла {file}.")
     except Exception as e:
         print(f"Ошибка при перемещении файлов: {e}")
 
@@ -110,7 +104,7 @@ async def main():
 
     print("Бот авторизован и запущен!")
 
-    # Запуск перемещения файлов
+    # Запуск перемещения файлов с проверкой
     move_telegram_files()
 
     # Запуск бота
