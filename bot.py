@@ -33,31 +33,25 @@ SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 # Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция для отмены локальных изменений
-def reset_local_changes():
-    """
-    Отменяет все локальные изменения в репозитории.
-    """
+# Функция для обновления главного файла
+def update_main_file():
     try:
-        print("Отмена локальных изменений...")
-        subprocess.check_call(['git', 'checkout', '--', '.'])
-        print("Локальные изменения отменены.")
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при отмене изменений: {e}")
+        response = requests.get(GITHUB_RAW_URL)
+        if response.status_code == 200:
+            main_file_path = os.path.abspath(__file__)
+            # Скачиваем новый файл bot.py только если это основной файл
+            if os.path.basename(main_file_path) == 'bot.py':
+                with open(main_file_path, 'w', encoding='utf-8') as f:
+                    f.write(response.text)
+                print("Главный файл bot.py обновлен.")
+            else:
+                print("Игнорируем обновление для не-основного файла.")
+        else:
+            print(f"Ошибка при скачивании обновления: {response.status_code}")
+    except Exception as e:
+        print(f"Ошибка обновления файла: {e}")
 
-# Функция для обновления репозитория
-def update_repository():
-    """
-    Обновляет репозиторий, выполняет 'git pull'.
-    """
-    try:
-        print("Обновление репозитория...")
-        subprocess.check_call(['git', 'pull'])
-        print("Репозиторий обновлен.")
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при обновлении репозитория: {e}")
-
-# Функция для установки модулей из скачанных файлов
+# Функция для установки модуля
 def install_module(file_path):
     """
     Устанавливает Python-модуль из .py файла.
@@ -84,73 +78,60 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Проверка и обновление главного файла
-def update_main_file():
+# Функция для скачивания файла и установки
+async def download_and_install_module():
+    # Здесь вы можете добавить любой источник для скачивания файла. Например, скачивание с URL.
+    file_url = "https://raw.githubusercontent.com/your-repo/your-module.py"
+    file_name = "module.py"
+    
+    # Скачиваем файл в нужную папку
+    file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
     try:
-        response = requests.get(GITHUB_RAW_URL)
-        if response.status_code == 200:
-            main_file_path = os.path.abspath(__file__)
-            # Скачиваем новый файл bot.py только если это основной файл
-            if os.path.basename(main_file_path) == 'bot.py':
-                with open(main_file_path, 'w', encoding='utf-8') as f:
-                    f.write(response.text)
-                print("Главный файл bot.py обновлен.")
-            else:
-                print("Игнорируем обновление для не-основного файла.")
+        response = requests.get(file_url)
+        with open(file_path, 'wb') as f:
+            f.write(response.content)
+        print(f"Файл успешно скачан в {file_path}")
+        
+        # После скачивания устанавливаем модуль
+        if install_module(file_path):
+            print(f"Модуль {file_name} успешно установлен.")
         else:
-            print(f"Ошибка при скачивании обновления: {response.status_code}")
+            print("Ошибка при установке модуля.")
     except Exception as e:
-        print(f"Ошибка обновления файла: {e}")
+        print(f"Ошибка при скачивании файла: {e}")
+
+# Обработчик команды для обновления главного файла
+@client.on(events.NewMessage(pattern="/update"))
+async def handler(event):
+    update_main_file()
+    await event.reply("Главный файл был обновлен.")
+
+# Обработчик нового файла
+@client.on(events.NewMessage)
+async def file_handler(event):
+    if event.file and event.file.name.endswith(".py"):
+        # Скачиваем файл в папку загрузок
+        file_path = await event.download_media(DOWNLOADS_FOLDER)
+        print(f"Получен файл {file_path}")
+
+        # Устанавливаем модуль
+        if install_module(file_path):
+            # Перезапускаем бота после установки модуля
+            await event.reply("Модуль успешно установлен и перезапущен.")
+            restart_bot()
+        else:
+            await event.reply("Ошибка при установке модуля.")
 
 # Функция для перезапуска бота
 def restart_bot():
     print("Перезапуск бота...")
     os.execv(sys.executable, ['python'] + sys.argv)
 
-# Проверка установленных модулей
-def get_installed_modules():
-    installed_modules = []
-    for dist in subprocess.check_output([sys.executable, '-m', 'pip', 'freeze']).decode().splitlines():
-        installed_modules.append(dist.split('==')[0])
-    return installed_modules
-
-# Обработчик команд
-@client.on(events.NewMessage(pattern="/modules"))
-async def handler(event):
-    installed_modules = get_installed_modules()
-    response = "Установленные модули:\n" + "\n".join(installed_modules)
-    await event.reply(response)
-
-# Обработчик нового файла
-@client.on(events.NewMessage)
-async def file_handler(event):
-    if event.file and event.file.name.endswith(".py"):
-        # Путь для скачивания файла в папку загрузок
-        file_path = await event.download_media(DOWNLOADS_FOLDER)
-
-        # Логирование пути скачанного файла
-        print(f"Файл скачан: {file_path}")
-
-        # Устанавливаем модуль
-        if install_module(file_path):
-            print(f"Модуль {file_path} успешно установлен.")
-            # Перезапускаем бота после установки модуля
-            restart_bot()
-        else:
-            print("Ошибка при установке модуля.")
-            await event.reply("Ошибка при установке модуля.")
-
 # Основная логика бота
 async def main():
-    # Отменяем локальные изменения
-    reset_local_changes()
-    
-    # Обновляем репозиторий
-    update_repository()
-    
     # Обновляем главный файл
     update_main_file()
-
+    
     # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
     print("Бот авторизован и запущен!")
