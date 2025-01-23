@@ -32,6 +32,27 @@ SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 # Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
+# Функция для обновления главного файла
+def update_main_file():
+    """
+    Обновляет главный файл bot.py из репозитория GitHub
+    """
+    try:
+        response = requests.get(GITHUB_RAW_URL)
+        if response.status_code == 200:
+            main_file_path = os.path.abspath(__file__)
+            # Скачиваем новый файл bot.py только если это основной файл
+            if os.path.basename(main_file_path) == 'bot.py':
+                with open(main_file_path, 'w', encoding='utf-8') as f:
+                    f.write(response.text)
+                print("Главный файл bot.py обновлен.")
+            else:
+                print("Игнорируем обновление для не-основного файла.")
+        else:
+            print(f"Ошибка при скачивании обновления: {response.status_code}")
+    except Exception as e:
+        print(f"Ошибка обновления файла: {e}")
+
 # Функция для установки модуля
 def install_module(file_path):
     """
