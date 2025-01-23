@@ -5,14 +5,14 @@ import requests
 import importlib
 import time
 import asyncio
+import shutil
 from telethon import TelegramClient, events
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/Download"  # Папка загрузок на Android
+TELEGRAM_FOLDER = "/storage/emulated/0/Android/data/org.telegram.messenger/files/"  # Папка Telegram
+DOWNLOADS_FOLDER = os.path.expanduser("~/storage/downloads/")  # Папка загрузок на Android
 
 # Получаем данные конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -31,7 +31,6 @@ else:
 # Путь для сессии
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
-
 # Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
@@ -44,8 +43,7 @@ def update_main_file():
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
             main_file_path = os.path.abspath(__file__)
-            # Скачиваем новый файл bot.py только если это основной файл
-            if os.path.basename(main_file_path) == 'bot.py':
+            if os.path.basename(main_file_path) == 'bot.py':  # Проверяем, что обновляем текущий файл
                 with open(main_file_path, 'w', encoding='utf-8') as f:
                     f.write(response.text)
                 print("Главный файл bot.py обновлен.")
@@ -64,16 +62,14 @@ def install_module(file_path):
     try:
         module_name = os.path.basename(file_path).replace('.py', '')
         destination = os.path.join(os.getcwd(), module_name + '.py')
-
+        
         # Перемещаем файл из папки загрузок в рабочую директорию
-        print(f"Перемещаем файл из {file_path} в {destination}")
         os.rename(file_path, destination)
 
         # Добавляем путь в sys.path
         sys.path.append(os.getcwd())
 
         # Попытка импорта модуля
-        print(f"Пытаемся импортировать модуль {module_name}...")
         importlib.import_module(module_name)
         print(f"Модуль {module_name} установлен успешно.")
         return True
@@ -81,38 +77,46 @@ def install_module(file_path):
         print(f"Ошибка установки модуля: {e}")
         return False
 
-# Обработчик событий для watchdog
-class DownloadHandler(FileSystemEventHandler):
-    def on_modified(self, event):
-        # Проверяем, что это файл с расширением .py
-        if event.is_directory:
-            return
-        if event.src_path.endswith('.py'):
-            print(f"Найден новый файл: {event.src_path}")
-            if install_module(event.src_path):
-                print(f"Модуль {event.src_path} установлен успешно.")
-                os.remove(event.src_path)  # Удаляем файл после установки
-            else:
-                print(f"Ошибка установки модуля {event.src_path}")
+# Функция для перемещения файлов из Telegram
+def move_telegram_files():
+    """
+    Перемещает файлы из папки Telegram в доступную папку.
+    """
+    try:
+        files = os.listdir(TELEGRAM_FOLDER)
+        for file_name in files:
+            if file_name.endswith(".py"):
+                src_path = os.path.join(TELEGRAM_FOLDER, file_name)
+                dst_path = os.path.join(DOWNLOADS_FOLDER, file_name)
+                shutil.move(src_path, dst_path)
+                print(f"Файл {file_name} перемещён в {DOWNLOADS_FOLDER}")
+    except Exception as e:
+        print(f"Ошибка перемещения файлов: {e}")
 
-# Функция для мониторинга загрузок с использованием watchdog
+# Функция для мониторинга загрузок
 def monitor_downloads():
     """
     Периодически проверяет папку загрузок на наличие новых файлов .py
     """
-    event_handler = DownloadHandler()
-    observer = Observer()
-    observer.schedule(event_handler, DOWNLOADS_FOLDER, recursive=False)
-    observer.start()
+    print("Начат мониторинг папки загрузок...")
+    while True:
+        move_telegram_files()  # Перемещаем файлы из Telegram
 
-    print(f"Начат мониторинг папки: {DOWNLOADS_FOLDER}")
+        # Проверяем доступную папку загрузок
+        files = os.listdir(DOWNLOADS_FOLDER)
+        for file_name in files:
+            file_path = os.path.join(DOWNLOADS_FOLDER, file_name)
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+            # Проверяем файлы с расширением .py
+            if file_name.endswith('.py'):
+                print(f"Найден новый файл: {file_name}")
+                if install_module(file_path):
+                    print(f"Модуль {file_name} установлен успешно.")
+                    os.remove(file_path)  # Удаляем файл после установки
+                else:
+                    print(f"Ошибка установки модуля {file_name}")
+
+        time.sleep(10)  # Ожидание перед следующей проверкой
 
 # Основная логика бота
 async def main():
