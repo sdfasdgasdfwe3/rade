@@ -11,7 +11,7 @@ import importlib.util
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
-DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/"  # Папка загрузок на Android
+DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram"  # Папка загрузок на Android
 
 # Получаем данные конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -63,12 +63,22 @@ def install_module(file_path):
     Устанавливает Python-модуль из .py файла.
     """
     try:
+        # Получаем имя модуля и путь назначения
         module_name = os.path.basename(file_path).replace('.py', '')
         destination = os.path.join(os.getcwd(), module_name + '.py')
+
+        # Если файл с таким именем уже существует, перезаписываем его
+        if os.path.exists(destination):
+            print(f"Модуль {module_name} уже существует, перезаписываем...")
+            os.remove(destination)
+
+        # Перемещаем файл в папку с ботом
         os.rename(file_path, destination)
         sys.path.append(os.getcwd())
+
+        # Импортируем модуль
         importlib.import_module(module_name)
-        print(f"Модуль {module_name} установлен успешно.")
+        print(f"Модуль {module_name} успешно установлен.")
         return True
     except Exception as e:
         print(f"Ошибка установки модуля: {e}")
@@ -115,12 +125,11 @@ async def handler(event):
 @client.on(events.NewMessage)
 async def file_handler(event):
     if event.file and event.file.name.endswith(".py"):
-        # Скачиваем файл в папку загрузок
-        print(f"Получен файл: {event.file.name}")
-        
-        # Путь для скачивания файла
+        # Путь для скачивания файла в папку загрузок
         file_path = await event.download_media(DOWNLOADS_FOLDER)
-        print(f"Файл скачан в папку: {file_path}")
+
+        # Логирование пути скачанного файла
+        print(f"Файл скачан: {file_path}")
 
         # Устанавливаем модуль
         if install_module(file_path):
