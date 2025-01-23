@@ -5,6 +5,7 @@ import requests
 import subprocess
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
+from telethon.sessions import StringSession  # Используем StringSession вместо SQLite
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
@@ -113,8 +114,8 @@ async def main():
     # Загрузка конфигурации
     API_ID, API_HASH, PHONE_NUMBER = load_config()
 
-    # Уникальное имя для каждой сессии
-    session_name = 'session_name'  # Уникальное имя сессии
+    # Создаем уникальное имя сессии
+    session_name = StringSession()  # Используем StringSession вместо SQLite
     client = TelegramClient(session_name, API_ID, API_HASH)
 
     try:
@@ -171,5 +172,6 @@ async def main():
 if __name__ == "__main__":
     # Загрузка конфигурации
     API_ID, API_HASH, PHONE_NUMBER = load_config()
-    client = TelegramClient('session_name', API_ID, API_HASH)  # Передаем API_ID и API_HASH напрямую
+    session_name = StringSession()  # Используем StringSession
+    client = TelegramClient(session_name, API_ID, API_HASH)
     client.loop.run_until_complete(main())
