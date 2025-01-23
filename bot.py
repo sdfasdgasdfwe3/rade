@@ -1,16 +1,13 @@
 import os
 import json
-import requests
 from telethon import TelegramClient, events
 import subprocess
-import shutil
 import sys
+from animations import typewriter_effect, get_animations  # Импортируем анимации
 
 # Константы
 CONFIG_FILE = "config.json"
 SCRIPT_VERSION = "0.0.10"
-DEFAULT_TYPING_SPEED = 1.5
-DEFAULT_CURSOR = "▮"
 
 # Загрузка данных конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -42,55 +39,42 @@ else:
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция для установки модуля или обработки файла
-def handle_file(file_path):
+# Команда /p для анимации текста
+@client.on(events.NewMessage(pattern=r'/p\s+(.+)'))
+async def text_animation_handler(event):
+    """
+    Обработчик команды /p для анимации текста (печатающая машинка).
+    """
+    text = event.pattern_match.group(1)  # Текст после команды
+    result = typewriter_effect(text)  # Анимация текста
+    message = await event.reply(result)  # Отправляем результат
+    
+    # Удаляем 3 последних сообщения бота (команда и результат)
+    async for message in client.iter_messages(event.chat_id, limit=3):
+        if message.sender_id == client.id:
+            await message.delete()
+
+# Команда /md для вывода списка установленных модулей
+@client.on(events.NewMessage(pattern='/md'))
+async def list_modules_handler(event):
+    """
+    Обработчик команды /md для вывода списка установленных модулей.
+    """
     try:
-        file_extension = os.path.splitext(file_path)[-1].lower()
-        if file_extension in ['.whl', '.tar.gz', '.zip']:
-            # Устанавливаем модуль через pip
-            result = subprocess.run(
-                [sys.executable, '-m', 'pip', 'install', file_path],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
-            if result.returncode == 0:
-                return f"Модуль из {os.path.basename(file_path)} успешно установлен."
-            else:
-                return f"Ошибка установки: {result.stderr}"
-        elif file_extension == '.py':
-            # Перемещаем скрипт в директорию проекта
-            dest_path = os.path.join(os.getcwd(), os.path.basename(file_path))
-            shutil.move(file_path, dest_path)
-            return f"Файл {os.path.basename(file_path)} успешно скопирован в директорию проекта."
+        # Получаем список установленных модулей
+        result = subprocess.run(
+            [sys.executable, '-m', 'pip', 'list'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if result.returncode == 0:
+            modules_list = result.stdout  # Список модулей
+            await event.reply(f"Установленные модули:\n```\n{modules_list}\n```", parse_mode='markdown')
         else:
-            return f"Файл с расширением {file_extension} не поддерживается."
+            await event.reply(f"Ошибка при получении списка модулей:\n{result.stderr}")
     except Exception as e:
-        return f"Не удалось обработать файл: {str(e)}"
-
-# Обработчик команды /up
-@client.on(events.NewMessage(pattern='/up'))
-async def upload_handler(event):
-    if event.reply_to_msg_id:
-        replied_message = await event.get_reply_message()
-        if replied_message.file:
-            # Скачиваем файл
-            file_path = await replied_message.download_media()
-            await event.reply(f"Файл {os.path.basename(file_path)} загружен. Обрабатываю...")
-            result = handle_file(file_path)
-            await event.reply(result)
-        else:
-            await event.reply("Ответьте на сообщение с файлом Python-модуля или скрипта, чтобы установить его.")
-    else:
-        await event.reply("Ответьте на сообщение с файлом Python-модуля или скрипта, чтобы установить его.")
-
-# Автоматическая обработка файла, отправленного в избранное
-@client.on(events.NewMessage)
-async def auto_install_handler(event):
-    if event.is_channel and event.chat_id == event.sender_id and event.file:
-        # Скачиваем файл
-        file_path = await event.download_media()
-        await event.reply(f"Обнаружен файл в избранном: {os.path.basename(file_path)}. Обрабатываю...")
-        result = handle_file(file_path)
-        await event.reply(result)
+        await event.reply(f"Не удалось получить список модулей: {str(e)}")
 
 async def main():
     await client.start(phone=PHONE_NUMBER)
