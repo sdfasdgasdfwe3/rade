@@ -7,6 +7,8 @@ from telethon import TelegramClient
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 SCRIPT_VERSION = "0.0.9"
+DEFAULT_TYPING_SPEED = 1.5  # Скорость печати по умолчанию
+DEFAULT_CURSOR = "▮"  # Курсор по умолчанию
 
 # Функция для проверки обновлений скрипта на GitHub
 def check_for_updates():
@@ -76,7 +78,9 @@ else:
             json.dump({
                 "API_ID": API_ID,
                 "API_HASH": API_HASH,
-                "PHONE_NUMBER": PHONE_NUMBER
+                "PHONE_NUMBER": PHONE_NUMBER,
+                "typing_speed": typing_speed,
+                "cursor_symbol": cursor_symbol
             }, f)
         print(f"Данные сохранены в {CONFIG_FILE}.")
     except ValueError as ve:
@@ -107,3 +111,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+
