@@ -1,13 +1,25 @@
 import os
 import json
+import requests
 from telethon import TelegramClient, events
 import subprocess
+import shutil
 import sys
-from animations import typewriter_effect, get_animations  # Импортируем анимации
 
 # Константы
 CONFIG_FILE = "config.json"
 SCRIPT_VERSION = "0.0.10"
+DEFAULT_TYPING_SPEED = 1.5
+DEFAULT_CURSOR = "▮"
+
+# Попробуем импортировать модуль animations, но если его нет — обработаем исключение
+animations = None
+try:
+    from animations.animations import typewriter_effect, get_animations
+    animations = True
+except ImportError:
+    animations = False
+    print("Модуль animations не найден. Анимации не будут доступны.")
 
 # Загрузка данных конфигурации
 if os.path.exists(CONFIG_FILE):
@@ -39,42 +51,60 @@ else:
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Команда /p для анимации текста
-@client.on(events.NewMessage(pattern=r'/p\s+(.+)'))
-async def text_animation_handler(event):
-    """
-    Обработчик команды /p для анимации текста (печатающая машинка).
-    """
-    text = event.pattern_match.group(1)  # Текст после команды
-    result = typewriter_effect(text)  # Анимация текста
-    message = await event.reply(result)  # Отправляем результат
+# Функция для обработки команды выбора анимации
+@client.on(events.NewMessage(pattern='/choose_animation'))
+async def choose_animation_handler(event):
+    if not animations:
+        await event.reply("Модуль animations не найден. Анимации недоступны.")
+        return
     
-    # Удаляем 3 последних сообщения бота (команда и результат)
-    async for message in client.iter_messages(event.chat_id, limit=3):
-        if message.sender_id == client.id:
-            await message.delete()
+    # Получаем список анимаций из модуля
+    available_animations = get_animations()
+    if not available_animations:
+        await event.reply("Доступных анимаций нет.")
+        return
 
-# Команда /md для вывода списка установленных модулей
+    # Выводим список анимаций
+    animation_list = "\n".join(f"{i + 1}. {name}" for i, name in enumerate(available_animations))
+    message = await event.reply(f"Выберите анимацию (ответьте номером):\n\n{animation_list}")
+
+    # Ждем ответа пользователя
+    try:
+        response = await client.wait_for(events.NewMessage(from_users=event.sender_id), timeout=30)
+        selected_index = int(response.text.strip()) - 1
+
+        # Проверяем, что выбор корректен
+        if 0 <= selected_index < len(available_animations):
+            selected_animation = available_animations[selected_index]
+            await event.reply(f"Вы выбрали: {selected_animation}")
+            await message.delete()
+            await response.delete()
+
+        else:
+            await event.reply("Некорректный выбор. Попробуйте снова.")
+    except (ValueError, TimeoutError):
+        await event.reply("Вы не выбрали анимацию вовремя.")
+
+# Команда для запуска анимации текста
+@client.on(events.NewMessage(pattern='/p (.+)'))
+async def text_animation_handler(event):
+    if not animations:
+        await event.reply("Модуль animations не найден. Анимации недоступны.")
+        return
+
+    # Получаем текст для анимации
+    text = event.pattern_match.group(1)
+
+    # Используем анимацию typewriter_effect
+    animated_text = typewriter_effect(text, speed=0.1)
+    await event.reply(f"```\n{animated_text}\n```", parse_mode="markdown")
+
+# Команда для отображения списка установленных модулей
 @client.on(events.NewMessage(pattern='/md'))
 async def list_modules_handler(event):
-    """
-    Обработчик команды /md для вывода списка установленных модулей.
-    """
-    try:
-        # Получаем список установленных модулей
-        result = subprocess.run(
-            [sys.executable, '-m', 'pip', 'list'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        if result.returncode == 0:
-            modules_list = result.stdout  # Список модулей
-            await event.reply(f"Установленные модули:\n```\n{modules_list}\n```", parse_mode='markdown')
-        else:
-            await event.reply(f"Ошибка при получении списка модулей:\n{result.stderr}")
-    except Exception as e:
-        await event.reply(f"Не удалось получить список модулей: {str(e)}")
+    result = subprocess.run([sys.executable, '-m', 'pip', 'list'], stdout=subprocess.PIPE, text=True)
+    installed_modules = result.stdout
+    await event.reply(f"Установленные модули:\n\n```\n{installed_modules}\n```", parse_mode="markdown")
 
 async def main():
     await client.start(phone=PHONE_NUMBER)
