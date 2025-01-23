@@ -74,7 +74,7 @@ def move_telegram_files():
     try:
         # Указываем исходную и целевую директории
         SOURCE_DIR = "/storage/emulated/0/Android/data/org.telegram.messenger/files/"
-        DEST_DIR = "~/storage/downloads/"
+        DEST_DIR = os.path.expanduser("~/storage/downloads/")  # Правильный путь для папки Termux
 
         # Сканируем папку с загрузками Telegram
         for file in os.listdir(SOURCE_DIR):
