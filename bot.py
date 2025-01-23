@@ -7,7 +7,6 @@ import importlib
 from telethon import TelegramClient, events
 import asyncio
 import time
-import importlib.util
 
 # Конфигурация
 CONFIG_FILE = "config.json"  # Файл конфигурации
