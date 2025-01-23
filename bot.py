@@ -1,122 +1,118 @@
 import os
 import json
-import importlib
 import subprocess
 import sys
 import requests
+import importlib
 from telethon import TelegramClient, events
 import asyncio
+import importlib.util
 
-# Имя файла конфигурации
-CONFIG_FILE = "config.json"
+# Конфигурация
+CONFIG_FILE = "config.json"  # Файл конфигурации
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL для скачивания главного файла
+DOWNLOADS_FOLDER = "/storage/emulated/0/Download/Telegram/Download"  # Папка загрузок на Android
 
-# Имя файла сессии будет формироваться на основе номера телефона
-SESSION_FILE = None
-
-# Значения по умолчанию для дополнительных параметров
-DEFAULT_TYPING_SPEED = 0.1
-
-# Текущая версия скрипта
-SCRIPT_VERSION = "1.0.0"
-
-# GitHub URL для загрузки последней версии bot.py
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Обновите URL
-
-# Проверяем наличие файла конфигурации
+# Получаем данные конфигурации
 if os.path.exists(CONFIG_FILE):
-    try:
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        API_ID = config.get("API_ID")
-        API_HASH = config.get("API_HASH")
-        PHONE_NUMBER = config.get("PHONE_NUMBER")
-        typing_speed = config.get("typing_speed", DEFAULT_TYPING_SPEED)
-    except (json.JSONDecodeError, KeyError) as e:
-        print(f"Ошибка чтения конфигурации: {e}. Попробуем запросить данные заново.")
-        API_ID = None
-        API_HASH = None
-        PHONE_NUMBER = None
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    API_ID = config.get("API_ID")
+    API_HASH = config.get("API_HASH")
+    PHONE_NUMBER = config.get("PHONE_NUMBER")
 else:
-    # Если файл не существует, запрашиваем данные у пользователя
-    API_ID = None
-    API_HASH = None
-    PHONE_NUMBER = None
+    API_ID = input("Введите API_ID: ")
+    API_HASH = input("Введите API_HASH: ")
+    PHONE_NUMBER = input("Введите номер телефона: ")
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump({"API_ID": API_ID, "API_HASH": API_HASH, "PHONE_NUMBER": PHONE_NUMBER}, f)
 
-# Если данные конфигурации не заданы, запрашиваем их у пользователя
-if not API_ID or not API_HASH or not PHONE_NUMBER:
-    try:
-        print("Пожалуйста, введите данные для авторизации в Telegram.")
-        API_ID = int(input("Введите ваш API ID: "))
-        API_HASH = input("Введите ваш API Hash: ").strip()
-        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
+# Путь для сессии
+SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 
-        # Сохраняем данные в файл конфигурации
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump({
-                "API_ID": API_ID,
-                "API_HASH": API_HASH,
-                "PHONE_NUMBER": PHONE_NUMBER,
-                "typing_speed": DEFAULT_TYPING_SPEED,
-                "cursor_symbol": DEFAULT_CURSOR
-            }, f)
-        print("Данные успешно сохранены в конфигурации.")
-    except Exception as e:
-        print(f"Ошибка сохранения конфигурации: {e}")
-        exit(1)
-
-# Уникальное имя файла для сессии
-SESSION_FILE = f'session_{PHONE_NUMBER.replace("+", "").replace("-", "")}'
-
-# Создаем клиента Telegram
+# Устанавливаем клиента Telegram
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция установки зависимостей
-def install_dependencies():
-    print("Проверяем зависимости...")
-    DEPENDENCIES = ["telethon", "tinydb", "requests"]
-    for package in DEPENDENCIES:
-        try:
-            __import__(package)
-            print(f"Библиотека '{package}' уже установлена.")
-        except ImportError:
-            print(f"Устанавливаем библиотеку '{package}'...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-    print("Все зависимости установлены.")
-
-# Функция для принудительного обновления скрипта из GitHub
-def update_script():
-    """Принудительно загружаем файл bot.py из GitHub и перезаписываем локальный файл."""
+# Модуль для установки модуля
+def install_module(file_path):
+    """
+    Устанавливает Python-модуль из .py файла.
+    """
     try:
-        print("Обновление скрипта из GitHub...")
+        module_name = os.path.basename(file_path).replace('.py', '')
+        destination = os.path.join(os.getcwd(), module_name + '.py')
+        os.rename(file_path, destination)
+        sys.path.append(os.getcwd())
+        importlib.import_module(module_name)
+        print(f"Модуль {module_name} установлен успешно.")
+        return True
+    except Exception as e:
+        print(f"Ошибка установки модуля: {e}")
+        return False
+
+# Проверка и обновление главного файла
+def update_main_file():
+    try:
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
-            # Получаем текст скрипта с GitHub
-            remote_script = response.text
-            current_file = os.path.abspath(__file__)
-
-            # Перезаписываем файл bot.py
-            with open(current_file, 'w', encoding='utf-8') as f:
-                f.write(remote_script)
-            print("Скрипт успешно обновлен из GitHub.")
+            main_file_path = os.path.abspath(__file__)
+            # Скачиваем новый файл bot.py только если это основной файл
+            if os.path.basename(main_file_path) == 'bot.py':
+                with open(main_file_path, 'w', encoding='utf-8') as f:
+                    f.write(response.text)
+                print("Главный файл bot.py обновлен.")
+            else:
+                print("Игнорируем обновление для не-основного файла.")
         else:
-            print(f"Не удалось скачать скрипт. Код ответа сервера: {response.status_code}")
+            print(f"Ошибка при скачивании обновления: {response.status_code}")
     except Exception as e:
-        print(f"Ошибка при обновлении скрипта: {e}")
+        print(f"Ошибка обновления файла: {e}")
 
-# Основная логика
+# Функция для перезапуска бота
+def restart_bot():
+    print("Перезапуск бота...")
+    os.execv(sys.executable, ['python'] + sys.argv)
+
+# Проверка установленных модулей
+def get_installed_modules():
+    installed_modules = []
+    for dist in subprocess.check_output([sys.executable, '-m', 'pip', 'freeze']).decode().splitlines():
+        installed_modules.append(dist.split('==')[0])
+    return installed_modules
+
+# Обработчик команд
+@client.on(events.NewMessage(pattern="/modules"))
+async def handler(event):
+    installed_modules = get_installed_modules()
+    response = "Установленные модули:\n" + "\n".join(installed_modules)
+    await event.reply(response)
+
+# Обработчик нового файла
+@client.on(events.NewMessage)
+async def file_handler(event):
+    if event.file and event.file.name.endswith(".py"):
+        # Скачиваем файл в папку загрузок
+        file_path = await event.download_media(DOWNLOADS_FOLDER)
+        print(f"Получен файл {file_path}")
+
+        # Устанавливаем модуль
+        if install_module(file_path):
+            # Перезапускаем бота после установки модуля
+            restart_bot()
+        else:
+            await event.reply("Ошибка при установке модуля.")
+
+# Основная логика бота
 async def main():
-    # Устанавливаем зависимости
-    install_dependencies()
-
-    # Принудительное обновление скрипта
-    update_script()
-
-    # Если сессия не существует, проходим авторизацию
+    # Обновляем главный файл
+    update_main_file()
+    
+    # Начинаем авторизацию
     await client.start(PHONE_NUMBER)
-    print("Бот запущен и авторизация завершена!")
-
-    # Запуск бота и ожидание новых сообщений
+    print("Бот авторизован и запущен!")
+    
+    # Запуск бота
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    client.loop.run_until_complete(main())
+    asyncio.run(main())
