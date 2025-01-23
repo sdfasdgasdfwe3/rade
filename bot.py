@@ -5,6 +5,7 @@ import git
 import subprocess
 import importlib
 from telethon import TelegramClient, events
+from telethon.errors import SessionPasswordNeededError
 from config import api_id, api_hash, phone_number, repo_path
 
 # Функция для создания необходимых файлов и папок при отсутствии
@@ -111,6 +112,19 @@ async def main():
 
     # Авторизация
     await client.start(phone_number)
+
+    # Проверка, если сессия не авторизована, то запросить код и пароль
+    if not await client.is_user_authorized():
+        print("Необходимо пройти авторизацию!")
+        await client.send_code_request(phone_number)
+        await client.sign_in(phone_number, input('Введите код из SMS: '))
+
+        try:
+            await client.sign_in(password=input('Введите ваш 2FA пароль: '))
+        except SessionPasswordNeededError:
+            print("Пароль 2FA не требуется.")
+        print("Авторизация прошла успешно!")
+
     print("Бот успешно запущен!")
 
     # Настройка структуры проекта
