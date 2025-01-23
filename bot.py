@@ -3,10 +3,11 @@ import json
 import requests
 from telethon import TelegramClient, events
 import subprocess
+import shutil
 
 # Константы
 CONFIG_FILE = "config.json"
-SCRIPT_VERSION = "0.0.9"
+SCRIPT_VERSION = "0.0.10"
 DEFAULT_TYPING_SPEED = 1.5
 DEFAULT_CURSOR = "▮"
 
@@ -40,19 +41,29 @@ else:
 SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
 client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
-# Функция для установки модуля через pip
-def install_module(file_path):
+# Функция для установки модуля или обработки файла
+def handle_file(file_path):
     try:
-        result = subprocess.run(
-            [sys.executable, '-m', 'pip', 'install', file_path],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-        )
-        if result.returncode == 0:
-            return f"Модуль из {os.path.basename(file_path)} успешно установлен."
+        file_extension = os.path.splitext(file_path)[-1].lower()
+        if file_extension in ['.whl', '.tar.gz', '.zip']:
+            # Устанавливаем модуль через pip
+            result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'install', file_path],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
+            if result.returncode == 0:
+                return f"Модуль из {os.path.basename(file_path)} успешно установлен."
+            else:
+                return f"Ошибка установки: {result.stderr}"
+        elif file_extension == '.py':
+            # Перемещаем скрипт в директорию проекта
+            dest_path = os.path.join(os.getcwd(), os.path.basename(file_path))
+            shutil.move(file_path, dest_path)
+            return f"Файл {os.path.basename(file_path)} успешно скопирован в директорию проекта."
         else:
-            return f"Ошибка установки: {result.stderr}"
+            return f"Файл с расширением {file_extension} не поддерживается."
     except Exception as e:
-        return f"Не удалось установить модуль: {str(e)}"
+        return f"Не удалось обработать файл: {str(e)}"
 
 # Обработчик команды /up
 @client.on(events.NewMessage(pattern='/up'))
@@ -61,25 +72,23 @@ async def upload_handler(event):
         replied_message = await event.get_reply_message()
         if replied_message.file:
             file_path = await replied_message.download_media()
-            await event.reply(f"Файл {os.path.basename(file_path)} загружен. Устанавливаю модуль...")
-            install_result = install_module(file_path)
-            await event.reply(install_result)
-            os.remove(file_path)  # Удаляем файл после установки
+            await event.reply(f"Файл {os.path.basename(file_path)} загружен. Обрабатываю...")
+            result = handle_file(file_path)
+            await event.reply(result)
         else:
-            await event.reply("Ответьте на сообщение с файлом Python-модуля, чтобы установить его.")
+            await event.reply("Ответьте на сообщение с файлом Python-модуля или скрипта, чтобы установить его.")
     else:
-        await event.reply("Ответьте на сообщение с файлом Python-модуля, чтобы установить его.")
+        await event.reply("Ответьте на сообщение с файлом Python-модуля или скрипта, чтобы установить его.")
 
-# Автоматическая установка файла, отправленного в избранное
+# Автоматическая обработка файла, отправленного в избранное
 @client.on(events.NewMessage)
 async def auto_install_handler(event):
     # Проверяем, что сообщение отправлено в избранное
     if event.is_channel and event.chat_id == event.sender_id and event.file:
         file_path = await event.download_media()
-        await event.reply(f"Обнаружен файл в избранном: {os.path.basename(file_path)}. Устанавливаю модуль...")
-        install_result = install_module(file_path)
-        await event.reply(install_result)
-        os.remove(file_path)  # Удаляем файл после установки
+        await event.reply(f"Обнаружен файл в избранном: {os.path.basename(file_path)}. Обрабатываю...")
+        result = handle_file(file_path)
+        await event.reply(result)
 
 async def main():
     await client.start(phone=PHONE_NUMBER)
