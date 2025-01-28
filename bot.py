@@ -1,13 +1,17 @@
 import asyncio
 import os
-import logging
 import requests
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError, FloodWaitError
+import logging
+
+# Полностью отключаем логирование
+logging.basicConfig(level=logging.CRITICAL)  # Устанавливаем уровень логирования на CRITICAL
+logging.getLogger("telethon").setLevel(logging.CRITICAL)  # Отключаем логирование telethon
 
 # Получаем API ID и API Hash из переменных окружения или вводим вручную
 api_id = int(os.environ.get("TELEGRAM_API_ID") or input("Введите API ID: "))
-api_hash = os.environ.get("TELEGRAM_API_HASH") or input("Введите API Hash: ")
+api_hash = os.environ.get("TELEGRAM_API_HASH") or input("Введите API Hash: "))
 
 # Название сессии (файла, где будет храниться информация об авторизации)
 session_name = "my_telegram_session"  # Имя файла сессии
@@ -34,14 +38,14 @@ async def check_for_updates():
 
         # Сравниваем содержимое
         if remote_content != local_content:
-            logger.info("Обнаружена новая версия скрипта!")
+            print("Обнаружена новая версия скрипта!")
             return remote_content
         else:
-            logger.info("У вас актуальная версия скрипта.")
+            print("У вас актуальная версия скрипта.")
             return None
 
     except Exception as e:
-        logger.error(f"Ошибка при проверке обновлений: {e}")
+        print(f"Ошибка при проверке обновлений: {e}")
         return None
 
 async def update_script(new_content):
@@ -51,25 +55,25 @@ async def update_script(new_content):
     try:
         with open(__file__, "w", encoding="utf-8") as file:
             file.write(new_content)
-        logger.info("Скрипт успешно обновлен!")
+        print("Скрипт успешно обновлен!")
     except Exception as e:
-        logger.error(f"Ошибка при обновлении скрипта: {e}")
+        print(f"Ошибка при обновлении скрипта: {e}")
 
 async def main():
     try:
         # Проверяем обновления
         new_version = await check_for_updates()
         if new_version:
-            logger.info("Найдена новая версия. Обновляюсь...")
+            print("Найдена новая версия. Обновляюсь...")
             await update_script(new_version)
-            logger.info("Перезапустите скрипт для применения обновлений.")
+            print("Перезапустите скрипт для применения обновлений.")
             return  # Завершаем выполнение, чтобы пользователь перезапустил скрипт
 
         # Запуск клиента и проверка авторизации
         await client.start()
 
         if not await client.is_user_authorized():
-            logger.info("Не авторизованы, запускаем процесс авторизации...")
+            print("Не авторизованы, запускаем процесс авторизации...")
             phone_number = input("Введите номер телефона: ")
             await client.send_code_request(phone_number)
 
@@ -77,22 +81,22 @@ async def main():
                 code = input('Введите код из Telegram: ')
                 await client.sign_in(phone_number, code)
             except SessionPasswordNeededError:
-                logger.info("Требуется пароль двухфакторной аутентификации:")
+                print("Требуется пароль двухфакторной аутентификации:")
                 password = input("Пароль: ")
                 await client.sign_in(password=password)
-            logger.info("Авторизация прошла успешно!")
+            print("Авторизация прошла успешно!")
         else:
-            logger.info("Вы уже авторизованы!")
+            print("Вы уже авторизованы!")
 
         # Пример использования клиента после авторизации (отправка сообщения самому себе)
         me = await client.get_me()
         await client.send_message(me.id, "Привет, это тестовое сообщение!")
-        logger.info(f"Сообщение отправлено пользователю {me.username}!")
+        print(f"Сообщение отправлено пользователю {me.username}!")
 
     except FloodWaitError as e:
-        logger.error(f"Превышено количество попыток. Попробуйте снова через {e.seconds} секунд.")
+        print(f"Превышено количество попыток. Попробуйте снова через {e.seconds} секунд.")
     except Exception as e:
-        logger.error(f"Произошла ошибка: {e}")
+        print(f"Произошла ошибка: {e}")
     finally:
         # Отключение клиента (важно для корректного сохранения сессии)
         await client.disconnect()
