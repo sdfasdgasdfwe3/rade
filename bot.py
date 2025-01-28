@@ -5,10 +5,6 @@ import requests
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError, FloodWaitError
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Получаем API ID и API Hash из переменных окружения или вводим вручную
 api_id = int(os.environ.get("TELEGRAM_API_ID") or input("Введите API ID: "))
 api_hash = os.environ.get("TELEGRAM_API_HASH") or input("Введите API Hash: ")
