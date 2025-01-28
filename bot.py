@@ -1,116 +1,106 @@
+import asyncio
 import os
-import json
+import logging
 import requests
-from telethon import TelegramClient, events
-import subprocess
-import shutil
-import sys
+from telethon import TelegramClient
+from telethon.errors import SessionPasswordNeededError, FloodWaitError
 
-# Константы
-CONFIG_FILE = "config.json"
-SCRIPT_VERSION = "0.0.10"
-DEFAULT_TYPING_SPEED = 1.5
-DEFAULT_CURSOR = "▮"
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Попробуем импортировать модуль animations, но если его нет — обработаем исключение
-animations = None
-try:
-    from animations.animations import typewriter_effect, get_animations
-    animations = True
-except ImportError:
-    animations = False
-    print("Модуль animations не найден. Анимации не будут доступны.")
+# Получаем API ID и API Hash из переменных окружения или вводим вручную
+api_id = int(os.environ.get("TELEGRAM_API_ID") or input("Введите API ID: "))
+api_hash = os.environ.get("TELEGRAM_API_HASH") or input("Введите API Hash: ")
 
-# Загрузка данных конфигурации
-if os.path.exists(CONFIG_FILE):
+# Название сессии (файла, где будет храниться информация об авторизации)
+session_name = "my_telegram_session"  # Имя файла сессии
+
+# Ссылка на raw-файл в GitHub
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3ra/de/main/bot.py"
+
+# Создаем клиент Telethon
+client = TelegramClient(session_name, api_id, api_hash)
+
+async def check_for_updates():
+    """
+    Проверяет наличие обновлений на GitHub.
+    Если найдена новая версия, возвращает её содержимое.
+    """
     try:
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        API_ID = config.get("API_ID")
-        API_HASH = config.get("API_HASH")
-        PHONE_NUMBER = config.get("PHONE_NUMBER")
-    except (json.JSONDecodeError, KeyError):
-        print("Ошибка чтения конфигурации. Удалите файл config.json и попробуйте снова.")
-        exit(1)
-else:
-    try:
-        API_ID = int(input("Введите ваш API ID: "))
-        API_HASH = input("Введите ваш API Hash: ").strip()
-        PHONE_NUMBER = input("Введите ваш номер телефона (в формате +375XXXXXXXXX, +7XXXXXXXXXX): ").strip()
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump({
-                "API_ID": API_ID,
-                "API_HASH": API_HASH,
-                "PHONE_NUMBER": PHONE_NUMBER,
-            }, f)
-    except Exception as e:
-        print(f"Ошибка сохранения конфигурации: {e}")
-        exit(1)
+        response = requests.get(GITHUB_RAW_URL)
+        response.raise_for_status()  # Проверяем, что запрос успешен
+        remote_content = response.text
 
-# Создание клиента Telegram
-SESSION_FILE = f"session_{PHONE_NUMBER.replace('+', '').replace('-', '')}"
-client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+        # Читаем текущий файл скрипта
+        with open(__file__, "r", encoding="utf-8") as file:
+            local_content = file.read()
 
-# Функция для обработки команды выбора анимации
-@client.on(events.NewMessage(pattern='/choose_animation'))
-async def choose_animation_handler(event):
-    if not animations:
-        await event.reply("Модуль animations не найден. Анимации недоступны.")
-        return
-    
-    # Получаем список анимаций из модуля
-    available_animations = get_animations()
-    if not available_animations:
-        await event.reply("Доступных анимаций нет.")
-        return
-
-    # Выводим список анимаций
-    animation_list = "\n".join(f"{i + 1}. {name}" for i, name in enumerate(available_animations))
-    message = await event.reply(f"Выберите анимацию (ответьте номером):\n\n{animation_list}")
-
-    # Ждем ответа пользователя
-    try:
-        response = await client.wait_for(events.NewMessage(from_users=event.sender_id), timeout=30)
-        selected_index = int(response.text.strip()) - 1
-
-        # Проверяем, что выбор корректен
-        if 0 <= selected_index < len(available_animations):
-            selected_animation = available_animations[selected_index]
-            await event.reply(f"Вы выбрали: {selected_animation}")
-            await message.delete()
-            await response.delete()
-
+        # Сравниваем содержимое
+        if remote_content != local_content:
+            logger.info("Обнаружена новая версия скрипта!")
+            return remote_content
         else:
-            await event.reply("Некорректный выбор. Попробуйте снова.")
-    except (ValueError, TimeoutError):
-        await event.reply("Вы не выбрали анимацию вовремя.")
+            logger.info("У вас актуальная версия скрипта.")
+            return None
 
-# Команда для запуска анимации текста
-@client.on(events.NewMessage(pattern='/p (.+)'))
-async def text_animation_handler(event):
-    if not animations:
-        await event.reply("Модуль animations не найден. Анимации недоступны.")
-        return
+    except Exception as e:
+        logger.error(f"Ошибка при проверке обновлений: {e}")
+        return None
 
-    # Получаем текст для анимации
-    text = event.pattern_match.group(1)
-
-    # Используем анимацию typewriter_effect
-    animated_text = typewriter_effect(text, speed=0.1)
-    await event.reply(f"```\n{animated_text}\n```", parse_mode="markdown")
-
-# Команда для отображения списка установленных модулей
-@client.on(events.NewMessage(pattern='/md'))
-async def list_modules_handler(event):
-    result = subprocess.run([sys.executable, '-m', 'pip', 'list'], stdout=subprocess.PIPE, text=True)
-    installed_modules = result.stdout
-    await event.reply(f"Установленные модули:\n\n```\n{installed_modules}\n```", parse_mode="markdown")
+async def update_script(new_content):
+    """
+    Обновляет текущий скрипт новой версией.
+    """
+    try:
+        with open(__file__, "w", encoding="utf-8") as file:
+            file.write(new_content)
+        logger.info("Скрипт успешно обновлен!")
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении скрипта: {e}")
 
 async def main():
-    await client.start(phone=PHONE_NUMBER)
-    print(f"Успешно авторизованы как {PHONE_NUMBER}")
-    await client.run_until_disconnected()
+    try:
+        # Проверяем обновления
+        new_version = await check_for_updates()
+        if new_version:
+            logger.info("Найдена новая версия. Обновляюсь...")
+            await update_script(new_version)
+            logger.info("Перезапустите скрипт для применения обновлений.")
+            return  # Завершаем выполнение, чтобы пользователь перезапустил скрипт
 
-if __name__ == "__main__":
-    import asyncio
+        # Запуск клиента и проверка авторизации
+        await client.start()
+
+        if not await client.is_user_authorized():
+            logger.info("Не авторизованы, запускаем процесс авторизации...")
+            phone_number = input("Введите номер телефона: ")
+            await client.send_code_request(phone_number)
+
+            try:
+                code = input('Введите код из Telegram: ')
+                await client.sign_in(phone_number, code)
+            except SessionPasswordNeededError:
+                logger.info("Требуется пароль двухфакторной аутентификации:")
+                password = input("Пароль: ")
+                await client.sign_in(password=password)
+            logger.info("Авторизация прошла успешно!")
+        else:
+            logger.info("Вы уже авторизованы!")
+
+        # Пример использования клиента после авторизации (отправка сообщения самому себе)
+        me = await client.get_me()
+        await client.send_message(me.id, "Привет, это тестовое сообщение!")
+        logger.info(f"Сообщение отправлено пользователю {me.username}!")
+
+    except FloodWaitError as e:
+        logger.error(f"Превышено количество попыток. Попробуйте снова через {e.seconds} секунд.")
+    except Exception as e:
+        logger.error(f"Произошла ошибка: {e}")
+    finally:
+        # Отключение клиента (важно для корректного сохранения сессии)
+        await client.disconnect()
+
+if __name__ == '__main__':
+    # Запуск асинхронного цикла
     asyncio.run(main())
