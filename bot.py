@@ -5,6 +5,7 @@ from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 import requests
 import configparser
+import subprocess
 
 def check_for_updates():
     GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
@@ -41,7 +42,7 @@ def check_for_updates():
             print("Файл обновлен. Перезапуск скрипта...")
             os.execv(sys.executable, [sys.executable] + sys.argv)
             
-    except Exception as e:  # Исправлено: добавлен отступ и имя ошибки "e"
+    except Exception as e:
         print(f"Ошибка при проверке обновлений: {str(e)}")
 
 def load_config():
@@ -61,6 +62,21 @@ def load_config():
         with open('config.ini', 'w') as configfile:
             config.write(configfile)
         return config['Telegram']
+
+def run_animation_script(client, chat_id):
+    # Здесь вы можете указать путь к вашему другому скрипту
+    script_path = "animation_script.py"
+    
+    # Запуск другого скрипта
+    subprocess.run([sys.executable, script_path])
+    
+    # Отправка сообщения от имени бота
+    client.send_message(chat_id, "Переход в скрипт анимаций выполнен!")
+
+async def message_handler(event):
+    if event.message.message == "Анимации":
+        chat_id = event.message.chat_id
+        run_animation_script(client, chat_id)
 
 check_for_updates()
 
@@ -86,6 +102,12 @@ try:
     
     print("Авторизация успешна!")
     check_for_updates()
+
+    # Регистрация обработчика сообщений
+    client.add_event_handler(message_handler)
+
+    # Запуск цикла обработки сообщений
+    client.run_until_disconnected()
 
 finally:
     client.disconnect()
