@@ -79,22 +79,29 @@ def load_config():
 
 def run_animation_script(client, chat_id):
     script_path = "animation_script.py"
-    
     try:
-        subprocess.run([sys.executable, script_path], check=True)
-        client.send_message(chat_id, "Переход в скрипт анимаций выполнен!")
+        subprocess.run([sys.executable, script_path, str(chat_id)], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при запуске скрипта анимаций: {str(e)}")
         client.send_message(chat_id, "Ошибка при выполнении скрипта анимаций!")
 
 async def message_handler(event):
     if isinstance(event, events.NewMessage.Event):
-        if event.message.message == "Анимации":
-            chat_id = event.message.chat_id
+        message = event.message.message
+        chat_id = event.chat_id
+        
+        if message == "Анимации":
             run_animation_script(client, chat_id)
-        elif event.message.message == "Сброс":
+        elif message == "Сброс":
             reset_local_changes()
             await event.reply("Локальные изменения удалены, кроме config.ini.")
+        elif message == "/p":
+            if os.path.exists('selected_animation.txt'):
+                with open('selected_animation.txt', 'r') as f:
+                    choice = f.read().strip()
+                    await event.reply(f"Воспроизведение анимации {choice}")
+            else:
+                await event.reply("Анимация не выбрана. Используйте 'Анимации' для выбора.")
 
 if __name__ == "__main__":
     check_for_updates()
