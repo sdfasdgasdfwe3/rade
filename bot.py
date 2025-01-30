@@ -53,7 +53,7 @@ def check_for_updates():
 check_for_updates()
 
 # Остальной код авторизации
-api_id = int(input("Введите API ID: ")
+api_id = input("Введите API ID: ")
 api_hash = input("Введите API HASH: ")
 phone_number = input("Введите номер телефона (+7xxxxxxxxx): ")
 
