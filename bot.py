@@ -41,7 +41,7 @@ def check_for_updates():
             print("Файл обновлен. Перезапуск скрипта...")
             os.execv(sys.executable, [sys.executable] + sys.argv)
             
-       except Exception as e:
+       except Exception as:
         print(f"Ошибка при проверке обновлений: {str(e)}")
 
 def load_config():
