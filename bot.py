@@ -12,8 +12,9 @@ def reset_local_changes():
     try:
         subprocess.run(["git", "stash", "push", "--", ".", ":!config.ini"], check=True)
         subprocess.run(["git", "clean", "-fd", "--exclude=config.ini"], check=True)
-    except subprocess.CalledProcessError:
-        pass
+        print("Локальные изменения удалены, кроме config.ini.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при удалении локальных изменений: {str(e)}")
 
 def check_for_updates():
     GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
@@ -32,22 +33,29 @@ def check_for_updates():
         
         response = requests.get(GITHUB_RAW_URL, headers=headers, timeout=10)
         
-        if response.status_code in [404, 403]:
+        if response.status_code == 404:
+            print("Файл обновления не найден на GitHub!")
             return
+        if response.status_code == 403:
+            print("Достигнут лимит запросов к GitHub!")
+            return
+            
         response.raise_for_status()
         
         remote_content = response.text
         remote_hash = hashlib.sha256(remote_content.encode()).hexdigest()
         
         if local_hash != remote_hash:
+            print("Обнаружено обновление! Загружаем новую версию...")
             if os.path.exists(LOCAL_FILE):
                 os.rename(LOCAL_FILE, LOCAL_FILE + ".bak")
             with open(LOCAL_FILE, 'w', encoding='utf-8') as f:
                 f.write(remote_content)
+            print("Файл обновлен. Перезапуск скрипта...")
             os.execv(sys.executable, [sys.executable] + sys.argv)
             
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Ошибка при проверке обновлений: {str(e)}")
 
 def load_config():
     config = configparser.ConfigParser()
@@ -75,7 +83,8 @@ def run_animation_script(client, chat_id):
     try:
         subprocess.run([sys.executable, script_path], check=True)
         client.send_message(chat_id, "Переход в скрипт анимаций выполнен!")
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при запуске скрипта анимаций: {str(e)}")
         client.send_message(chat_id, "Ошибка при выполнении скрипта анимаций!")
 
 async def message_handler(event):
@@ -109,11 +118,14 @@ if __name__ == "__main__":
                 password = input("Введите пароль двухэтапной аутентификации: ")
                 client.sign_in(password=password)
         
+        print("Авторизация успешна!")
         check_for_updates()
+
         client.add_event_handler(message_handler, events.NewMessage)
         client.run_until_disconnected()
 
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Критическая ошибка: {str(e)}")
+        raise
     finally:
         client.disconnect()
