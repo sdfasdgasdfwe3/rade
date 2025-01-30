@@ -6,6 +6,7 @@ from telethon.errors import SessionPasswordNeededError
 import requests
 import configparser
 import subprocess
+from telethon import events
 
 def check_for_updates():
     GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
@@ -74,9 +75,11 @@ def run_animation_script(client, chat_id):
     client.send_message(chat_id, "Переход в скрипт анимаций выполнен!")
 
 async def message_handler(event):
-    if event.message.message == "Анимации":
-        chat_id = event.message.chat_id
-        run_animation_script(client, chat_id)
+    # Проверяем, что событие является сообщением
+    if isinstance(event, events.NewMessage.Event):
+        if event.message.message == "Анимации":
+            chat_id = event.message.chat_id
+            run_animation_script(client, chat_id)
 
 check_for_updates()
 
@@ -104,7 +107,7 @@ try:
     check_for_updates()
 
     # Регистрация обработчика сообщений
-    client.add_event_handler(message_handler)
+    client.add_event_handler(message_handler, events.NewMessage)
 
     # Запуск цикла обработки сообщений
     client.run_until_disconnected()
