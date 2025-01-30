@@ -6,7 +6,7 @@ from telethon.errors import SessionPasswordNeededError
 import requests
 
 def check_for_updates():
-    GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3ra/main/bot.py"  # Проверьте URL!
+    GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # Проверьте URL!
     LOCAL_FILE = "bot.py"
     
     try:
