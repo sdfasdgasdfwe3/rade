@@ -53,8 +53,8 @@ def check_for_updates():
 check_for_updates()
 
 # Остальной код авторизации
-api_id = int(input("Введите API ID: "))
-api_hash = input("Введите API HASH: "))
+api_id = int(input("Введите API ID: ")
+api_hash = input("Введите API HASH: ")
 phone_number = input("Введите номер телефона (+7xxxxxxxxx): ")
 
 client = TelegramClient('session_name', api_id, api_hash)
