@@ -9,7 +9,7 @@ from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from configparser import ConfigParser
 
-VERSION = "1.1"
+VERSION = "1.2"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
@@ -107,6 +107,7 @@ async def main():
     
     print("\n🔑 Авторизация прошла успешно!")
     me = await client.get_me()
+    print("Наш telegram: t.me/kwotko")
     print(f"👤 Имя: {me.first_name}")
     print(f"📱 Номер: {me.phone}")
     
