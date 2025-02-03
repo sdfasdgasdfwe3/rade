@@ -113,7 +113,7 @@ async def main():
     
     print("\n🔑 Авторизация прошла успешно!")
     me = await client.get_me()
-    print("   Наш telegram: t.me/kwotko")
+    print(f"✅ Наш telegram: t.me/kwotko")
     print(f"👤 Имя: {me.first_name}")
     print(f"📱 Номер: {me.phone}")
     
