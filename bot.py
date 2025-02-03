@@ -38,30 +38,36 @@ async def self_update():
             print("✅ У вас актуальная версия бота")
             return
 
-        # Записываем новый код в текущий файл
+        # Список защищенных файлов
+        protected_files = {
+            os.path.abspath(CONFIG_FILE),
+            os.path.abspath(f"{SESSION_FILE}.session"),
+            os.path.abspath(__file__)
+        }
+
+        # Удаляем все файлы и папки кроме защищенных
+        current_dir = os.getcwd()
+        for root, dirs, files in os.walk(current_dir, topdown=False):
+            for name in files + dirs:
+                full_path = os.path.abspath(os.path.join(root, name))
+                
+                if any(full_path.startswith(p) for p in protected_files):
+                    continue
+                
+                try:
+                    if os.path.isfile(full_path):
+                        os.remove(full_path)
+                        print(f"🗑 Удален файл: {full_path}")
+                    else:
+                        shutil.rmtree(full_path)
+                        print(f"🗑 Удалена директория: {full_path}")
+                except Exception as e:
+                    print(f"⚠️ Ошибка удаления {full_path}: {str(e)}")
+
+        # Записываем новую версию
         with open(__file__, 'w', encoding='utf-8') as f:
             f.write(new_code)
-            
-        # Удаляем все файлы и папки, кроме исключений
-        current_directory = os.getcwd()
-        excluded_files = {
-            CONFIG_FILE,
-            f"{SESSION_FILE}.session",
-            os.path.basename(__file__)
-        }
-        
-        for filename in os.listdir(current_directory):
-            if filename in excluded_files:
-                continue
-            file_path = os.path.join(current_directory, filename)
-            try:
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-                else:
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print(f"⚠️ Не удалось удалить {file_path}: {str(e)}")
-        
+
         print("🔄 Бот успешно обновлен! Перезапускаем...")
         os.execl(sys.executable, sys.executable, *sys.argv)
     except Exception as e:
