@@ -125,12 +125,21 @@ async def main():
     print("/update - Принудительное обновление")
     print("/exit - Выход из бота\n")
     
-    while True:
-        cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
-        if cmd.strip() == '/update':
-            await self_update()
-        elif cmd.strip() == '/exit':
+   while True:
+    cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
+    if cmd.strip() == '/update':
+        await self_update()
+    elif cmd.strip() == '/a':  # Добавлено
+        script_name = "animation_script.py"
+        if not os.path.exists(script_name):
+            print(f"⛔ Скрипт {script_name} не найден!")
+        else:
+            print(f"🚀 Запускаем {script_name}...")
+            await client.disconnect()
+            subprocess.Popen([sys.executable, script_name])
             sys.exit(0)
+    elif cmd.strip() == '/exit':
+        sys.exit(0)
 
 if __name__ == '__main__':
     try:
