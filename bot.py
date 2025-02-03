@@ -1,138 +1,119 @@
-import hashlib
 import os
+import re
 import sys
+import asyncio
+import aiohttp
+import subprocess
 from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError
-import requests
-import configparser
-import subprocess
-from telethon import events
+from configparser import ConfigParser
 
-def reset_local_changes():
+VERSION = "1.1"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
+CONFIG_FILE = 'config.ini'
+SESSION_FILE = 'session_name'
+
+def parse_version(version_str):
+    return tuple(map(int, version_str.split('.')))
+
+async def check_update():
     try:
-        subprocess.run(["git", "stash", "push", "--", ".", ":!config.ini"], check=True)
-        subprocess.run(["git", "clean", "-fd", "--exclude=config.ini"], check=True)
-        print("Локальные изменения удалены, кроме config.ini.")
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при удалении локальных изменений: {str(e)}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(GITHUB_RAW_URL) as response:
+                remote_code = await response.text()
+                remote_version = re.search(r"VERSION\s*=\s*['\"](.*?)['\"]", remote_code).group(1)
+                
+                if parse_version(remote_version) > parse_version(VERSION):
+                    return True, remote_code
+    except Exception as e:
+        print(f"Ошибка проверки обновлений: {str(e)}")
+    return False, None
 
-def check_for_updates():
-    GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
-    LOCAL_FILE = "bot.py"
+async def self_update():
+    print("♻️ Начинаем процесс обновления...")
+    try:
+        update_available, new_code = await check_update()
+        if not update_available:
+            print("✅ У вас актуальная версия бота")
+            return
+
+        with open(__file__, 'w', encoding='utf-8') as f:
+            f.write(new_code)
+            
+        print("🔄 Бот успешно обновлен! Перезапускаем...")
+        os.execl(sys.executable, sys.executable, *sys.argv)
+    except Exception as e:
+        print(f"⛔ Ошибка при обновлении: {str(e)}")
+
+async def update_checker():
+    while True:
+        await asyncio.sleep(3600)  # Проверка каждые 60 минут
+        await self_update()
+
+def create_or_read_config():
+    config = ConfigParser()
     
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0",
-            "Accept": "application/vnd.github.v3.raw"
-        }
+    if not os.path.exists(CONFIG_FILE):
+        print("🔧 Конфигурационный файл не найден. Создаем новый...")
         
-        local_hash = ""
-        if os.path.exists(LOCAL_FILE):
-            with open(LOCAL_FILE, 'rb') as f:
-                local_hash = hashlib.sha256(f.read()).hexdigest()
-        
-        response = requests.get(GITHUB_RAW_URL, headers=headers, timeout=10)
-        
-        if response.status_code == 404:
-            print("Файл обновления не найден на GitHub!")
-            return
-        if response.status_code == 403:
-            print("Достигнут лимит запросов к GitHub!")
-            return
-            
-        response.raise_for_status()
-        
-        remote_content = response.text
-        remote_hash = hashlib.sha256(remote_content.encode()).hexdigest()
-        
-        if local_hash != remote_hash:
-            print("Обнаружено обновление! Загружаем новую версию...")
-            if os.path.exists(LOCAL_FILE):
-                os.rename(LOCAL_FILE, LOCAL_FILE + ".bak")
-            with open(LOCAL_FILE, 'w', encoding='utf-8') as f:
-                f.write(remote_content)
-            print("Файл обновлен. Перезапуск скрипта...")
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-            
-    except Exception as e:
-        print(f"Ошибка при проверке обновлений: {str(e)}")
-
-def load_config():
-    config = configparser.ConfigParser()
-    if os.path.exists('config.ini'):
-        config.read('config.ini')
-        if 'Telegram' not in config:
-            raise ValueError("Конфигурация Telegram отсутствует в config.ini!")
-        return config['Telegram']
-    else:
-        api_id = input("Введите API ID: ")
-        api_hash = input("Введите API HASH: ")
-        phone_number = input("Введите номер телефона (+7xxxxxxxxx): ")
         config['Telegram'] = {
-            'api_id': api_id,
-            'api_hash': api_hash,
-            'phone_number': phone_number
+            'api_id': input("Введите ваш API ID: "),
+            'api_hash': input("Введите ваш API HASH: "),
+            'phone_number': input("Введите номер телефона (с кодом страны): ")
         }
-        with open('config.ini', 'w') as configfile:
-            config.write(configfile)
-        return config['Telegram']
+        
+        with open(CONFIG_FILE, 'w') as f:
+            config.write(f)
+        print(f"💾 Конфигурация сохранена в {CONFIG_FILE}")
+    
+    config.read(CONFIG_FILE)
+    return config['Telegram']
 
-def run_animation_script(client, chat_id):
-    script_path = "animation_script.py"
+async def main():
+    print(f"🚀 Запуск бота версии {VERSION}")
+    await self_update()  # Проверка обновлений при старте
+    
+    config = create_or_read_config()
+    
+    client = TelegramClient(
+        SESSION_FILE,
+        int(config['api_id']),
+        config['api_hash']
+    )
+    
+    await client.start(phone=config['phone_number'])
+    
+    print("\n🔑 Авторизация прошла успешно!")
+    me = await client.get_me()
+    print(f"👤 Имя: {me.first_name}")
+    print(f"📱 Номер: {me.phone}")
+    
+    # Запуск фоновой задачи проверки обновлений
+    asyncio.create_task(update_checker())
+    
+    print("\n🛠️ Доступные команды:")
+    print("/update - Принудительное обновление")
+    print("/exit - Выход из бота\n")
+    
+    while True:
+        cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
+        if cmd.strip() == '/update':
+            await self_update()
+        elif cmd.strip() == '/exit':
+            sys.exit(0)
+
+if __name__ == '__main__':
     try:
-        subprocess.run([sys.executable, script_path, str(chat_id)], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при запуске скрипта анимаций: {str(e)}")
-        client.send_message(chat_id, "Ошибка при выполнении скрипта анимаций!")
-
-async def message_handler(event):
-    if isinstance(event, events.NewMessage.Event):
-        message = event.message.message
-        chat_id = event.chat_id
-        
-        if message == "Анимации":
-            run_animation_script(client, chat_id)
-        elif message == "Сброс":
-            reset_local_changes()
-            await event.reply("Локальные изменения удалены, кроме config.ini.")
-        elif message == "/p":
-            if os.path.exists('selected_animation.txt'):
-                with open('selected_animation.txt', 'r') as f:
-                    choice = f.read().strip()
-                    await event.reply(f"Воспроизведение анимации {choice}")
-            else:
-                await event.reply("Анимация не выбрана. Используйте 'Анимации' для выбора.")
-
-if __name__ == "__main__":
-    check_for_updates()
-
-    try:
-        config = load_config()
-        api_id = config['api_id']
-        api_hash = config['api_hash']
-        phone_number = config['phone_number']
-
-        client = TelegramClient('session_name', api_id, api_hash)
-        client.connect()
-        
-        if not client.is_user_authorized():
-            client.send_code_request(phone_number)
-            code = input("Введите полученный код: ")
-            
-            try:
-                client.sign_in(phone_number, code)
-            except SessionPasswordNeededError:
-                password = input("Введите пароль двухэтапной аутентификации: ")
-                client.sign_in(password=password)
-        
-        print("Авторизация успешна!")
-        check_for_updates()
-
-        client.add_event_handler(message_handler, events.NewMessage)
-        client.run_until_disconnected()
-
+        asyncio.run(main())
+    except SessionPasswordNeededError:
+        print("\n🔐 Требуется двухфакторная аутентификация!")
+        password = input("Введите пароль: ")
+        with TelegramClient(SESSION_FILE, 
+                          int(config['api_id']), 
+                          config['api_hash']) as client:
+            client.start(password=password)
+        print("✅ Пароль успешно проверен! Перезапустите бота.")
+    except KeyboardInterrupt:
+        print("\n🛑 Работа бота завершена.")
     except Exception as e:
-        print(f"Критическая ошибка: {str(e)}")
-        raise
-    finally:
-        client.disconnect()
+        print(f"⛔ Критическая ошибка: {str(e)}")
