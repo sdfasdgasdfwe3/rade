@@ -9,7 +9,7 @@ from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from configparser import ConfigParser
 
-VERSION = "1.2"
+VERSION = "1.3"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
