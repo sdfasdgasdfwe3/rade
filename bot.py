@@ -3,13 +3,13 @@ import re
 import sys
 import asyncio
 import aiohttp
-import shutil
-from telethon import TelegramClient, events
+import subprocess
+import shutil  # Добавлен импорт shutil
+from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from configparser import ConfigParser
-import animation_script
 
-VERSION = "1.2"
+VERSION = "1.1"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
@@ -33,52 +33,39 @@ async def check_update():
 async def self_update():
     print("♻️ Начинаем процесс обновления...")
     try:
-        temp_dir = "temp_update"
-        os.makedirs(temp_dir, exist_ok=True)
+        update_available, new_code = await check_update()
+        if not update_available:
+            print("✅ У вас актуальная версия бота")
+            return
+
+        # Записываем новый код в текущий файл
+        with open(__file__, 'w', encoding='utf-8') as f:
+            f.write(new_code)
+            
+        # Удаляем все файлы и папки, кроме исключений
+        current_directory = os.getcwd()
+        excluded_files = {
+            CONFIG_FILE,
+            f"{SESSION_FILE}.session",
+            os.path.basename(__file__)
+        }
         
-        async with aiohttp.ClientSession() as session:
-            files_to_update = {
-                "bot.py": GITHUB_RAW_URL,
-                "animation_script.py": GITHUB_RAW_URL.replace("bot.py", "animation_script.py")
-            }
-            
-            for filename, url in files_to_update.items():
-                async with session.get(url) as response:
-                    with open(os.path.join(temp_dir, filename), 'wb') as f:
-                        f.write(await response.read())
-            
-            gitignore_lines = [
-                "session_name.session\n",
-                "*.session\n",
-                "config.ini\n"
-            ]
-            if os.path.exists(".gitignore"):
-                with open(".gitignore", "r+") as f:
-                    content = f.read()
-                    for line in gitignore_lines:
-                        if line.strip() not in content:
-                            f.write(line)
-            else:
-                with open(".gitignore", "w") as f:
-                    f.writelines(gitignore_lines)
-            
-            for filename in files_to_update.keys():
-                if os.path.exists(filename):
-                    os.remove(filename)
-                shutil.move(os.path.join(temp_dir, filename), filename)
-            
-            shutil.rmtree(temp_dir)
-            
+        for filename in os.listdir(current_directory):
+            if filename in excluded_files:
+                continue
+            file_path = os.path.join(current_directory, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                else:
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"⚠️ Не удалось удалить {file_path}: {str(e)}")
+        
         print("🔄 Бот успешно обновлен! Перезапускаем...")
         os.execl(sys.executable, sys.executable, *sys.argv)
-        
     except Exception as e:
         print(f"⛔ Ошибка при обновлении: {str(e)}")
-        if os.path.exists(temp_dir):
-            for filename in files_to_update.keys():
-                if os.path.exists(os.path.join(temp_dir, filename)):
-                    shutil.move(os.path.join(temp_dir, filename), filename)
-            shutil.rmtree(temp_dir)
 
 async def update_checker():
     while True:
@@ -106,73 +93,36 @@ def create_or_read_config():
 
 async def main():
     print(f"🚀 Запуск бота версии {VERSION}")
-    await self_update()
+    await self_update()  # Проверка обновлений при старте
     
     config = create_or_read_config()
     
-    client = TelegramClient(SESSION_FILE, int(config['api_id']), config['api_hash'])
+    client = TelegramClient(
+        SESSION_FILE,
+        int(config['api_id']),
+        config['api_hash']
+    )
+    
     await client.start(phone=config['phone_number'])
     
     print("\n🔑 Авторизация прошла успешно!")
     me = await client.get_me()
     print(f"👤 Имя: {me.first_name}")
     print(f"📱 Номер: {me.phone}")
-
-    user_animations = {}
-    user_states = {}
-
-    @client.on(events.NewMessage(pattern='/a'))
-    async def handle_animation_selection(event):
-        user_id = event.sender_id
-        response = "🎬 Доступные анимации:\n"
-        for idx, anim in enumerate(animation_script.animations):
-            response += f"{idx}. {anim['name']}\n"
-        await event.respond(response + "\nВведите номер анимации:")
-        user_states[user_id] = 'awaiting_animation_choice'
-
-    @client.on(events.NewMessage(pattern='/p'))
-    async def animate_text_handler(event):
-        user_id = event.sender_id
-        text = event.raw_text[3:].strip()
-        
-        if not text:
-            await event.respond("❌ Укажите текст: /p Ваш текст")
-            return
-            
-        anim_index = user_animations.get(user_id)
-        if anim_index is None:
-            await event.respond("⚠️ Сначала выберите анимацию через /a")
-            return
-            
-        try:
-            animation = animation_script.animations[anim_index]
-            frames = animation['function'](text)
-            
-            for frame in frames:
-                await event.respond(frame)
-                await asyncio.sleep(0.3)
-        except Exception as e:
-            await event.respond(f"⚠️ Ошибка: {str(e)}")
-
-    @client.on(events.NewMessage)
-    async def message_handler(event):
-        user_id = event.sender_id
-        if user_states.get(user_id) == 'awaiting_animation_choice':
-            try:
-                choice = int(event.raw_text.strip())
-                if 0 <= choice < len(animation_script.animations):
-                    user_animations[user_id] = choice
-                    selected_anim = animation_script.animations[choice]['name']
-                    await event.respond(f"✅ Выбрано: {selected_anim}")
-                    user_states.pop(user_id, None)
-                else:
-                    await event.respond("❌ Неверный номер. Попробуйте снова.")
-            except ValueError:
-                await event.respond("❌ Введите число.")
-
+    
+    # Запуск фоновой задачи проверки обновлений
     asyncio.create_task(update_checker())
-    print("\n🛠️ Бот готов к работе! Ожидание сообщений...")
-    await client.run_until_disconnected()
+    
+    print("\n🛠️ Доступные команды:")
+    print("/update - Принудительное обновление")
+    print("/exit - Выход из бота\n")
+    
+    while True:
+        cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
+        if cmd.strip() == '/update':
+            await self_update()
+        elif cmd.strip() == '/exit':
+            sys.exit(0)
 
 if __name__ == '__main__':
     try:
@@ -181,8 +131,8 @@ if __name__ == '__main__':
         print("\n🔐 Требуется двухфакторная аутентификация!")
         password = input("Введите пароль: ")
         with TelegramClient(SESSION_FILE, 
-                          int(create_or_read_config()['api_id']), 
-                          create_or_read_config()['api_hash']) as client:
+                          int(config['api_id']), 
+                          config['api_hash']) as client:
             client.start(password=password)
         print("✅ Пароль успешно проверен! Перезапустите бота.")
     except KeyboardInterrupt:
