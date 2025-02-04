@@ -111,35 +111,29 @@ async def main():
     
     await client.start(phone=config['phone_number'])
     
-    print("\n🔑 Авторизация прошла успешно!")
-    me = await client.get_me()
-    print(f"✅ Наш telegram: t.me/kwotko")
-    print(f"👤 Имя: {me.first_name}")
-    print(f"📱 Номер: {me.phone}")
-    
-    # Запуск фоновой задачи проверки обновлений
-    asyncio.create_task(update_checker())
-    
+        # ... остальной код ...
+
     print("\n🛠️ Доступные команды:")
     print("/a - Выбор анимации")
     print("/update - Принудительное обновление")
     print("/exit - Выход из бота\n")
-    
-   while True:
-     cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
-    if cmd.strip() == '/update':
-        await self_update()
-    elif cmd.strip() == '/a':  # Добавлено
-        script_name = "animation_script.py"
-        if not os.path.exists(script_name):
-            print(f"⛔ Скрипт {script_name} не найден!")
-        else:
-            print(f"🚀 Запускаем {script_name}...")
-            await client.disconnect()
-            subprocess.Popen([sys.executable, script_name])
+
+    # Исправлено: выравнивание цикла while и его тела
+    while True:
+        cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
+        if cmd.strip() == '/update':
+            await self_update()
+        elif cmd.strip() == '/a':  # Добавлено
+            script_name = "animation_script.py"
+            if not os.path.exists(script_name):
+                print(f"⛔ Скрипт {script_name} не найден!")
+            else:
+                print(f"🚀 Запускаем {script_name}...")
+                await client.disconnect()
+                subprocess.Popen([sys.executable, script_name])
+                sys.exit(0)
+        elif cmd.strip() == '/exit':
             sys.exit(0)
-    elif cmd.strip() == '/exit':
-        sys.exit(0)
 
 if __name__ == '__main__':
     try:
