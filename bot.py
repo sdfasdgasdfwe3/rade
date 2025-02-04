@@ -139,6 +139,31 @@ async def main():
         print("/update - Принудительная проверка обновлений")
         print("/exit - Выход из бота\n")
 
+        @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+        async def handle_private_message(event):
+            msg_text = event.raw_text.strip().lower()
+            
+            if msg_text == '/exit':
+                await event.respond('🛑 Останавливаю работу...')
+                await client.disconnect()
+                print("Бот завершил работу по команде /exit из сообщения.")
+                sys.exit(0)
+            
+            elif msg_text == '/k':
+                message = await event.respond('🔄 Обновляю список команд...')
+                commands = "Список команд:\n/a - запуск анимации\n/update - проверка обновлений\n/exit - выход"
+                await message.edit(commands)
+            
+            elif msg_text == '/a':
+                script_name = "animation_script.py"
+                if os.path.exists(script_name):
+                    await event.respond('🚀 Запускаю анимацию...')
+                    await client.disconnect()
+                    subprocess.Popen([sys.executable, script_name])
+                    sys.exit(0)
+                else:
+                    await event.respond(f'❌ Скрипт {script_name} не найден!')
+
         while True:
             cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
             cmd = cmd.strip().lower()
