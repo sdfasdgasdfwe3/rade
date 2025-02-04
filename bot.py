@@ -9,7 +9,7 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from configparser import ConfigParser
 
-VERSION = "1.6"
+VERSION = "1.7"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
@@ -27,7 +27,6 @@ async def self_update():
                         return
                     new_version = version_match.group(1)
                     
-                    # Сравнение версий как чисел
                     current_parts = list(map(int, VERSION.split('.')))
                     new_parts = list(map(int, new_version.split('.')))
                     
@@ -36,13 +35,10 @@ async def self_update():
                         temp_file = 'bot_temp.py'
                         script_path = os.path.abspath(__file__)
                         
-                        # Сохраняем новый код во временный файл
                         with open(temp_file, 'w', encoding='utf-8') as f:
                             f.write(new_content)
                             
-                        # Заменяем текущий файл
                         shutil.move(temp_file, script_path)
-                        
                         print("✅ Обновление завершено. Перезапуск бота...")
                         os.execv(sys.executable, [sys.executable] + sys.argv)
                     else:
@@ -68,6 +64,9 @@ def create_or_read_config():
         sys.exit()
     else:
         config.read(CONFIG_FILE)
+        if not config.has_section('Telegram'):
+            print("❌ В конфиге отсутствует секция [Telegram]!")
+            sys.exit(1)
         return config['Telegram']
 
 async def authenticate(client, phone):
@@ -84,7 +83,7 @@ async def authenticate(client, phone):
 
 async def main():
     print(f"🚀 Запуск бота версии {VERSION}")
-    await self_update()  # Добавлен вызов автообновления
+    await self_update()
     
     config = create_or_read_config()
     client = TelegramClient(SESSION_FILE, 
