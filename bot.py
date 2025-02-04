@@ -9,7 +9,7 @@ from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from configparser import ConfigParser
 
-VERSION = "1.4"
+VERSION = "1.5"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
@@ -135,15 +135,20 @@ async def main():
         elif cmd.strip() == '/exit':
             sys.exit(0)
 
+# ... (импорты и предыдущий код остаются без изменений)
+
 if __name__ == '__main__':
     try:
         asyncio.run(main())
     except SessionPasswordNeededError:
         print("\n🔐 Требуется двухфакторная аутентификация!")
+        # Читаем конфиг заново
+        config = ConfigParser()
+        config.read(CONFIG_FILE)
         password = input("Введите пароль: ")
         with TelegramClient(SESSION_FILE, 
-                          int(config['api_id']), 
-                          config['api_hash']) as client:
+                          int(config['Telegram']['api_id']), 
+                          config['Telegram']['api_hash']) as client:
             client.start(password=password)
         print("✅ Пароль успешно проверен! Перезапустите бота.")
     except KeyboardInterrupt:
