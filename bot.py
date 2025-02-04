@@ -9,12 +9,62 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from configparser import ConfigParser
 
-VERSION = "1.8"
+VERSION = "1.7"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
-SESSION_FILE = 'session_name'
+SESSION_FILE = 'rade_session'
+
+def create_config():
+    """Создает конфигурационный файл с пояснениями"""
+    config = ConfigParser()
+    
+    config['Telegram'] = {
+        '# Получите API ID и Hash на my.telegram.org': None,
+        'api_id': 'ВАШ_API_ID',
+        'api_hash': 'ВАШ_API_HASH',
+        '# Номер в международном формате': None,
+        'phone_number': '+79991234567'
+    }
+
+    with open(CONFIG_FILE, 'w') as f:
+        config.write(f)
+
+    print(f"""
+    =============================================
+    Создан новый конфигурационный файл {CONFIG_FILE}
+    
+    1. Зарегистрируйте приложение здесь:
+       https://my.telegram.org/apps
+       
+    2. Введите полученные данные в конфиг:
+       - api_id (цифры)
+       - api_hash (32 символа)
+       - номер телефона с кодом страны
+    
+    3. Сохраните файл и перезапустите бота
+    =============================================
+    """)
+    sys.exit()
+
+def validate_config(config):
+    """Проверяет корректность конфигурации"""
+    required = {
+        'api_id': ("Введите API ID (цифры)", r'^\d+$'),
+        'api_hash': ("Введите API Hash (32 символа)", r'^[a-f0-9]{32}$'),
+        'phone_number': ("Введите номер телефона", r'^\+[0-9]{9,15}$')
+    }
+
+    for key, (message, pattern) in required.items():
+        value = config.get('Telegram', key)
+        if 'ВАШ_' in value or not re.match(pattern, value):
+            print(f"\n❌ Ошибка в параметре {key}:")
+            print(f"   - {message}")
+            print(f"   - Текущее значение: {value}")
+            print("\n⚠️ Исправьте конфиг и перезапустите бота")
+            sys.exit(1)
 
 async def self_update():
+    """Система автоматического обновления"""
     print("🔍 Проверка обновлений...")
     try:
         async with aiohttp.ClientSession() as session:
@@ -22,106 +72,72 @@ async def self_update():
                 if response.status == 200:
                     new_content = await response.text()
                     version_match = re.search(r'VERSION\s*=\s*"([\d.]+)"', new_content)
-                    if not version_match:
-                        print("⚠️ Не удалось определить версию в обновлении.")
-                        return
-                    new_version = version_match.group(1)
                     
-                    current_parts = list(map(int, VERSION.split('.')))
-                    new_parts = list(map(int, new_version.split('.')))
-                    
-                    if new_parts > current_parts:
-                        print(f"🆕 Обнаружена новая версия {new_version}, обновление...")
-                        temp_file = 'bot_temp.py'
-                        script_path = os.path.abspath(__file__)
-                        
-                        with open(temp_file, 'w', encoding='utf-8') as f:
+                    if version_match and version_match.group(1) > VERSION:
+                        print(f"🆕 Обнаружена версия {version_match.group(1)}, обновление...")
+                        with open('bot_temp.py', 'w') as f:
                             f.write(new_content)
-                            
-                        shutil.move(temp_file, script_path)
-                        print("✅ Обновление завершено. Перезапуск бота...")
+                        shutil.move('bot_temp.py', __file__)
+                        print("✅ Обновление завершено. Перезапуск...")
                         os.execv(sys.executable, [sys.executable] + sys.argv)
-                    else:
-                        print(f"✅ У вас уже установлена актуальная версия {VERSION}.")
-                else:
-                    print(f"⚠️ Не удалось проверить обновления. Код ответа: {response.status}")
     except Exception as e:
-        print(f"⚠️ Ошибка при проверке обновлений: {str(e)}")
-
-def create_or_read_config():
-    config = ConfigParser()
-    if not os.path.exists(CONFIG_FILE):
-        print("⚙️ Создаем новый конфиг...")
-        config['Telegram'] = {
-            'api_id': 'ваш_api_id',
-            'api_hash': 'ваш_api_hash',
-            'phone_number': '+79991234567'
-        }
-        with open(CONFIG_FILE, 'w') as f:
-            config.write(f)
-        print(f"✅ Конфиг создан: {CONFIG_FILE}")
-        print("⚠️ Заполните его перед использованием!")
-        sys.exit()
-    else:
-        config.read(CONFIG_FILE)
-        if not config.has_section('Telegram'):
-            print("❌ В конфиге отсутствует секция [Telegram]!")
-            sys.exit(1)
-        return config['Telegram']
-
-async def authenticate(client, phone):
-    try:
-        await client.send_code_request(phone)
-        code = input("Введите код подтверждения из Telegram: ")
-        return await client.sign_in(phone=phone, code=code)
-    except PhoneCodeInvalidError:
-        print("Неверный код подтверждения!")
-        return await authenticate(client, phone)
-    except SessionPasswordNeededError:
-        password = input("Введите пароль двухфакторной аутентификации: ")
-        return await client.sign_in(password=password)
+        print(f"⚠️ Ошибка обновления: {e}")
 
 async def main():
-    print(f"🚀 Запуск бота версии {VERSION}")
-    await self_update()
+    # Проверка и создание конфига
+    if not os.path.exists(CONFIG_FILE):
+        create_config()
     
-    config = create_or_read_config()
-    client = TelegramClient(SESSION_FILE, 
-                          int(config['api_id']), 
-                          config['api_hash'])
-    
-    try:
-        await client.start(phone=lambda: config['phone_number'])
-        if not await client.is_user_authorized():
-            print("🔐 Начинаем процесс авторизации...")
-            await authenticate(client, config['phone_number'])
-        
-        print("✅ Успешная авторизация!")
-        print("\n🛠️ Доступные команды:")
-        print("/a - Выбор анимации")
-        print("/update - Принудительное обновление")
-        print("/exit - Выход из бота\n")
+    # Проверка конфига
+    config = ConfigParser()
+    config.read(CONFIG_FILE)
+    validate_config(config)
+    tg_config = config['Telegram']
 
-        while True:
-            cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
-            if cmd.strip() == '/update':
-                await self_update()
-            elif cmd.strip() == '/a':
-                script_name = "animation_script.py"
-                if not os.path.exists(script_name):
-                    print(f"⛔ Скрипт {script_name} не найден!")
-                else:
-                    print(f"🚀 Запускаем {script_name}...")
-                    await client.disconnect()
-                    subprocess.Popen([sys.executable, script_name])
-                    sys.exit(0)
-            elif cmd.strip() == '/exit':
-                await client.disconnect()
-                sys.exit(0)
-                
+    # Инициализация клиента
+    client = TelegramClient(
+        SESSION_FILE,
+        int(tg_config['api_id']),
+        tg_config['api_hash']
+    )
+
+    # Процесс авторизации
+    try:
+        if not await client.is_user_authorized():
+            print("\n🔐 Начинаем авторизацию...")
+            await client.start(
+                phone=lambda: tg_config['phone_number'],
+                code_callback=lambda: input("✉️ Введите код из Telegram: "),
+                password=lambda: input("🔑 Введите пароль 2FA: ")
+            )
+            print("✅ Авторизация успешна!")
     except Exception as e:
-        print(f"⛔ Ошибка: {str(e)}")
-        await client.disconnect()
+        print(f"🚨 Ошибка авторизации: {e}")
+        sys.exit(1)
+
+    # Основной интерфейс
+    print(f"""
+    ============================
+    Бот успешно запущен! 
+    Версия: {VERSION}
+    Номер: {tg_config['phone_number']}
+    Команды:
+    /a - Запуск анимации
+    /update - Проверить обновления
+    /exit - Выход
+    ============================
+    """)
+
+    while True:
+        cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
+        if cmd == '/a':
+            # Логика запуска анимации
+            pass
+        elif cmd == '/update':
+            await self_update()
+        elif cmd == '/exit':
+            await client.disconnect()
+            sys.exit()
 
 if __name__ == '__main__':
     try:
