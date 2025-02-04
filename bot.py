@@ -14,6 +14,62 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
 
+async def self_update():
+    print("🔍 Проверка обновлений...")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(GITHUB_RAW_URL) as response:
+                if response.status == 200:
+                    new_content = await response.text()
+                    version_match = re.search(r'VERSION\s*=\s*"([\d.]+)"', new_content)
+                    if not version_match:
+                        print("⚠️ Не удалось определить версию в обновлении.")
+                        return
+                    new_version = version_match.group(1)
+                    
+                    # Сравнение версий как чисел
+                    current_parts = list(map(int, VERSION.split('.')))
+                    new_parts = list(map(int, new_version.split('.')))
+                    
+                    if new_parts > current_parts:
+                        print(f"🆕 Обнаружена новая версия {new_version}, обновление...")
+                        temp_file = 'bot_temp.py'
+                        script_path = os.path.abspath(__file__)
+                        
+                        # Сохраняем новый код во временный файл
+                        with open(temp_file, 'w', encoding='utf-8') as f:
+                            f.write(new_content)
+                            
+                        # Заменяем текущий файл
+                        shutil.move(temp_file, script_path)
+                        
+                        print("✅ Обновление завершено. Перезапуск бота...")
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+                    else:
+                        print(f"✅ У вас уже установлена актуальная версия {VERSION}.")
+                else:
+                    print(f"⚠️ Не удалось проверить обновления. Код ответа: {response.status}")
+    except Exception as e:
+        print(f"⚠️ Ошибка при проверке обновлений: {str(e)}")
+
+def create_or_read_config():
+    config = ConfigParser()
+    if not os.path.exists(CONFIG_FILE):
+        print("⚙️ Создаем новый конфиг...")
+        config['Telegram'] = {
+            'api_id': 'ваш_api_id',
+            'api_hash': 'ваш_api_hash',
+            'phone_number': '+79991234567'
+        }
+        with open(CONFIG_FILE, 'w') as f:
+            config.write(f)
+        print(f"✅ Конфиг создан: {CONFIG_FILE}")
+        print("⚠️ Заполните его перед использованием!")
+        sys.exit()
+    else:
+        config.read(CONFIG_FILE)
+        return config['Telegram']
+
 async def authenticate(client, phone):
     try:
         await client.send_code_request(phone)
@@ -28,7 +84,7 @@ async def authenticate(client, phone):
 
 async def main():
     print(f"🚀 Запуск бота версии {VERSION}")
-    await self_update()
+    await self_update()  # Добавлен вызов автообновления
     
     config = create_or_read_config()
     client = TelegramClient(SESSION_FILE, 
