@@ -126,7 +126,7 @@ async def main():
     print("/exit - Выход из бота\n")
     
    while True:
-    cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
+     cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
     if cmd.strip() == '/update':
         await self_update()
     elif cmd.strip() == '/a':  # Добавлено
