@@ -4,6 +4,7 @@ import requests
 from telethon import TelegramClient, events
 import subprocess
 import sys
+from sys import stdout
 import asyncio
 import random
 import signal
@@ -11,23 +12,78 @@ import signal
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
-SCRIPT_VERSION = "0.0.9"
+SCRIPT_VERSION = "0.1.0"
 
-# Глобальные переменные для управления анимацией
+# Глобальные переменные
 is_typing_enabled = True
 typing_speed = 1.5
 pixel_typing_speed = 0.10
 cursor_symbol = "▮"
 selected_animation = 1
 
-# Список анимаций
+# Настройки цветов и смайликов
+COLORS = {
+    "HEADER": "\033[95m",
+    "BLUE": "\033[94m",
+    "CYAN": "\033[96m",
+    "GREEN": "\033[92m",
+    "YELLOW": "\033[93m",
+    "RED": "\033[91m",
+    "BOLD": "\033[1m",
+    "UNDERLINE": "\033[4m",
+    "GRAY": "\033[90m",
+    "ENDC": "\033[0m",
+}
+
+EMOJIS = {
+    "banner": "✨",
+    "update": "🔄",
+    "success": "✅",
+    "error": "❌",
+    "warning": "⚠️",
+    "info": "ℹ️",
+    "auth": "🔑",
+    "phone": "📱",
+    "robot": "🤖",
+    "config": "📄",
+    "exit": "👋",
+    "typing": "✍️",
+    "version": "🏷️",
+    "author": "👤",
+    "separator": "▬"
+}
+
 animations = {
     1: "Стандартная анимация",
     2: "Пиксельное разрушение",
 }
 
+def print_color(text, color=None, end='\n'):
+    if color and stdout.isatty():
+        print(f"{color}{text}{COLORS['ENDC']}", end=end)
+    else:
+        print(text, end=end)
+
+def print_banner():
+    banner = f"""
+{COLORS['BLUE']}
+██████╗  █████╗ ██████╗ ███████╗    {EMOJIS['banner']}
+██╔══██╗██╔══██╗██╔══██╗██╔════╝    
+██████╔╝███████║██║  ██║█████╗      
+██╔══██╗██╔══██║██║  ██║██╔══╝      
+██║  ██║██║  ██║██████╔╝███████╗    
+╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝    
+{COLORS['ENDC']}"""
+    print(banner)
+    print_color(f"{EMOJIS['version']} Telegram Text Animator {SCRIPT_VERSION}", COLORS['CYAN'])
+    print_color(f"{EMOJIS['author']} Автор: github.com/sdfasdgasdfwe3\n", COLORS['GRAY'])
+
+def print_separator():
+    sep = f" {EMOJIS['separator']} " * 15
+    print_color(sep, COLORS['GRAY'])
+
 def signal_handler(sig, frame):
-    print('\nБот остановлен.')
+    print_color(f'\n{EMOJIS["exit"]} Бот остановлен', COLORS['RED'])
     sys.exit(0)
 
 def discard_local_changes():
@@ -37,6 +93,8 @@ def discard_local_changes():
         pass
 
 def check_for_updates():
+    print_separator()
+    print_color(f"{EMOJIS['update']} Проверка обновлений...", COLORS['BLUE'])
     try:
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
@@ -53,16 +111,21 @@ def check_for_updates():
                     break
 
             if remote_version and SCRIPT_VERSION != remote_version:
-                print(f"Доступна новая версия {remote_version} (текущая {SCRIPT_VERSION})")
+                print_color(f"{EMOJIS['warning']} Доступна новая версия {remote_version}!", COLORS['YELLOW'])
+                print_color(f"{EMOJIS['info']} Текущая версия: {SCRIPT_VERSION}", COLORS['GRAY'])
+                print_color(f"{EMOJIS['update']} Обновление...", COLORS['BLUE'])
                 with open(current_file, 'w', encoding='utf-8') as f:
                     f.write(remote_script)
-                print("Скрипт обновлен. Перезапустите программу.")
+                print_color(f"{EMOJIS['success']} Скрипт обновлен!", COLORS['GREEN'])
+                print_color(f"{EMOJIS['warning']} Перезапустите программу {EMOJIS['robot']}", COLORS['BOLD'])
                 exit()
             else:
-                print("У вас актуальная версия скрипта.")
+                print_color(f"{EMOJIS['success']} Версия актуальна", COLORS['GREEN'])
     except Exception as e:
-        print(f"Ошибка при проверке обновлений: {e}")
+        print_color(f"{EMOJIS['error']} Ошибка при проверке обновлений: {e}", COLORS['RED'])
+    print_separator()
 
+# Проверка конфигурации
 if os.path.exists(CONFIG_FILE):
     try:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
@@ -77,25 +140,29 @@ else:
 
 if not all([API_ID, API_HASH, PHONE_NUMBER]):
     try:
-        print("Введите данные для авторизации:")
-        API_ID = int(input("API ID: "))
-        API_HASH = input("API Hash: ").strip()
-        PHONE_NUMBER = input("Номер телефона: ").strip()
+        print_color(f"{EMOJIS['auth']} Требуется авторизация", COLORS['BLUE'])
+        print_color(f"{EMOJIS['info']} Введите данные от аккаунта Telegram:", COLORS['GRAY'])
+        
+        print_color(f"{EMOJIS['info']} API ID можно получить на my.telegram.org", COLORS['GRAY'])
+        API_ID = int(input(COLORS['BLUE'] + f"{EMOJIS['config']} API ID: " + COLORS['ENDC']))
+        
+        print_color(f"{EMOJIS['info']} API Hash выглядит как 32-значная строка", COLORS['GRAY'])
+        API_HASH = input(COLORS['BLUE'] + f"{EMOJIS['config']} API Hash: " + COLORS['ENDC']).strip()
+        
+        print_color(f"{EMOJIS['info']} Номер в формате +79991234567", COLORS['GRAY'])
+        PHONE_NUMBER = input(COLORS['BLUE'] + f"{EMOJIS['phone']} Номер: " + COLORS['ENDC']).strip()
 
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump({
-                "API_ID": API_ID,
-                "API_HASH": API_HASH,
-                "PHONE_NUMBER": PHONE_NUMBER
-            }, f)
+            json.dump({"API_ID": API_ID, "API_HASH": API_HASH, "PHONE_NUMBER": PHONE_NUMBER}, f)
+        
+        print_color(f"{EMOJIS['success']} Данные сохранены в config.json", COLORS['GREEN'])
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print_color(f"{EMOJIS['error']} Ошибка: {e}", COLORS['RED'])
         exit(1)
 
-# !!! Важно: создаем клиента здесь, перед объявлением обработчиков !!!
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
 
-# Асинхронные функции и обработчики событий
+# Анимации
 async def animate_text(client, event, text):
     displayed_text = ""
     msg = await event.edit(displayed_text + cursor_symbol)
@@ -146,6 +213,7 @@ async def pixel_destruction(client, event, text):
     
     await event.edit(text)
 
+# Обработчики событий
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
     if event.out:
@@ -158,14 +226,14 @@ async def animate_handler(event):
                 elif selected_animation == 2:
                     await pixel_destruction(client, event, text_to_animate)
             except Exception as e:
-                print(f"Ошибка анимации: {e}")
+                print_color(f"{EMOJIS['error']} Ошибка анимации: {e}", COLORS['RED'])
         else:
-            await event.reply("Используйте: /p ваш текст")
+            await event.reply(f"{EMOJIS['warning']} Используйте: /p ваш текст")
 
 @client.on(events.NewMessage(pattern='/1'))
 async def list_animations(event):
     if event.out:
-        animation_list = "Доступные анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
+        animation_list = f"{EMOJIS['info']} Доступные анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
         await event.reply(animation_list)
 
 @client.on(events.NewMessage(pattern='^\\d+$'))
@@ -184,16 +252,22 @@ async def change_animation(event):
         except ValueError:
             pass
 
+# Главная функция
 async def main():
     try:
+        print_separator()
+        print_color(f"{EMOJIS['robot']} Подключение к Telegram...", COLORS['BLUE'])
         await client.start(PHONE_NUMBER)
-        print(f"Авторизован как {PHONE_NUMBER}")
+        print_color(f"{EMOJIS['success']} Авторизован как {PHONE_NUMBER}", COLORS['GREEN'])
+        print_color(f"{EMOJIS['info']} Бот запущен. Ctrl+C для остановки", COLORS['BLUE'])
+        print_separator()
         await client.run_until_disconnected()
     except Exception as e:
-        print(f"Ошибка подключения: {e}")
+        print_color(f"{EMOJIS['error']} Ошибка подключения: {e}", COLORS['RED'])
         sys.exit(1)
 
 if __name__ == "__main__":
+    print_banner()
     signal.signal(signal.SIGINT, signal_handler)
     check_for_updates()
     asyncio.run(main())
