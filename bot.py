@@ -164,6 +164,30 @@ async def main():
                 else:
                     await event.respond(f'❌ Скрипт {script_name} не найден!')
 
+        @client.on(events.NewMessage(outgoing=True))
+        async def handle_own_messages(event):
+            msg_text = event.raw_text.strip().lower()
+            
+            if msg_text == '/exit':
+                await event.respond('🛑 Останавливаю работу...')
+                await client.disconnect()
+                print("Бот завершил работу по команде /exit из своего сообщения.")
+                sys.exit(0)
+            
+            elif msg_text == '/update':
+                await self_update()
+                await event.respond('✅ Проверка обновлений завершена')
+            
+            elif msg_text == '/a':
+                script_name = "animation_script.py"
+                if os.path.exists(script_name):
+                    await event.respond('🚀 Запускаю анимацию...')
+                    await client.disconnect()
+                    subprocess.Popen([sys.executable, script_name])
+                    sys.exit(0)
+                else:
+                    await event.respond(f'❌ Скрипт {script_name} не найден!')
+
         while True:
             cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
             cmd = cmd.strip().lower()
