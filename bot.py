@@ -9,7 +9,7 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from configparser import ConfigParser
 
-VERSION = "2.1"
+VERSION = "2.2"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
@@ -32,19 +32,19 @@ def create_or_read_config():
         print("\n🔧 Первоначальная настройка бота:")
         
         api_id = get_input(
-            "Введите API ID (получить на my.telegram.org): ",
+            "Введите API ID: ",
             r'^\d+$',
             "API ID должен состоять только из цифр!"
         )
         
         api_hash = get_input(
-            "Введите API HASH (32 символа из my.telegram.org): ",
+            "Введите API HASH: ",
             r'^[a-f0-9]{32}$',
             "API HASH должен содержать 32 символа (a-f, 0-9)!"
         )
         
         phone_number = get_input(
-            "Введите номер телефона (формат +79991234567): ",
+            "Введите номер телефона: ",
             r'^\+\d{10,15}$',
             "Номер должен быть в международном формате!"
         )
@@ -114,6 +114,31 @@ async def authenticate(client, phone):
         password = get_input("Введите пароль двухфакторной аутентификации: ")
         return await client.sign_in(password=password)
 
+async def async_input(prompt: str = "> ") -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, input, prompt)
+
+async def console_input_task(client):
+    while True:
+        cmd = (await async_input()).strip().lower()
+        if cmd == '/update':
+            await self_update()
+        elif cmd == '/a':
+            script_name = "animation_script.py"
+            if not os.path.exists(script_name):
+                print(f"⛔ Скрипт {script_name} не найден!")
+            else:
+                print(f"🚀 Запускаем {script_name}...")
+                await client.disconnect()
+                subprocess.Popen([sys.executable, script_name])
+                sys.exit(0)
+        elif cmd == '/exit':
+            await client.disconnect()
+            print("\n🛑 Завершение работы бота...")
+            sys.exit(0)
+        else:
+            print("⚠️ Неизвестная команда. Доступные команды: /a, /update, /exit")
+
 async def main():
     print(f"\n🚀 Запуск бота версии {VERSION}")
     await self_update()
@@ -141,28 +166,31 @@ async def main():
 
         @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
         async def handle_private_message(event):
-            msg_text = event.raw_text.strip().lower()
-            
-            if msg_text == '/exit':
-                await event.respond('🛑 Останавливаю работу...')
-                await client.disconnect()
-                print("Бот завершил работу по команде /exit из сообщения.")
-                sys.exit(0)
-            
-            elif msg_text == '/k':
-                message = await event.respond('🔄 Обновляю список команд...')
-                commands = "Список команд:\n/a - запуск анимации\n/update - проверка обновлений\n/exit - выход"
-                await message.edit(commands)
-            
-            elif msg_text == '/a':
-                script_name = "animation_script.py"
-                if os.path.exists(script_name):
-                    await event.respond('🚀 Запускаю анимацию...')
+            try:
+                msg_text = event.raw_text.strip().lower()
+                
+                if msg_text == '/exit':
+                    await event.respond('🛑 Останавливаю работу...')
                     await client.disconnect()
-                    subprocess.Popen([sys.executable, script_name])
+                    print("Бот завершил работу по команде /exit из сообщения.")
                     sys.exit(0)
-                else:
-                    await event.respond(f'❌ Скрипт {script_name} не найден!')
+                
+                elif msg_text == '/k':
+                    message = await event.respond('🔄 Обновляю список команд...')
+                    commands = "Список команд:\n/a - запуск анимации\n/update - проверка обновлений\n/exit - выход"
+                    await message.edit(commands)
+                
+                elif msg_text == '/a':
+                    script_name = "animation_script.py"
+                    if os.path.exists(script_name):
+                        await event.respond('🚀 Запускаю анимацию...')
+                        await client.disconnect()
+                        subprocess.Popen([sys.executable, script_name])
+                        sys.exit(0)
+                    else:
+                        await event.respond(f'❌ Скрипт {script_name} не найден!')
+            except Exception as e:
+                print(f"Ошибка при обработке сообщения: {e}")
 
         @client.on(events.NewMessage(outgoing=True))
         async def handle_own_messages(event):
@@ -188,27 +216,11 @@ async def main():
                 else:
                     await event.respond(f'❌ Скрипт {script_name} не найден!')
 
-        while True:
-            cmd = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
-            cmd = cmd.strip().lower()
-            
-            if cmd == '/update':
-                await self_update()
-            elif cmd == '/a':
-                script_name = "animation_script.py"
-                if not os.path.exists(script_name):
-                    print(f"⛔ Скрипт {script_name} не найден!")
-                else:
-                    print(f"🚀 Запускаем {script_name}...")
-                    await client.disconnect()
-                    subprocess.Popen([sys.executable, script_name])
-                    sys.exit(0)
-            elif cmd == '/exit':
-                await client.disconnect()
-                print("\n🛑 Завершение работы бота...")
-                sys.exit(0)
-            else:
-                print("⚠️ Неизвестная команда. Доступные команды: /a, /update, /exit")
+        # Запускаем задачу для обработки консольного ввода
+        asyncio.create_task(console_input_task(client))
+        
+        # Оставляем клиент работать до отключения
+        await client.run_until_disconnected()
                 
     except Exception as e:
         print(f"\n⛔ Критическая ошибка: {str(e)}")
