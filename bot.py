@@ -9,10 +9,27 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from configparser import ConfigParser
 
-VERSION = "2.2"
+VERSION = "2.3"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
+CHOICE_FILE = 'animation_choice.txt'
+
+# Словарь с настройками доступных анимаций
+AVAILABLE_ANIMATIONS = {
+    "1": {"name": "Медленный набор текста", "typing_speed": 0.3, "cursor_symbol": "|"},
+    "2": {"name": "Быстрый набор текста", "typing_speed": 0.1, "cursor_symbol": "_"},
+    # Можно добавить другие варианты
+}
+
+# Если пользователь ранее выбирал анимацию, читаем её из файла, иначе – используем вариант "1"
+if os.path.exists(CHOICE_FILE):
+    with open(CHOICE_FILE, 'r', encoding='utf-8') as f:
+        chosen = f.read().strip()
+else:
+    chosen = "1"  # значение по умолчанию
+
+animation_settings = AVAILABLE_ANIMATIONS.get(chosen, AVAILABLE_ANIMATIONS["1"])
 
 def get_input(prompt, validation_regex=None, error_message="Неверный формат!"):
     while True:
@@ -128,7 +145,8 @@ async def console_input_task(client):
             if not os.path.exists(script_name):
                 print(f"⛔ Скрипт {script_name} не найден!")
             else:
-                print(f"🚀 Запускаем {script_name}...")
+                print(f"🚀 Запускаем {script_name} для выбора анимации...")
+                # Передаем управление скрипту выбора анимации:
                 await client.disconnect()
                 subprocess.Popen([sys.executable, script_name])
                 sys.exit(0)
@@ -160,10 +178,30 @@ async def main():
         
         print("\n✅ Успешная авторизация!")
         print("\n🛠️ Доступные команды:")
-        print("/a - Запуск анимационного скрипта")
-        print("/update - Принудительная проверка обновлений")
-        print("/exit - Выход из бота\n")
+        print("/a - запуск скрипта выбора анимации")
+        print("/update - принудительная проверка обновлений")
+        print("/exit - выход из бота")
+        print("/p Текст - анимация выбранным стилем (например: /p Привет!)\n")
 
+        # Обработчик для анимации текста по команде /p
+        @client.on(events.NewMessage(pattern=r'/p (.+)'))
+        async def handle_animation(event):
+            # Обрабатываем команду только для исходящих сообщений (от бота)
+            if not event.out:
+                return
+            try:
+                text = event.pattern_match.group(1)
+                typed_text = ""
+                for char in text:
+                    typed_text += char
+                    await event.edit(typed_text + animation_settings["cursor_symbol"])
+                    await asyncio.sleep(animation_settings["typing_speed"])
+                await event.edit(typed_text)
+            except Exception as e:
+                print(f"Ошибка анимации: {e}")
+                await event.reply("<b>Произошла ошибка во время выполнения команды.</b>", parse_mode='html')
+        
+        # Другие обработчики входящих/исходящих сообщений (пример /exit, /update) можно оставить без изменений:
         @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
         async def handle_private_message(event):
             try:
@@ -177,18 +215,8 @@ async def main():
                 
                 elif msg_text == '/k':
                     message = await event.respond('🔄 Обновляю список команд...')
-                    commands = "Список команд:\n/a - запуск анимации\n/update - проверка обновлений\n/exit - выход"
+                    commands = "Список команд:\n/a - запуск выбора анимации\n/update - проверка обновлений\n/exit - выход"
                     await message.edit(commands)
-                
-                elif msg_text == '/a':
-                    script_name = "animation_script.py"
-                    if os.path.exists(script_name):
-                        await event.respond('🚀 Запускаю анимацию...')
-                        await client.disconnect()
-                        subprocess.Popen([sys.executable, script_name])
-                        sys.exit(0)
-                    else:
-                        await event.respond(f'❌ Скрипт {script_name} не найден!')
             except Exception as e:
                 print(f"Ошибка при обработке сообщения: {e}")
 
@@ -209,7 +237,7 @@ async def main():
             elif msg_text == '/a':
                 script_name = "animation_script.py"
                 if os.path.exists(script_name):
-                    await event.respond('🚀 Запускаю анимацию...')
+                    await event.respond('🚀 Запускаю скрипт выбора анимации...')
                     await client.disconnect()
                     subprocess.Popen([sys.executable, script_name])
                     sys.exit(0)
@@ -219,7 +247,7 @@ async def main():
         # Запускаем задачу для обработки консольного ввода
         asyncio.create_task(console_input_task(client))
         
-        # Оставляем клиент работать до отключения
+        # Оставляем клиента работать до отключения
         await client.run_until_disconnected()
                 
     except Exception as e:
