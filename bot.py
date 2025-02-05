@@ -9,7 +9,7 @@ from telethon import events, TelegramClient
 CONFIG_FILE = "config.json"
 DEFAULT_TYPING_SPEED = 0.3
 DEFAULT_CURSOR = "\u2588"  # Символ по умолчанию для анимации
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/mishkagoo/userbot/refs/heads/main/main.py"  # URL обновляемого скрипта
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"  # URL обновляемого скрипта
 SCRIPT_VERSION = "1.4.32"
 
 # Чтение конфигурации или запрос данных у пользователя
