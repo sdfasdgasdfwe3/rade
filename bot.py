@@ -9,7 +9,7 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from configparser import ConfigParser
 
-VERSION = "2.4"
+VERSION = "2.5"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 GITHUB_ANIMATION_URL = "https://raw.githubusercontent.com/yourusername/yourrepo/main/animation_script.py"  # Замените на актуальный URL
 CONFIG_FILE = 'config.ini'
