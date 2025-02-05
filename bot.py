@@ -13,54 +13,27 @@ CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 SCRIPT_VERSION = "0.0.9"
 
-# Настройки анимации
+# Глобальные переменные для управления анимацией
+is_typing_enabled = True
 typing_speed = 1.5
 pixel_typing_speed = 0.10
 cursor_symbol = "▮"
 selected_animation = 1
 
+# Список анимаций
 animations = {
     1: "Стандартная анимация",
     2: "Пиксельное разрушение",
 }
 
-# Цветовая палитра
-COLORS = {
-    "HEADER": "\033[95m",
-    "BLUE": "\033[94m",
-    "CYAN": "\033[96m",
-    "GREEN": "\033[92m",
-    "YELLOW": "\033[93m",
-    "RED": "\033[91m",
-    "ENDC": "\033[0m",
-    "BOLD": "\033[1m",
-    "LINE": "\033[4m",
-}
-
-def print_banner():
-    os.system('clear' if os.name == 'posix' else 'cls')
-    print(f"""{COLORS['CYAN']}
-██████╗░░█████╗░██████╗░███████╗
-██╔══██╗██╔══██╗██╔══██╗██╔════╝
-██████╔╝███████║██║░░██║█████╗░░
-██╔══██╗██╔══██║██║░░██║██╔══╝░░
-██║░░██║██║░░██║██████╔╝███████╗
-╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝
-{COLORS['GREEN']}Telegram Text Animator Bot {SCRIPT_VERSION}
-{COLORS['YELLOW']}github.com/sdfasdgasdfwe3/rade
-{COLORS['ENDC']}""")
-
-def print_status(message, color="GREEN"):
-    print(f"{COLORS[color]}[•] {message}{COLORS['ENDC']}")
-
 def signal_handler(sig, frame):
-    print(f"\n{COLORS['RED']}[!] Бот остановлен{COLORS['ENDC']}")
+    print('\nБот остановлен.')
     sys.exit(0)
 
 def discard_local_changes():
     try:
         subprocess.run(["git", "checkout", "--", "bot.py"], check=True)
-    except Exception:
+    except subprocess.CalledProcessError:
         pass
 
 def check_for_updates():
@@ -68,9 +41,11 @@ def check_for_updates():
         response = requests.get(GITHUB_RAW_URL)
         if response.status_code == 200:
             remote_script = response.text
-            with open(__file__, 'r', encoding='utf-8') as f:
+            current_file = os.path.abspath(__file__)
+
+            with open(current_file, 'r', encoding='utf-8') as f:
                 current_script = f.read()
-            
+
             remote_version = None
             for line in remote_script.splitlines():
                 if "SCRIPT_VERSION" in line:
@@ -78,71 +53,93 @@ def check_for_updates():
                     break
 
             if remote_version and SCRIPT_VERSION != remote_version:
-                print_status(f"Доступно обновление {remote_version}", "YELLOW")
-                with open(__file__, 'w', encoding='utf-8') as f:
+                print(f"Доступна новая версия {remote_version} (текущая {SCRIPT_VERSION})")
+                with open(current_file, 'w', encoding='utf-8') as f:
                     f.write(remote_script)
-                print_status("Скрипт обновлен! Перезапустите бота", "GREEN")
+                print("Скрипт обновлен. Перезапустите программу.")
                 exit()
+            else:
+                print("У вас актуальная версия скрипта.")
     except Exception as e:
-        print_status(f"Ошибка проверки обновлений: {e}", "RED")
+        print(f"Ошибка при проверке обновлений: {e}")
 
-def load_config():
-    config = {}
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-        except Exception as e:
-            print_status(f"Ошибка чтения конфига: {e}", "RED")
-    return config
-
-def save_config(config):
+if os.path.exists(CONFIG_FILE):
     try:
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(config, f)
-    except Exception as e:
-        print_status(f"Ошибка сохранения конфига: {e}", "RED")
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        API_ID = config.get("API_ID")
+        API_HASH = config.get("API_HASH")
+        PHONE_NUMBER = config.get("PHONE_NUMBER")
+    except (json.JSONDecodeError, KeyError):
+        API_ID = API_HASH = PHONE_NUMBER = None
+else:
+    API_ID = API_HASH = PHONE_NUMBER = None
 
-async def animate_text(event, text):
-    message = await event.edit(f"{cursor_symbol}")
-    displayed = ""
+if not all([API_ID, API_HASH, PHONE_NUMBER]):
+    try:
+        print("Введите данные для авторизации:")
+        API_ID = int(input("API ID: "))
+        API_HASH = input("API Hash: ").strip()
+        PHONE_NUMBER = input("Номер телефона: ").strip()
+
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({
+                "API_ID": API_ID,
+                "API_HASH": API_HASH,
+                "PHONE_NUMBER": PHONE_NUMBER
+            }, f)
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        exit(1)
+
+# !!! Важно: создаем клиента здесь, перед объявлением обработчиков !!!
+client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
+
+# Асинхронные функции и обработчики событий
+async def animate_text(client, event, text):
+    displayed_text = ""
+    msg = await event.edit(displayed_text + cursor_symbol)
     for char in text:
-        displayed += char
+        displayed_text += char
         try:
-            await message.edit(f"{displayed}{cursor_symbol}")
+            await msg.edit(displayed_text + cursor_symbol)
         except Exception:
             pass
         await asyncio.sleep(typing_speed)
-    await message.edit(displayed)
+    await msg.edit(displayed_text)
 
-async def pixel_destruction(event, text):
-    lines = 4
-    chunks = [text[i:i+len(text)//lines] for i in range(0, len(text), len(text)//lines)]
-    prev_text = ""
-    
-    # Фаза пикселизации
+async def pixel_destruction(client, event, text):
+    lines_count = 4
+    chunk_size = len(text) // lines_count
+    text_lines = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+    previous_text = ""
+
+    # Фаза 1: Пикселизация
+    pixelated_text = [list(" " * len(line)) for line in text_lines]
     for _ in range(3):
-        pixelated = []
-        for chunk in chunks:
-            new_chunk = [random.choice([".", "*", "○", "⊙", "%"]) if random.random() < 0.1 else " " for _ in chunk]
-            pixelated.append("".join(new_chunk))
-        current_text = "\n".join(pixelated)
-        if current_text != prev_text:
+        for i in range(len(pixelated_text)):
+            for j in range(len(pixelated_text[i])):
+                if random.random() < 0.1:
+                    pixelated_text[i][j] = random.choice([".", "*", "○", "⊙", "%"])
+        displayed_text = "\n".join(["".join(line) for line in pixelated_text])
+        if displayed_text != previous_text:
             try:
-                await event.edit(current_text)
-                prev_text = current_text
+                await event.edit(displayed_text)
+                previous_text = displayed_text
             except Exception:
                 pass
         await asyncio.sleep(pixel_typing_speed)
-    
-    # Фаза разрушения
+
+    # Фаза 2: Разрушение
     for _ in range(3):
-        destroyed = ["".join([random.choice([".", "*", " "]) for _ in chunk]) for chunk in chunks]
-        current_text = "\n".join(destroyed)
-        if current_text != prev_text:
+        displayed_text = "\n".join([
+            "".join([random.choice([".", "*", " ", "○", "⊙"]) for _ in line])
+            for line in text_lines
+        ])
+        if displayed_text != previous_text:
             try:
-                await event.edit(current_text)
-                prev_text = current_text
+                await event.edit(displayed_text)
+                previous_text = displayed_text
             except Exception:
                 pass
         await asyncio.sleep(pixel_typing_speed)
@@ -150,79 +147,53 @@ async def pixel_destruction(event, text):
     await event.edit(text)
 
 @client.on(events.NewMessage(pattern='/p'))
-async def animation_handler(event):
+async def animate_handler(event):
     if event.out:
-        args = event.text.split(maxsplit=1)
-        if len(args) > 1:
+        command_text = event.raw_text
+        if len(command_text.split()) > 1:
+            text_to_animate = command_text.partition(' ')[2]
             try:
                 if selected_animation == 1:
-                    await animate_text(event, args[1])
+                    await animate_text(client, event, text_to_animate)
                 elif selected_animation == 2:
-                    await pixel_destruction(event, args[1])
+                    await pixel_destruction(client, event, text_to_animate)
             except Exception as e:
-                print_status(f"Ошибка анимации: {e}", "RED")
+                print(f"Ошибка анимации: {e}")
         else:
-            await event.reply(f"{COLORS['YELLOW']}Использование: /p <текст>{COLORS['ENDC']}")
+            await event.reply("Используйте: /p ваш текст")
 
-@client.on(events.NewMessage(pattern='/animlist'))
-async def show_animations(event):
+@client.on(events.NewMessage(pattern='/1'))
+async def list_animations(event):
     if event.out:
-        anim_list = "\n".join([f"{COLORS['CYAN']}{k}) {v}{COLORS['ENDC']}" for k, v in animations.items()])
-        await event.reply(f"{COLORS['GREEN']}Доступные анимации:\n{anim_list}")
+        animation_list = "Доступные анимации:\n" + "\n".join([f"{i}) {name}" for i, name in animations.items()])
+        await event.reply(animation_list)
 
-@client.on(events.NewMessage(pattern=r'^\d+$'))
-async def select_animation(event):
+@client.on(events.NewMessage(pattern='^\\d+$'))
+async def change_animation(event):
     if event.out:
         global selected_animation
         try:
-            num = int(event.text)
-            if num in animations:
-                selected_animation = num
-                await event.delete()
-                messages = await client.get_messages(event.chat_id, limit=2)
+            animation_number = int(event.raw_text)
+            if animation_number in animations:
+                selected_animation = animation_number
+                messages = await client.get_messages(event.chat_id, limit=3)
                 for msg in messages:
-                    if msg.out and msg.id != event.id:
+                    if msg.out and msg.id != event.message.id:
                         await msg.delete()
-                await event.respond(f"{COLORS['GREEN']}Анимация {num} выбрана!{COLORS['ENDC']}")
-        except Exception as e:
-            print_status(f"Ошибка выбора анимации: {e}", "RED")
+                await event.delete()
+        except ValueError:
+            pass
 
 async def main():
-    print_banner()
-    check_for_updates()
-    
-    config = load_config()
-    if not all(config.get(key) for key in ["API_ID", "API_HASH", "PHONE_NUMBER"]):
-        print_status("Введите данные для авторизации:", "BLUE")
-        config["API_ID"] = int(input(f"{COLORS['CYAN']}[?] API ID: {COLORS['ENDC']}"))
-        config["API_HASH"] = input(f"{COLORS['CYAN']}[?] API Hash: {COLORS['ENDC']}").strip()
-        config["PHONE_NUMBER"] = input(f"{COLORS['CYAN']}[?] Номер телефона: {COLORS['ENDC']}").strip()
-        save_config(config)
-
-    client = TelegramClient(
-        session=f"session_{config['PHONE_NUMBER']}",
-        api_id=config["API_ID"],
-        api_hash=config["API_HASH"]
-    )
-
     try:
-        await client.start(config["PHONE_NUMBER"])
-        me = await client.get_me()
-        print(f"""{COLORS['GREEN']}
-╔══════════════════════════════════╗
-║          АВТОРИЗАЦИЯ OK          ║
-╠══════════════════════════════════╣
-║ ID: {me.id}
-║ Имя: {me.first_name}
-║ Фамилия: {me.last_name or '—'}
-║ Username: @{me.username or '—'}
-╚══════════════════════════════════╝{COLORS['ENDC']}""")
-        print_status("Бот готов к работе! Ожидание команд...", "GREEN")
+        await client.start(PHONE_NUMBER)
+        print(f"Авторизован как {PHONE_NUMBER}")
         await client.run_until_disconnected()
     except Exception as e:
-        print_status(f"Критическая ошибка: {e}", "RED")
+        print(f"Ошибка подключения: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
+    check_for_updates()
     asyncio.run(main())
