@@ -11,9 +11,11 @@ from configparser import ConfigParser
 
 VERSION = "2.3"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
+GITHUB_ANIMATION_URL = "https://raw.githubusercontent.com/yourusername/yourrepo/main/animation_script.py"  # Замените на актуальный URL
 CONFIG_FILE = 'config.ini'
 SESSION_FILE = 'session_name'
 CHOICE_FILE = 'animation_choice.txt'
+ANIMATION_FILE = "animation_script.py"
 
 # Словарь с настройками доступных анимаций
 AVAILABLE_ANIMATIONS = {
@@ -31,6 +33,7 @@ else:
 
 animation_settings = AVAILABLE_ANIMATIONS.get(chosen, AVAILABLE_ANIMATIONS["1"])
 
+
 def get_input(prompt, validation_regex=None, error_message="Неверный формат!"):
     while True:
         value = input(prompt).strip()
@@ -41,6 +44,7 @@ def get_input(prompt, validation_regex=None, error_message="Неверный ф�
             print(f"⚠️ {error_message}")
             continue
         return value
+
 
 def create_or_read_config():
     config = ConfigParser()
@@ -84,8 +88,9 @@ def create_or_read_config():
         
     return config['Telegram']
 
+
 async def self_update():
-    print("🔍 Проверка обновлений...")
+    print("🔍 Проверка обновлений основного файла бота...")
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(GITHUB_RAW_URL) as response:
@@ -119,6 +124,27 @@ async def self_update():
     except Exception as e:
         print(f"⚠️ Ошибка при обновлении: {str(e)}")
 
+
+async def update_animation_script():
+    print("🔍 Проверка обновлений для animation_script.py...")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(GITHUB_ANIMATION_URL) as response:
+                if response.status == 200:
+                    new_content = await response.text()
+                    # Если в файле animation_script.py есть версия, можно добавить проверку версии.
+                    temp_file = 'animation_temp.py'
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        f.write(new_content)
+                    
+                    shutil.move(temp_file, ANIMATION_FILE)
+                    print("✅ Файл animation_script.py успешно обновлён.")
+                else:
+                    print(f"⚠️ Ошибка при проверке обновлений для animation_script.py. Код: {response.status}")
+    except Exception as e:
+        print(f"⚠️ Ошибка обновления animation_script.py: {str(e)}")
+
+
 async def authenticate(client, phone):
     try:
         await client.send_code_request(phone)
@@ -131,31 +157,34 @@ async def authenticate(client, phone):
         password = get_input("Введите пароль двухфакторной аутентификации: ")
         return await client.sign_in(password=password)
 
+
 async def async_input(prompt: str = "> ") -> str:
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, input, prompt)
+
 
 async def console_input_task(client):
     while True:
         cmd = (await async_input()).strip().lower()
         if cmd == '/update':
             await self_update()
+        elif cmd == '/update_animation':
+            await update_animation_script()
         elif cmd == '/a':
-            script_name = "animation_script.py"
-            if not os.path.exists(script_name):
-                print(f"⛔ Скрипт {script_name} не найден!")
+            if not os.path.exists(ANIMATION_FILE):
+                print(f"⛔ Скрипт {ANIMATION_FILE} не найден!")
             else:
-                print(f"🚀 Запускаем {script_name} для выбора анимации...")
-                # Передаем управление скрипту выбора анимации:
+                print(f"🚀 Запускаем {ANIMATION_FILE} для выбора анимации...")
                 await client.disconnect()
-                subprocess.Popen([sys.executable, script_name])
+                subprocess.Popen([sys.executable, ANIMATION_FILE])
                 sys.exit(0)
         elif cmd == '/exit':
             await client.disconnect()
             print("\n🛑 Завершение работы бота...")
             sys.exit(0)
         else:
-            print("⚠️ Неизвестная команда. Доступные команды: /a, /update, /exit")
+            print("⚠️ Неизвестная команда. Доступные команды: /a, /update, /update_animation, /exit")
+
 
 async def main():
     print(f"\n🚀 Запуск бота версии {VERSION}")
@@ -179,9 +208,10 @@ async def main():
         print("\n✅ Успешная авторизация!")
         print("\n🛠️ Доступные команды:")
         print("/a - запуск скрипта выбора анимации")
-        print("/update - принудительная проверка обновлений")
+        print("/update - принудительная проверка обновлений основного файла")
+        print("/update_animation - проверка обновлений для animation_script.py")
         print("/exit - выход из бота")
-        print("/p Текст - анимация выбранным стилем (например: /p Привет!)\n")
+        print("/p Текст - анимация выбранным стилем.\n")
 
         # Обработчик для анимации текста по команде /p
         @client.on(events.NewMessage(pattern=r'/p (.+)'))
@@ -201,7 +231,7 @@ async def main():
                 print(f"Ошибка анимации: {e}")
                 await event.reply("<b>Произошла ошибка во время выполнения команды.</b>", parse_mode='html')
         
-        # Другие обработчики входящих/исходящих сообщений (пример /exit, /update) можно оставить без изменений:
+        # Обработчик для входящих сообщений в личных чатах
         @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
         async def handle_private_message(event):
             try:
@@ -215,11 +245,12 @@ async def main():
                 
                 elif msg_text == '/k':
                     message = await event.respond('🔄 Обновляю список команд...')
-                    commands = "Список команд:\n/a - запуск выбора анимации\n/update - проверка обновлений\n/exit - выход"
+                    commands = "Список команд:\n/a - запуск выбора анимации\n/update - проверка обновлений основного файла\n/update_animation - проверка обновлений animation_script.py\n/exit - выход"
                     await message.edit(commands)
             except Exception as e:
                 print(f"Ошибка при обработке сообщения: {e}")
 
+        # Обработчик для исходящих сообщений бота
         @client.on(events.NewMessage(outgoing=True))
         async def handle_own_messages(event):
             msg_text = event.raw_text.strip().lower()
@@ -232,17 +263,20 @@ async def main():
             
             elif msg_text == '/update':
                 await self_update()
-                await event.respond('✅ Проверка обновлений завершена')
+                await event.respond('✅ Проверка обновлений основного файла завершена')
+            
+            elif msg_text == '/update_animation':
+                await update_animation_script()
+                await event.respond('✅ Проверка обновлений для animation_script.py завершена')
             
             elif msg_text == '/a':
-                script_name = "animation_script.py"
-                if os.path.exists(script_name):
+                if os.path.exists(ANIMATION_FILE):
                     await event.respond('🚀 Запускаю скрипт выбора анимации...')
                     await client.disconnect()
-                    subprocess.Popen([sys.executable, script_name])
+                    subprocess.Popen([sys.executable, ANIMATION_FILE])
                     sys.exit(0)
                 else:
-                    await event.respond(f'❌ Скрипт {script_name} не найден!')
+                    await event.respond(f'❌ Скрипт {ANIMATION_FILE} не найден!')
 
         # Запускаем задачу для обработки консольного ввода
         asyncio.create_task(console_input_task(client))
