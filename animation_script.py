@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "0.2.4"
+ANIMATION_SCRIPT_VERSION = "0.2.5"
 
 import asyncio
 import random
@@ -58,23 +58,25 @@ async def pixel_destruction(event, text):
         await asyncio.sleep(pixel_typing_speed)
     await msg.edit(text)
 
-async def line_destruction(event, text):
-    """Анимация 'Разрушение строк': строки текста постепенно исчезают."""
-    lines = text.split("\n")
+async def shifting_pattern(event, text):
+    """Анимация 'Сдвигающийся узор': фон из символов █▓▒░ движется позади текста."""
+    pattern = ["█", "▓", "▒", "░"]
+    width = len(text) + 6  # Ширина фона
     msg = await event.edit("Начинаю анимацию...")
     await asyncio.sleep(1)
-    while lines:
+    for _ in range(10):
+        background = "".join(random.choices(pattern, k=width))
+        display_text = background[:3] + text + background[3:]
         try:
-            await msg.edit("\n".join(lines))
-            await asyncio.sleep(0.5)
+            await msg.edit(display_text)
         except Exception:
             pass
-        lines.pop(random.randint(0, len(lines) - 1))
-    await msg.edit("Текст исчез... 💨")
+        await asyncio.sleep(0.3)
+    await msg.edit(text)
 
 # Словарь доступных анимаций: ключ – номер, значение – кортеж (название, функция)
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
     2: ("Пиксельное разрушение 💥", pixel_destruction),
-    3: ("Разрушение строк 💨", line_destruction)
+    3: ("Сдвигающийся узор ▓", shifting_pattern)
 }
