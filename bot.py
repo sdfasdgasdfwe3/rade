@@ -39,9 +39,9 @@ selected_animation = config.get("selected_animation", 1)
 
 if not all([API_ID, API_HASH, PHONE_NUMBER]):
     try:
-        API_ID = int(input("Enter API ID: "))
-        API_HASH = input("Enter API HASH: ").strip()
-        PHONE_NUMBER = input("Enter phone number (format +79991234567): ").strip()
+        API_ID = int(input("Введите API ID: "))
+        API_HASH = input("Введите API HASH: ").strip()
+        PHONE_NUMBER = input("Введите номер телефона: ").strip()
         config = {"API_ID": API_ID, "API_HASH": API_HASH, "PHONE_NUMBER": PHONE_NUMBER, "selected_animation": selected_animation}
         save_config(config)
     except Exception as e:
@@ -73,12 +73,12 @@ def check_for_updates():
                 discard_local_changes()
                 with open(os.path.abspath(__file__), 'w') as f:
                     f.write(remote_script)
-                print("Script updated. Please restart.")
+                print("Скрипт обновлен. Пожалуйста, перезапустите скрипт.")
                 exit()
         else:
-            print("Update check error:", response.status_code)
+            print("Ошибка проверки обновлений:", response.status_code)
     except Exception as e:
-        print("Update check error:", e)
+        print("Ошибка проверки обновлений:", e)
 
 animation_selection_mode = False
 
@@ -95,7 +95,7 @@ async def animate_handler(event):
         try:
             await anim_func(event, text_to_animate)
         except Exception as e:
-            print("Animation error:", e)
+            print("Ошибка анимации:", e)
     else:
         await event.reply("Invalid animation selected.")
 
