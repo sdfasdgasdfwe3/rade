@@ -142,7 +142,20 @@ async def animation_selection_handler(event):
                 selected_animation = number
                 config["selected_animation"] = selected_animation
                 save_config(config)
+                # Отправляем сообщение с подтверждением выбора анимации
                 await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
+                # Удаляем 4 последних сообщения бота в этом чате
+                messages = await client.get_messages(event.chat_id, limit=10)
+                deleted_count = 0
+                for msg in messages:
+                    if msg.out:
+                        try:
+                            await msg.delete()
+                            deleted_count += 1
+                        except Exception as e:
+                            print(f"{EMOJIS['error']} Ошибка удаления сообщения:", e)
+                        if deleted_count >= 4:
+                            break
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
