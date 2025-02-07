@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "0.2.5"
+ANIMATION_SCRIPT_VERSION = "0.2.6"
 
 import asyncio
 import random
@@ -26,8 +26,9 @@ async def pixel_destruction(event, text):
     chunk_size = max(1, len(text) // lines_count)
     text_lines = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
     previous_text = ""
-    msg = await event.edit("Начинаю анимацию...")
-    await asyncio.sleep(1)
+    # Убираем сообщение "Начинаю анимацию..."
+    # msg = await event.edit("Начинаю анимацию...")
+    # await asyncio.sleep(1)  # Убираем задержку
     # Фаза 1: пикселизация
     pixelated_text = [list(" " * len(line)) for line in text_lines]
     for _ in range(3):
@@ -59,20 +60,22 @@ async def pixel_destruction(event, text):
     await msg.edit(text)
 
 async def shifting_pattern(event, text):
-    """Анимация 'Сдвигающийся узор': фон из символов █▓▒░ движется позади текста."""
-    pattern = ["█", "▓", "▒", "░"]
+    """Анимация 'Сдвигающийся узор': текст появляется слева направо с фоном."""
+    pattern = ["░", "▒", "▓", "█"]  # Изменили порядок символов
     width = len(text) + 6  # Ширина фона
-    msg = await event.edit("Начинаю анимацию...")
-    await asyncio.sleep(1)
-    for _ in range(10):
-        background = "".join(random.choices(pattern, k=width))
-        display_text = background[:3] + text + background[3:]
+    msg = await event.edit("")
+    background = "".join(random.choices(pattern, k=width))
+    
+    for i in range(len(text)):
+        # Символы текста появляются постепенно
+        display_text = background[:3] + text[:i+1] + background[3:]
         try:
             await msg.edit(display_text)
         except Exception:
             pass
         await asyncio.sleep(0.3)
-    await msg.edit(text)
+    
+    await msg.edit(text)  # Завершаем с полным текстом
 
 # Словарь доступных анимаций: ключ – номер, значение – кортеж (название, функция)
 animations = {
