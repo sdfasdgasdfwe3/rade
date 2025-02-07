@@ -1,8 +1,8 @@
 import asyncio
 import random
 
-typing_speed = 3
-pixel_typing_speed = 0.1
+typing_speed = 2
+pixel_typing_speed = 2
 cursor_symbol = "▮"
 
 async def animate_text(event, text):
