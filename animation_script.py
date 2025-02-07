@@ -1,4 +1,5 @@
-ANIMATION_SCRIPT_VERSION = "0.2.7
+ANIMATION_SCRIPT_VERSION = "0.2.71"
+
 import asyncio
 import random
 
@@ -25,8 +26,6 @@ async def pixel_destruction(event, text):
     chunk_size = max(1, len(text) // lines_count)
     text_lines = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
     previous_text = ""
-    # Отправляем начальное пустое сообщение
-    msg = await event.edit("")
     # Фаза 1: пикселизация
     pixelated_text = [list(" " * len(line)) for line in text_lines]
     for _ in range(3):
@@ -37,7 +36,7 @@ async def pixel_destruction(event, text):
         displayed_text = "\n".join("".join(line) for line in pixelated_text)
         if displayed_text != previous_text:
             try:
-                await msg.edit(displayed_text)
+                await event.edit(displayed_text)
                 previous_text = displayed_text
             except Exception:
                 pass
@@ -50,38 +49,15 @@ async def pixel_destruction(event, text):
         )
         if displayed_text != previous_text:
             try:
-                await msg.edit(displayed_text)
+                await event.edit(displayed_text)
                 previous_text = displayed_text
             except Exception:
                 pass
         await asyncio.sleep(pixel_typing_speed)
-    # Завершаем с полным текстом
-    await msg.edit(text)
-
-
-async def shifting_pattern(event, text):
-    """Анимация 'Сдвигающийся узор': текст появляется слева направо с фоном."""
-    pattern = ["░", "▒", "▓", "█"]  # Порядок символов
-    width = len(text) + 6  # Ширина фона
-    # Отправляем начальное пустое сообщение
-    msg = await event.edit("")
-    background = "".join(random.choices(pattern, k=width))
-    
-    for i in range(len(text)):
-        # Символы текста появляются постепенно
-        display_text = background[:3] + text[:i+1] + background[3:]
-        try:
-            await msg.edit(display_text)
-        except Exception:
-            pass
-        await asyncio.sleep(0.3)
-    
-    # Завершаем с полным текстом
-    await msg.edit(text)
+    await event.edit(text)
 
 # Словарь доступных анимаций: ключ – номер, значение – кортеж (название, функция)
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
-    2: ("Пиксельное разрушение 💥", pixel_destruction),
-    3: ("Сдвигающийся узор ▓", shifting_pattern)
+    2: ("Пиксельное разрушение 💥", pixel_destruction)
 }
