@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "0.2.3"
+ANIMATION_SCRIPT_VERSION = "0.2.4"
 
 import asyncio
 import random
@@ -26,6 +26,8 @@ async def pixel_destruction(event, text):
     chunk_size = max(1, len(text) // lines_count)
     text_lines = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
     previous_text = ""
+    msg = await event.edit("Начинаю анимацию...")
+    await asyncio.sleep(1)
     # Фаза 1: пикселизация
     pixelated_text = [list(" " * len(line)) for line in text_lines]
     for _ in range(3):
@@ -36,7 +38,7 @@ async def pixel_destruction(event, text):
         displayed_text = "\n".join("".join(line) for line in pixelated_text)
         if displayed_text != previous_text:
             try:
-                await event.edit(displayed_text)
+                await msg.edit(displayed_text)
                 previous_text = displayed_text
             except Exception:
                 pass
@@ -49,30 +51,30 @@ async def pixel_destruction(event, text):
         )
         if displayed_text != previous_text:
             try:
-                await event.edit(displayed_text)
+                await msg.edit(displayed_text)
                 previous_text = displayed_text
             except Exception:
                 pass
         await asyncio.sleep(pixel_typing_speed)
-    await event.edit(text)
+    await msg.edit(text)
 
-async def shifting_pattern(event, text):
-    """Анимация 'Сдвигающийся узор ▓': буквы появляются в движущемся узоре."""
-    pattern = ["▓", "▒", "░", " "]
-    displayed_text = " " * len(text)
-    msg = await event.edit(displayed_text)
-    for _ in range(10):  # Количество циклов сдвига
-        displayed_text = "".join(random.choice(pattern) for _ in text)
+async def line_destruction(event, text):
+    """Анимация 'Разрушение строк': строки текста постепенно исчезают."""
+    lines = text.split("\n")
+    msg = await event.edit("Начинаю анимацию...")
+    await asyncio.sleep(1)
+    while lines:
         try:
-            await msg.edit(displayed_text)
+            await msg.edit("\n".join(lines))
+            await asyncio.sleep(0.5)
         except Exception:
             pass
-        await asyncio.sleep(0.2)
-    await msg.edit(text)
+        lines.pop(random.randint(0, len(lines) - 1))
+    await msg.edit("Текст исчез... 💨")
 
 # Словарь доступных анимаций: ключ – номер, значение – кортеж (название, функция)
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
     2: ("Пиксельное разрушение 💥", pixel_destruction),
-    3: ("Сдвигающийся узор ▓", shifting_pattern)
+    3: ("Разрушение строк 💨", line_destruction)
 }
