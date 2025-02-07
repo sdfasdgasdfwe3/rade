@@ -13,7 +13,7 @@ import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
-SCRIPT_VERSION = "0.2.3"
+SCRIPT_VERSION = "0.2.31"
 
 # Emoji
 EMOJIS = {
@@ -195,8 +195,8 @@ def main():
     me = client.loop.run_until_complete(client.get_me())
     username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
     print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
-    print("Для остановки нажмите Ctrl+C")
     print("Телеграмм канал: t.me/kwotko")
+    print("Для остановки нажмите Ctrl+C")
     client.run_until_disconnected()
 
 if __name__ == "__main__":
