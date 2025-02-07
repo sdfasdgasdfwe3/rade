@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "0.2.2"
+ANIMATION_SCRIPT_VERSION = "0.2.3"
 
 import asyncio
 import random
@@ -56,8 +56,23 @@ async def pixel_destruction(event, text):
         await asyncio.sleep(pixel_typing_speed)
     await event.edit(text)
 
+async def shifting_pattern(event, text):
+    """Анимация 'Сдвигающийся узор ▓': буквы появляются в движущемся узоре."""
+    pattern = ["▓", "▒", "░", " "]
+    displayed_text = " " * len(text)
+    msg = await event.edit(displayed_text)
+    for _ in range(10):  # Количество циклов сдвига
+        displayed_text = "".join(random.choice(pattern) for _ in text)
+        try:
+            await msg.edit(displayed_text)
+        except Exception:
+            pass
+        await asyncio.sleep(0.2)
+    await msg.edit(text)
+
 # Словарь доступных анимаций: ключ – номер, значение – кортеж (название, функция)
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
-    2: ("Пиксельное разрушение 💥", pixel_destruction)
+    2: ("Пиксельное разрушение 💥", pixel_destruction),
+    3: ("Сдвигающийся узор ▓", shifting_pattern)
 }
