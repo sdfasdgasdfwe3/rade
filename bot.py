@@ -10,7 +10,7 @@ from animation_script import animations
 
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
-SCRIPT_VERSION = "0.1.0"
+SCRIPT_VERSION = "0.2.0"
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
