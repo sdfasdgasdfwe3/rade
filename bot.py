@@ -13,7 +13,7 @@ import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
-SCRIPT_VERSION = "1.0.0"
+SCRIPT_VERSION = "0.1.0"
 
 # Emoji
 EMOJIS = {
