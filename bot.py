@@ -7,11 +7,13 @@ import asyncio
 import signal
 from telethon import TelegramClient, events
 from animation_script import animations
+import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
-SCRIPT_VERSION = "0.2.1"
+ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
+SCRIPT_VERSION = "1.0.0"
 
 # Emoji
 EMOJIS = {
@@ -84,7 +86,7 @@ def check_for_updates():
             remote_script = response.text
             remote_version = None
             for line in remote_script.splitlines():
-                if "SCRIPT_VERSION" in line:
+                if "SCRIPT_VERSION" in line or "SCRIPT_VERSION" in line:
                     try:
                         remote_version = line.split('=')[1].strip().strip('"')
                     except Exception:
@@ -101,6 +103,32 @@ def check_for_updates():
             print(f"{EMOJIS['error']} Ошибка проверки обновлений: статус {response.status_code}")
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений:", e)
+
+def check_for_animation_script_updates():
+    try:
+        response = requests.get(ANIMATION_SCRIPT_GITHUB_URL)
+        if response.status_code == 200:
+            remote_file = response.text
+            remote_version = None
+            for line in remote_file.splitlines():
+                if "ANIMATION_SCRIPT_VERSION" in line:
+                    try:
+                        remote_version = line.split('=')[1].strip().strip('"')
+                    except Exception:
+                        pass
+                    break
+            if remote_version and remote_version != animation_script.ANIMATION_SCRIPT_VERSION:
+                print(f"{EMOJIS['update']} Обнаружена новая версия анимационного скрипта {remote_version} (текущая {animation_script.ANIMATION_SCRIPT_VERSION}). Обновление...")
+                with open("animation_script.py", "w", encoding="utf-8") as f:
+                    f.write(remote_file)
+                print(f"{EMOJIS['success']} Файл animation_script.py обновлён. Перезапустите программу.")
+                exit()
+            else:
+                print(f"{EMOJIS['success']} Анимационный скрипт актуален.")
+        else:
+            print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта: статус {response.status_code}")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
 
 animation_selection_mode = False
 
@@ -142,9 +170,8 @@ async def animation_selection_handler(event):
                 selected_animation = number
                 config["selected_animation"] = selected_animation
                 save_config(config)
-                # Отправляем сообщение с подтверждением выбора анимации
                 await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
-                # Удаляем 4 последних сообщения бота в этом чате
+                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
                 messages = await client.get_messages(event.chat_id, limit=10)
                 deleted_count = 0
                 for msg in messages:
@@ -162,9 +189,9 @@ async def animation_selection_handler(event):
 
 def main():
     check_for_updates()
+    check_for_animation_script_updates()
     client.start(PHONE_NUMBER)
     print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-    # Получаем данные авторизованного пользователя
     me = client.loop.run_until_complete(client.get_me())
     username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
     print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
