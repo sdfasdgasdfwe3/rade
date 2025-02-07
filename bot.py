@@ -29,7 +29,7 @@ def save_config(config):
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f)
     except Exception as e:
-        print("Error saving config:", e)
+        print("Ошибка сохранения конфигурации:", e)
 
 config = load_config()
 API_ID = config.get("API_ID")
@@ -128,7 +128,7 @@ async def animation_selection_handler(event):
 def main():
     check_for_updates()
     client.start(PHONE_NUMBER)
-    print("Bot started. Press Ctrl+C to stop.")
+    print("Бот запущен. Нажмите Ctrl+C, чтобы остановить.")
     client.run_until_disconnected()
 
 if __name__ == "__main__":
