@@ -1,67 +1,59 @@
-import os
-import sys
 import asyncio
-import subprocess
-from telethon import TelegramClient, events
-from configparser import ConfigParser
+import random
 
-CONFIG_FILE = 'config.ini'
-SESSION_FILE = 'session_name'
-CHOICE_FILE = 'animation_choice.txt'
+typing_speed = 1.5
+pixel_typing_speed = 0.1
+cursor_symbol = "|"
 
-# Доступные анимации (можно добавить или изменить варианты)
-AVAILABLE_ANIMATIONS = {
-    "1": {"name": "Медленный набор текста", "typing_speed": 0.3, "cursor_symbol": "|"},
-    "2": {"name": "Быстрый набор текста", "typing_speed": 0.1, "cursor_symbol": "_"},
+async def animate_text(event, text):
+    displayed_text = ""
+    msg = await event.edit(displayed_text + cursor_symbol)
+    for char in text:
+        displayed_text += char
+        try:
+            await msg.edit(displayed_text + cursor_symbol)
+        except Exception:
+            pass
+        await asyncio.sleep(typing_speed)
+    await msg.edit(displayed_text)
+
+async def pixel_destruction(event, text):
+    lines_count = 4
+    chunk_size = max(1, len(text) // lines_count)
+    text_lines = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+    previous_text = ""
+    # Фаза 1: пикселизация
+    pixelated_text = [list(" " * len(line)) for line in text_lines]
+    for _ in range(3):
+        for i in range(len(pixelated_text)):
+            for j in range(len(pixelated_text[i])):
+                if random.random() < 0.1:
+                    pixelated_text[i][j] = random.choice([".", "*", "○", "⊙", "%"])
+        displayed_text = "\n".join("".join(line) for line in pixelated_text)
+        if displayed_text != previous_text:
+            try:
+                await event.edit(displayed_text)
+                previous_text = displayed_text
+            except Exception:
+                pass
+        await asyncio.sleep(pixel_typing_speed)
+    # Фаза 2: разрушение
+    for _ in range(3):
+        displayed_text = "\n".join(
+            "".join(random.choice([".", "*", " ", "○", "⊙"]) for _ in line)
+            for line in text_lines
+        )
+        if displayed_text != previous_text:
+            try:
+                await event.edit(displayed_text)
+                previous_text = displayed_text
+            except Exception:
+                pass
+        await asyncio.sleep(pixel_typing_speed)
+    await event.edit(text)
+
+# Словарь анимаций: ключ – номер, значение – кортеж (название, функция)
+animations = {
+    1: ("Standard animation", animate_text),
+    2: ("Pixel destruction", pixel_destruction)
 }
-
-def create_or_read_config():
-    config = ConfigParser()
-    config.read(CONFIG_FILE)
-    if not config.has_section('Telegram'):
-        print("❌ Отсутствует секция [Telegram] в конфиге!")
-        sys.exit(1)
-    return config['Telegram']
-
-async def main():
-    config = create_or_read_config()
-    client = TelegramClient(SESSION_FILE, int(config['api_id']), config['api_hash'])
-    await client.start(phone=lambda: config['phone_number'])
-    
-    # Получаем свои данные, чтобы отправить сообщение самому себе
-    me = await client.get_me()
-    
-    # Формируем текст со списком доступных анимаций
-    animations_text = "Выберите анимацию, отправив номер:\n"
-    for num, data in AVAILABLE_ANIMATIONS.items():
-        animations_text += f"{num}: {data['name']}\n"
-    animations_text += "\nОтправьте сообщение с номером выбранной анимации."
-    
-    # Отправляем сообщение себе в личные сообщения
-    await client.send_message(me, animations_text)
-    print("Список анимаций отправлен. Ожидание выбора...")
-
-    # Обработчик входящих сообщений – ждем, пока пользователь отправит корректный номер
-    @client.on(events.NewMessage(incoming=True))
-    async def selection_handler(event):
-        text = event.raw_text.strip()
-        if text in AVAILABLE_ANIMATIONS:
-            # Сохраняем выбор в файл
-            with open(CHOICE_FILE, 'w', encoding='utf-8') as f:
-                f.write(text)
-            await event.reply(f"Вы выбрали анимацию: {AVAILABLE_ANIMATIONS[text]['name']}\nЗапускаю основной бот...")
-            # Завершаем работу клиента выбора анимации
-            await client.disconnect()
-            # Запускаем основной бот (bot.py)
-            subprocess.Popen([sys.executable, "bot.py"])
-            sys.exit(0)
-        else:
-            await event.reply("Неверный выбор. Пожалуйста, отправьте номер из списка.")
-
-    await client.run_until_disconnected()
-
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n🛑 Скрипт выбора анимации завершён пользователем.")
