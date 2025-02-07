@@ -1,7 +1,7 @@
 import asyncio
 import random
 
-typing_speed = 1.5
+typing_speed = 3
 pixel_typing_speed = 0.1
 cursor_symbol = "▮"
 
