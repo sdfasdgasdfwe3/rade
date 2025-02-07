@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "1.0.0"
+ANIMATION_SCRIPT_VERSION = "0.1.0"
 
 import asyncio
 import random
