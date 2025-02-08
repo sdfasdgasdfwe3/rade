@@ -29,6 +29,9 @@ EMOJIS = {
     "bot": "🤖"
 }
 
+# Переменная для хранения ID пользователя, который вызвал /m
+current_user_id = None
+
 def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
@@ -86,7 +89,7 @@ def check_for_updates():
             remote_script = response.text
             remote_version = None
             for line in remote_script.splitlines():
-                if "SCRIPT_VERSION" in line or "SCRIPT_VERSION" in line:
+                if "SCRIPT_VERSION" in line:
                     try:
                         remote_version = line.split('=')[1].strip().strip('"')
                     except Exception:
@@ -132,26 +135,10 @@ def check_for_animation_script_updates():
 
 animation_selection_mode = False
 
-@client.on(events.NewMessage(pattern='/p'))
-async def animate_handler(event):
-    command_text = event.raw_text
-    parts = command_text.split(maxsplit=1)
-    if len(parts) < 2:
-        await event.reply("Использование: /p текст")
-        return
-    text_to_animate = parts[1]
-    if selected_animation in animations:
-        anim_func = animations[selected_animation][1]
-        try:
-            await anim_func(event, text_to_animate)
-        except Exception as e:
-            print(f"{EMOJIS['error']} Ошибка анимации:", e)
-    else:
-        await event.reply("Выбрана недопустимая анимация.")
-
 @client.on(events.NewMessage(pattern='/m'))
 async def animation_menu(event):
-    global animation_selection_mode
+    global animation_selection_mode, current_user_id
+    current_user_id = event.sender_id  # Запоминаем ID пользователя
     animation_selection_mode = True
     menu_text = "Выберите анимацию:\n"
     for num, (name, _) in sorted(animations.items()):
@@ -161,8 +148,12 @@ async def animation_menu(event):
 
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
-    global animation_selection_mode, selected_animation, config
+    global animation_selection_mode, selected_animation, config, current_user_id
     if animation_selection_mode and event.out:
+        # Игнорируем сообщения от других пользователей
+        if event.sender_id != current_user_id:
+            return
+        
         text = event.raw_text.strip()
         if text.isdigit():
             number = int(text)
@@ -186,6 +177,7 @@ async def animation_selection_handler(event):
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
+            current_user_id = None  # Сбрасываем ID пользователя после завершения выбора
 
 def main():
     check_for_updates()
