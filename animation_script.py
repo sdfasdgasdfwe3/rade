@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "0.2.76"
+ANIMATION_SCRIPT_VERSION = "0.2.77"
 
 import asyncio
 import random
@@ -99,46 +99,3 @@ animations = {
     4: ("Светодиодный экран 🔲", led_display)
 }
 
-# Телеграмм клиент и другие части кода остаются неизменными
-
-@client.on(events.NewMessage(pattern='/m'))
-async def animation_menu(event):
-    global animation_selection_mode
-    animation_selection_mode = True
-    menu_text = "Выберите анимацию:\n"
-    for num, (name, _) in sorted(animations.items()):
-        menu_text += f"{num}) {name}\n"
-    menu_text += "\nВведите номер желаемой анимации."
-    await event.reply(menu_text)  # Отправка сообщения только в текущий чат
-
-@client.on(events.NewMessage)
-async def animation_selection_handler(event):
-    global animation_selection_mode, selected_animation, config
-    # Проверяем, что это сообщение от того пользователя, который вызвал команду /m
-    if animation_selection_mode and event.chat_id == event.sender_id:
-        text = event.raw_text.strip()
-        if text.isdigit():
-            number = int(text)
-            if number in animations:
-                selected_animation = number
-                config["selected_animation"] = selected_animation
-                save_config(config)
-                await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
-                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
-                messages = await client.get_messages(event.chat_id, limit=10)
-                deleted_count = 0
-                for msg in messages:
-                    if msg.out:
-                        try:
-                            await msg.delete()
-                            deleted_count += 1
-                        except Exception as e:
-                            print(f"{EMOJIS['error']} Ошибка удаления сообщения:", e)
-                        if deleted_count >= 4:
-                            break
-            else:
-                await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
-            animation_selection_mode = False  # Сбрасываем флаг после выбора
-        else:
-            await event.reply(f"{EMOJIS['error']} Пожалуйста, введите корректный номер анимации.")
-            animation_selection_mode = False  # Сбрасываем флаг, если введен некорректный текст
