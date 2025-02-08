@@ -1,10 +1,11 @@
-ANIMATION_SCRIPT_VERSION = "0.2.71"
+ANIMATION_SCRIPT_VERSION = "0.2.73"
 
 import asyncio
 import random
 
 typing_speed = 0.4
 pixel_typing_speed = 0.2
+random_reveal_speed = 0.2
 cursor_symbol = "▮"
 
 async def animate_text(event, text):
@@ -56,8 +57,27 @@ async def pixel_destruction(event, text):
         await asyncio.sleep(pixel_typing_speed)
     await event.edit(text)
 
-# Словарь доступных анимаций: ключ – номер, значение – кортеж (название, функция)
+async def random_reveal(event, text):
+    """Анимация 'Случайное появление букв': буквы открываются в случайном порядке."""
+    hidden_text = ["*" if char != " " else " " for char in text]
+    msg = await event.edit("".join(hidden_text))  # Показываем скрытый текст
+
+    indices = list(range(len(text)))  # Индексы всех символов
+    random.shuffle(indices)  # Перемешиваем порядок появления букв
+
+    for index in indices:
+        hidden_text[index] = text[index]  # Открываем букву
+        try:
+            await msg.edit("".join(hidden_text))  # Обновляем сообщение
+        except Exception:
+            pass
+        await asyncio.sleep(random_reveal_speed)  # Пауза между буквами
+
+    await msg.edit(text)  # Финальный текст
+
+# Словарь доступных анимаций
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
-    2: ("Пиксельное разрушение 💥", pixel_destruction)
+    2: ("Пиксельное разрушение 💥", pixel_destruction),
+    3: ("Случайное появление букв 🎲", random_reveal)
 }
