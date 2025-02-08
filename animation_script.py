@@ -1,4 +1,4 @@
-ANIMATION_SCRIPT_VERSION = "0.2.73"
+ANIMATION_SCRIPT_VERSION = "0.2.75"
 
 import asyncio
 import random
@@ -6,6 +6,7 @@ import random
 typing_speed = 0.4
 pixel_typing_speed = 0.2
 random_reveal_speed = 0.2
+led_display_speed = 0.3
 cursor_symbol = "▮"
 
 async def animate_text(event, text):
@@ -75,9 +76,25 @@ async def random_reveal(event, text):
 
     await msg.edit(text)  # Финальный текст
 
+async def led_display(event, text):
+    """Анимация 'Светодиодный экран': буквы появляются по частям, как на табло."""
+    hidden_text = ["⬛" for _ in text]  # Начальное состояние (все буквы скрыты)
+    msg = await event.edit("".join(hidden_text))
+
+    for i in range(len(text)):
+        hidden_text[i] = text[i]  # Заменяем ⬛ на реальную букву
+        try:
+            await msg.edit("".join(hidden_text))  # Обновляем сообщение
+        except Exception:
+            pass
+        await asyncio.sleep(led_display_speed)  # Задержка перед следующей буквой
+
+    await msg.edit(text)  # Финальный текст
+
 # Словарь доступных анимаций
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
     2: ("Пиксельное разрушение 💥", pixel_destruction),
-    3: ("Случайное появление букв 🎲", random_reveal)
+    3: ("Случайное появление букв 🎲", random_reveal),
+    4: ("Светодиодный экран 🔲", led_display)
 }
