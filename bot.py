@@ -13,7 +13,7 @@ import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
-SCRIPT_VERSION = "0.2.33"
+SCRIPT_VERSION = "0.2.31"
 
 # Emoji
 EMOJIS = {
@@ -140,10 +140,6 @@ async def animate_handler(event):
         await event.reply("Использование: /p текст")
         return
     text_to_animate = parts[1]
-    user_id = event.sender_id
-    user_config = config.get(str(user_id), {"selected_animation": 1})
-    selected_animation = user_config.get("selected_animation", 1)
-    
     if selected_animation in animations:
         anim_func = animations[selected_animation][1]
         try:
@@ -158,20 +154,9 @@ async def animation_menu(event):
     global animation_selection_mode
     animation_selection_mode = True
     menu_text = "Выберите анимацию:\n"
-    
-    # Отправляем меню только пользователю, вызвавшему команду
     for num, (name, _) in sorted(animations.items()):
         menu_text += f"{num}) {name}\n"
     menu_text += "\nВведите номер желаемой анимации."
-    
-    # Сохраняем выбор анимации в конфиге для конкретного пользователя
-    user_id = event.sender_id
-    user_config = config.get(str(user_id), {"selected_animation": 1})
-    config[str(user_id)] = user_config
-    
-    save_config(config)
-    
-    # Отправляем персонализированное сообщение пользователю
     await event.reply(menu_text)
 
 @client.on(events.NewMessage)
@@ -181,15 +166,12 @@ async def animation_selection_handler(event):
         text = event.raw_text.strip()
         if text.isdigit():
             number = int(text)
-            user_id = event.sender_id
-            user_config = config.get(str(user_id), {"selected_animation": 1})
-            
             if number in animations:
-                user_config["selected_animation"] = number
-                config[str(user_id)] = user_config
+                selected_animation = number
+                config["selected_animation"] = selected_animation
                 save_config(config)
-                await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[number][0]}")
-                # Удаляем 4 последних исходящих (своих) сообщений бота в чате
+                await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
+                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
                 messages = await client.get_messages(event.chat_id, limit=10)
                 deleted_count = 0
                 for msg in messages:
