@@ -153,10 +153,12 @@ async def animate_handler(event):
 @client.on(events.NewMessage(pattern='/m'))
 async def animation_menu(event):
     global animation_selection_mode, current_user_id
+
     # Запоминаем ID пользователя, который вызвал команду
-    if current_user_id is None:  # Если еще нет активного выбора, разрешаем
+    if current_user_id is None:  # Если ещё нет активного выбора, разрешаем
         current_user_id = event.sender_id
-    # Проверяем, что команда пришла от того же пользователя, который начал выбор анимации
+
+    # Проверяем, что команда пришла от того же пользователя, который начал выбор
     if event.sender_id == current_user_id:
         animation_selection_mode = True
         menu_text = "Выберите анимацию:\n"
@@ -164,8 +166,7 @@ async def animation_menu(event):
             menu_text += f"{num}) {name}\n"
         menu_text += "\nВведите номер желаемой анимации."
         await event.reply(menu_text)
-    else:
-        await event.reply(menu_text)
+    # Если команда вызвана другим пользователем — просто игнорируем
 
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
