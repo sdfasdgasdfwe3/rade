@@ -86,7 +86,7 @@ def check_for_updates():
             remote_script = response.text
             remote_version = None
             for line in remote_script.splitlines():
-                if "SCRIPT_VERSION" in line or "SCRIPT_VERSION" in line:
+                if "SCRIPT_VERSION" in line:
                     try:
                         remote_version = line.split('=')[1].strip().strip('"')
                     except Exception:
@@ -130,8 +130,9 @@ def check_for_animation_script_updates():
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
 
+# Флаги для выбора анимации
 animation_selection_mode = False
-current_user_id = None  # Переменная для хранения ID пользователя, вызвавшего команду /m
+current_user_id = None  # ID пользователя, вызвавшего команду /m
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
@@ -155,10 +156,10 @@ async def animation_menu(event):
     global animation_selection_mode, current_user_id
 
     # Запоминаем ID пользователя, который вызвал команду
-    if current_user_id is None:  # Если ещё нет активного выбора, разрешаем
+    if current_user_id is None:
         current_user_id = event.sender_id
 
-    # Проверяем, что команда пришла от того же пользователя, который начал выбор
+    # Обрабатываем команду только если она вызвана этим же пользователем
     if event.sender_id == current_user_id:
         animation_selection_mode = True
         menu_text = "Выберите анимацию:\n"
@@ -166,12 +167,13 @@ async def animation_menu(event):
             menu_text += f"{num}) {name}\n"
         menu_text += "\nВведите номер желаемой анимации."
         await event.reply(menu_text)
-    # Если команда вызвана другим пользователем — просто игнорируем
+    # Если команда вызвана другим пользователем – игнорируем
 
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
-    global animation_selection_mode, selected_animation, config
-    if animation_selection_mode and event.out:
+    global animation_selection_mode, selected_animation, config, current_user_id
+    # Исправлено: обрабатываем только сообщения от пользователя, вызвавшего меню (а не исходящие сообщения бота)
+    if animation_selection_mode and event.sender_id == current_user_id:
         text = event.raw_text.strip()
         if text.isdigit():
             number = int(text)
@@ -180,7 +182,7 @@ async def animation_selection_handler(event):
                 config["selected_animation"] = selected_animation
                 save_config(config)
                 await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
-                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
+                # Удаляем 4 последних исходящих сообщений бота в чате
                 messages = await client.get_messages(event.chat_id, limit=10)
                 deleted_count = 0
                 for msg in messages:
@@ -195,6 +197,7 @@ async def animation_selection_handler(event):
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
+            current_user_id = None  # Сброс ID после выбора
 
 def main():
     check_for_updates()
