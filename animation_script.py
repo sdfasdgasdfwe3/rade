@@ -1,7 +1,9 @@
-ANIMATION_SCRIPT_VERSION = "0.2.77"
-
 import asyncio
 import random
+from telethon import TelegramClient, events
+
+# === Параметры анимации ===
+ANIMATION_SCRIPT_VERSION = "0.2.78"
 
 typing_speed = 0.4
 pixel_typing_speed = 0.2
@@ -91,7 +93,7 @@ async def led_display(event, text):
 
     await msg.edit(text)  # Финальный текст
 
-# Словарь доступных анимаций
+# Словарь доступных анимаций (при необходимости можно добавить выбор анимации)
 animations = {
     1: ("Стандартная анимация ✍️", animate_text),
     2: ("Пиксельное разрушение 💥", pixel_destruction),
