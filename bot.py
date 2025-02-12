@@ -165,8 +165,7 @@ async def animation_menu(event):
         menu_text += "\nВведите номер желаемой анимации."
         await event.reply(menu_text)
     else:
-        # Отправляем сообщение о том, что команда /m доступна только тому, кто её вызвал
-        await event.reply(f"{EMOJIS['error']} Эта команда доступна только для того пользователя, который её вызвал.")
+        await event.reply(menu_text)
 
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
