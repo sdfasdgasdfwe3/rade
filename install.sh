@@ -29,5 +29,15 @@ echo "Устанавливаем зависимости Python..."
 pip install telethon requests
 
 echo "-----------------------------------------"
+echo "Делаем главный файл исполняемым..."
+chmod +x bot.py
+
+# Добавляем команду автозапуска бота в ~/.bashrc, если её там ещё нет
+if ! grep -q "cd ~/rade && python bot.py" ~/.bashrc; then
+    echo "cd ~/rade && python bot.py" >> ~/.bashrc
+    echo "Команда автозапуска бота добавлена в ~/.bashrc"
+fi
+
+echo "-----------------------------------------"
 echo "Запускаем бота..."
 python bot.py
