@@ -1,5 +1,11 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
+# Проверяем, запущен ли уже процесс бота
+if pgrep -f "python3 bot.py" > /dev/null; then
+    echo "Бот уже запущен. Прерываем запуск."
+    exit 0
+fi
+
 # Завершаем все процессы Python перед запуском бота
 kill -9 $(ps aux | grep '[p]ython' | awk '{print $2}')
 
