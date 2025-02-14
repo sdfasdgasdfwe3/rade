@@ -8,7 +8,7 @@ import signal
 from telethon import TelegramClient, events
 import psutil
 from animation_script import animations
-import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
+import animation_script
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -31,11 +31,15 @@ EMOJIS = {
 }
 
 def is_bot_running():
-    current_pid = os.getpid()  # Получаем ID текущего процесса
+    current_pid = os.getpid()
     for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
-        if 'python' in process.info['name'] and 'bot.py' in ' '.join(process.info['cmdline']):
-            if process.info['pid'] != current_pid:  # Если это не текущий процесс
-                return True
+        try:
+            cmdline = ' '.join(process.info['cmdline'])
+            if 'python' in process.info['name'].lower() and 'bot.py' in cmdline:
+                if process.info['pid'] != current_pid:
+                    return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError, TypeError):
+            continue
     return False
 
 def load_config():
@@ -46,16 +50,17 @@ def load_config():
             if "selected_animation" not in config:
                 config["selected_animation"] = 1
             return config
-        except Exception:
+        except Exception as e:
+            print(f"{EMOJIS['error']} Ошибка загрузки конфига:", e)
             return {}
     return {}
 
 def save_config(config):
     try:
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(config, f)
+            json.dump(config, f, indent=2)
     except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка сохранения конфигурации:", e)
+        print(f"{EMOJIS['error']} Ошибка сохранения конфига:", e)
 
 config = load_config()
 API_ID = config.get("API_ID")
@@ -80,7 +85,6 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
 
-# Проверка, запущен ли уже бот
 if is_bot_running():
     print("⚠️ Бот уже запущен! Второй экземпляр запускать нельзя.")
     sys.exit(1)
@@ -145,7 +149,7 @@ def check_for_animation_script_updates():
         print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
 
 animation_selection_mode = False
-current_user_id = None  # Переменная для хранения ID пользователя, вызвавшего команду /m
+current_user_id = None
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
@@ -167,14 +171,9 @@ async def animate_handler(event):
 @client.on(events.NewMessage(pattern='/m'))
 async def animation_menu(event):
     global animation_selection_mode, current_user_id
-
-    # Обработка команды /m только для исходящих сообщений (т.е. только если бот сам отправил сообщение /m)
     if not event.out:
         return
-
-    # Запоминаем ID пользователя (бота), который вызвал команду
     current_user_id = event.sender_id
-
     animation_selection_mode = True
     menu_text = "Выберите анимацию:\n"
     for num, (name, _) in sorted(animations.items()):
@@ -185,7 +184,6 @@ async def animation_menu(event):
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
     global animation_selection_mode, selected_animation, config
-    # Обрабатываем только исходящие сообщения (т.е. те, которые отправлены ботом)
     if animation_selection_mode and event.out:
         text = event.raw_text.strip()
         if text.isdigit():
@@ -195,7 +193,6 @@ async def animation_selection_handler(event):
                 config["selected_animation"] = selected_animation
                 save_config(config)
                 await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
-                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
                 messages = await client.get_messages(event.chat_id, limit=10)
                 deleted_count = 0
                 for msg in messages:
@@ -204,25 +201,41 @@ async def animation_selection_handler(event):
                             await msg.delete()
                             deleted_count += 1
                         except Exception as e:
-                            print(f"{EMOJIS['error']} Ошибка удаления сообщения:", e)
+                            print(f"{EMOJIS['error']} Ошибка удаления:", e)
                         if deleted_count >= 4:
                             break
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
 
+async def close_client():
+    if client.is_connected():
+        await client.disconnect()
+    print(f"\n{EMOJIS['exit']} Бот успешно остановлен.")
+
+def signal_handler(sig, frame):
+    print(f"\n{EMOJIS['exit']} Получен сигнал завершения. Останавливаем бота...")
+    client.loop.run_until_complete(close_client())
+    sys.exit(0)
+
 def main():
     check_for_updates()
     check_for_animation_script_updates()
-    client.start(PHONE_NUMBER)
-    print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-    me = client.loop.run_until_complete(client.get_me())
-    username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
-    print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
-    print("Телеграмм канал: t.me/kwotko")
-    print("Для остановки нажмите Ctrl+C")
-    client.run_until_disconnected()
+    try:
+        client.start(PHONE_NUMBER)
+        print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
+        me = client.loop.run_until_complete(client.get_me())
+        username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
+        print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
+        print("Телеграмм канал: t.me/kwotko")
+        print("Для остановки нажмите Ctrl+C")
+        signal.signal(signal.SIGINT, signal_handler)
+        client.run_until_disconnected()
+    except Exception as e:
+        print(f"{EMOJIS['error']} Критическая ошибка:", e)
+    finally:
+        client.loop.run_until_complete(close_client())
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))  # Закрытая скобка
+    signal.signal(signal.SIGINT, signal_handler)
     main()
