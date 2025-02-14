@@ -6,7 +6,6 @@
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SESSION_NAME="bot_session"
-LOCK_FILE="$HOME/bot.lock"
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -14,39 +13,7 @@ SCRIPT_NAME=$(basename "$0")
 # =============================================
 error_exit() {
     echo "ОШИБКА: $1" >&2
-    rm -f "$LOCK_FILE"
     exit 1
-}
-
-# =============================================
-# Проверка блокировки и создание lock-файла
-# =============================================
-if [ -e "$LOCK_FILE" ]; then
-    error_exit "Скрипт уже запущен! (обнаружен lock-файл)"
-fi
-touch "$LOCK_FILE" || error_exit "Не могу создать lock-файл"
-
-# Очистка lock-файла при выходе
-trap 'rm -f "$LOCK_FILE"' EXIT
-
-# =============================================
-# Проверка и завершение старых процессов
-# =============================================
-kill_previous_instances() {
-    current_pid=$$
-    killed=0
-
-    for pid in $(pgrep -f "python3.*bot\.py"); do
-        if [ "$pid" != "$current_pid" ]; then
-            echo "Завершаем процесс бота с PID $pid..."
-            kill -9 "$pid" && killed=$((killed + 1))
-        fi
-    done
-
-    if [ "$killed" -gt 0 ]; then
-        echo "Завершено процессов: $killed"
-        sleep 2  # Даем время на завершение
-    fi
 }
 
 # =============================================
@@ -98,6 +65,8 @@ setup_tmux() {
         echo "Запускаем бота в новой сессии..."
         tmux new-session -d -s "$SESSION_NAME" "python3 $REPO_DIR/bot.py" || error_exit "Ошибка запуска tmux"
         sleep 2
+    else
+        echo "Сессия tmux уже запущена."
     fi
 
     # Проверка жизнеспособности сессии
@@ -124,7 +93,6 @@ setup_autostart() {
 # Главный процесс выполнения
 # =============================================
 main() {
-    kill_previous_instances  # Завершаем старые процессы
     install_deps
     setup_repo
     setup_tmux
