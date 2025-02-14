@@ -55,5 +55,17 @@ fi
 
 echo "-----------------------------------------"
 echo "Запускаем бота..."
-nohup python bot.py > /dev/null 2>&1 &
 
+# Создаем скрипт для автозапуска при старте Termux
+mkdir -p ~/.termux/boot
+echo "#!/data/data/com.termux/files/usr/bin/bash
+# Скрипт для автозапуска бота в Termux
+termux-wake-lock
+cd ~/rade
+nohup python bot.py > /dev/null 2>&1 &" > ~/.termux/boot/start_bot.sh
+
+# Делаем скрипт исполняемым
+chmod +x ~/.termux/boot/start_bot.sh
+
+echo "-----------------------------------------"
+echo "Установка завершена. Бот будет запускаться автоматически при старте Termux."
