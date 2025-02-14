@@ -5,7 +5,6 @@
 # =============================================
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
-SESSION_NAME="bot_session"
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -23,16 +22,6 @@ install_git() {
     if ! command -v git &>/dev/null; then
         echo "Устанавливаем git..."
         pkg install git -y || error_exit "Ошибка установки git"
-    fi
-}
-
-# =============================================
-# Установка tmux, если он отсутствует
-# =============================================
-install_tmux() {
-    if ! command -v tmux &>/dev/null; then
-        echo "Устанавливаем tmux..."
-        pkg install tmux -y || error_exit "Ошибка установки tmux"
     fi
 }
 
@@ -72,29 +61,19 @@ setup_repo() {
 }
 
 # =============================================
-# Настройка tmux
+# Запуск бота в фоновом режиме
 # =============================================
-setup_tmux() {
-    echo "Проверка tmux сессии..."
-    if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
-        echo "Запускаем бота в новой сессии..."
-        tmux new-session -d -s "$SESSION_NAME" "python3 $REPO_DIR/bot.py" || error_exit "Ошибка запуска tmux"
-        sleep 2
-    else
-        echo "Сессия tmux уже запущена."
-    fi
-
-    # Проверка жизнеспособности сессии
-    if ! tmux list-sessions | grep -q "$SESSION_NAME"; then
-        error_exit "Сессия tmux не запустилась"
-    fi
+start_bot() {
+    echo "Запускаем бота в фоновом режиме..."
+    nohup python3 "$REPO_DIR/bot.py" > "$REPO_DIR/bot.log" 2>&1 &
+    echo "Бот запущен. Логи будут сохранены в $REPO_DIR/bot.log"
 }
 
 # =============================================
 # Настройка автозапуска
 # =============================================
 setup_autostart() {
-    local autostart_cmd="tmux has-session -t $SESSION_NAME 2>/dev/null || tmux new-session -d -s $SESSION_NAME 'python3 $REPO_DIR/bot.py'"
+    local autostart_cmd="cd $REPO_DIR && nohup python3 bot.py > bot.log 2>&1 &"
     
     # Добавляем команду в ~/.bashrc, если её там нет
     if ! grep -qF "$autostart_cmd" ~/.bashrc; then
@@ -110,10 +89,9 @@ setup_autostart() {
 # =============================================
 main() {
     install_git  # Устанавливаем git, если он отсутствует
-    install_tmux  # Устанавливаем tmux, если он отсутствует
     install_deps
     setup_repo
-    setup_tmux
+    start_bot
     setup_autostart
     
     echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
