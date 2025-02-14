@@ -34,8 +34,10 @@ chmod +x bot.py
 
 echo "-----------------------------------------"
 echo "Настроим автозапуск бота в Termux..."
-# Очищаем .bashrc перед добавлением новой строки
-> ~/.bashrc
+
+# Очищаем .bashrc
+echo "" > ~/.bashrc
+
 # Добавляем строку для автозапуска
 echo 'pgrep -f bot.py > /dev/null || (cd ~/rade && git pull && python3 bot.py)' >> ~/.bashrc
 
