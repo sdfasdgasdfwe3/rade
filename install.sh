@@ -6,7 +6,7 @@
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SESSION_NAME="bot_session"
-LOCK_FILE="$HOME/bot.lock"  # Используем домашнюю директорию
+LOCK_FILE="$HOME/bot.lock"
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -28,6 +28,26 @@ touch "$LOCK_FILE" || error_exit "Не могу создать lock-файл"
 
 # Очистка lock-файла при выходе
 trap 'rm -f "$LOCK_FILE"' EXIT
+
+# =============================================
+# Проверка и завершение старых процессов
+# =============================================
+kill_previous_instances() {
+    current_pid=$$
+    killed=0
+
+    for pid in $(pgrep -f "python3.*bot\.py"); do
+        if [ "$pid" != "$current_pid" ]; then
+            echo "Завершаем процесс бота с PID $pid..."
+            kill -9 "$pid" && killed=$((killed + 1))
+        fi
+    done
+
+    if [ "$killed" -gt 0 ]; then
+        echo "Завершено процессов: $killed"
+        sleep 2  # Даем время на завершение
+    fi
+}
 
 # =============================================
 # Проверка и установка зависимостей
@@ -70,16 +90,6 @@ setup_repo() {
 }
 
 # =============================================
-# Управление процессами
-# =============================================
-check_running() {
-    # Поиск существующих процессов бота
-    if pgrep -f "python3.*bot\.py" >/dev/null; then
-        error_exit "Бот уже запущен! (обнаружен running process)"
-    fi
-}
-
-# =============================================
 # Настройка tmux
 # =============================================
 setup_tmux() {
@@ -114,8 +124,8 @@ setup_autostart() {
 # Главный процесс выполнения
 # =============================================
 main() {
+    kill_previous_instances  # Завершаем старые процессы
     install_deps
-    check_running
     setup_repo
     setup_tmux
     setup_autostart
