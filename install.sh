@@ -12,12 +12,6 @@ if ! command -v python > /dev/null; then
 fi
 
 echo "-----------------------------------------"
-echo "Проверяем и устанавливаем pip..."
-if ! command -v pip > /dev/null; then
-    pkg install python-pip -y
-fi
-
-echo "-----------------------------------------"
 echo "Проверяем и устанавливаем Git..."
 if ! command -v git > /dev/null; then
     pkg install git -y
@@ -36,7 +30,6 @@ cd ~/rade || { echo "Ошибка: не удалось перейти в дир�
 
 echo "-----------------------------------------"
 echo "Устанавливаем зависимости Python..."
-pip install --upgrade pip
 pip install telethon requests
 
 echo "-----------------------------------------"
@@ -45,6 +38,12 @@ chmod +x bot.py
 
 # Устанавливаем termux-wake-lock для фоновой работы
 termux-wake-lock
+
+# Проверяем, существует ли ~/.bashrc, и создаем его, если нет
+if [ ! -f ~/.bashrc ]; then
+    touch ~/.bashrc
+    echo "Файл ~/.bashrc создан."
+fi
 
 # Добавляем команду автозапуска бота в ~/.bashrc, если её там ещё нет
 if ! grep -q "cd ~/rade && nohup python bot.py" ~/.bashrc; then
@@ -57,3 +56,4 @@ fi
 echo "-----------------------------------------"
 echo "Запускаем бота..."
 nohup python bot.py > /dev/null 2>&1 &
+
