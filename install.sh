@@ -5,7 +5,6 @@
 # =============================================
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
-SESSION_NAME="bot_session"
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -27,12 +26,12 @@ install_git() {
 }
 
 # =============================================
-# Установка tmux, если он отсутствует
+# Установка termux-api, если он отсутствует
 # =============================================
-install_tmux() {
-    if ! command -v tmux &>/dev/null; then
-        echo "Устанавливаем tmux..."
-        pkg install tmux -y || error_exit "Ошибка установки tmux"
+install_termux_api() {
+    if ! command -v termux-wake-lock &>/dev/null; then
+        echo "Устанавливаем termux-api..."
+        pkg install termux-api -y || error_exit "Ошибка установки termux-api"
     fi
 }
 
@@ -72,17 +71,22 @@ setup_repo() {
 }
 
 # =============================================
-# Настройка автозапуска через termux-boot
+# Настройка автозапуска через termux-job-scheduler
 # =============================================
 setup_autostart() {
-    local boot_script="$HOME/.termux/boot/start_bot"
+    local job_script="$HOME/.termux/job-scheduler/start_bot.sh"
     
-    echo "Настраиваем автозапуск через termux-boot..."
-    mkdir -p ~/.termux/boot
+    echo "Настраиваем автозапуск через termux-job-scheduler..."
+    mkdir -p ~/.termux/job-scheduler
     echo '#!/data/data/com.termux/files/usr/bin/sh
-tmux new-session -d -s bot_session "python3 ~/rade/bot.py"' > "$boot_script"
-    chmod +x "$boot_script"
-    echo "Автозапуск настроен через termux-boot."
+termux-wake-lock
+python3 ~/rade/bot.py
+termux-wake-unlock' > "$job_script"
+    chmod +x "$job_script"
+    
+    # Планируем задачу на запуск при старте Termux
+    termux-job-scheduler --job-id 1 --script "$job_script" --persisted true
+    echo "Автозапуск настроен через termux-job-scheduler."
 }
 
 # =============================================
@@ -90,13 +94,12 @@ tmux new-session -d -s bot_session "python3 ~/rade/bot.py"' > "$boot_script"
 # =============================================
 main() {
     install_git  # Устанавливаем git, если он отсутствует
-    install_tmux  # Устанавливаем tmux, если он отсутствует
+    install_termux_api  # Устанавливаем termux-api, если он отсутствует
     install_deps
     setup_repo
     setup_autostart
     
     echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
-    echo "Для подключения к сессии используйте: tmux attach -t bot_session"
 }
 
 # Запуск главной функции
