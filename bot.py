@@ -5,6 +5,7 @@ import sys
 import subprocess
 import asyncio
 import signal
+import time
 from telethon import TelegramClient, events
 import psutil
 from animation_script import animations
@@ -14,7 +15,7 @@ import animation_script
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
-SCRIPT_VERSION = "0.2.39"
+SCRIPT_VERSION = "0.2.41"
 
 # Emoji
 EMOJIS = {
@@ -30,17 +31,30 @@ EMOJIS = {
     "bot": "🤖"
 }
 
-def is_bot_running():
+def kill_previous_instances():
+    """Безопасно завершает предыдущие экземпляры бота"""
     current_pid = os.getpid()
-    for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+    killed = []
+    
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
-            cmdline = ' '.join(process.info['cmdline'])
-            if 'python' in process.info['name'].lower() and 'bot.py' in cmdline:
-                if process.info['pid'] != current_pid:
-                    return True
-        except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError, TypeError):
+            cmdline = ' '.join(proc.info.get('cmdline', []))
+            if ('python' in proc.info['name'].lower() 
+                and 'bot.py' in cmdline 
+                and proc.info['pid'] != current_pid):
+                
+                print(f"{EMOJIS['exit']} Завершаем процесс PID {proc.info['pid']}")
+                proc.terminate()
+                killed.append(proc.info['pid'])
+                
+        except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError, AttributeError):
             continue
-    return False
+    
+    if killed:
+        print(f"{EMOJIS['success']} Завершено процессов: {len(killed)}")
+        time.sleep(2)
+    
+    return len(killed) > 0
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -85,11 +99,12 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
 
-if is_bot_running():
-    print("⚠️ Бот уже запущен! Второй экземпляр запускать нельзя.")
-    sys.exit(1)
-
-client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
+client = TelegramClient(
+    f"session_{PHONE_NUMBER.replace('+', '')}",
+    API_ID,
+    API_HASH,
+    connection_retries=0
+)
 
 def discard_local_changes():
     try:
@@ -117,8 +132,6 @@ def check_for_updates():
                     f.write(remote_script)
                 print(f"{EMOJIS['success']} Скрипт обновлён. Перезапустите программу.")
                 exit()
-        else:
-            print(f"{EMOJIS['error']} Ошибка проверки обновлений: статус {response.status_code}")
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений:", e)
 
@@ -141,10 +154,6 @@ def check_for_animation_script_updates():
                     f.write(remote_file)
                 print(f"{EMOJIS['success']} Файл animation_script.py обновлён. Перезапустите программу.")
                 exit()
-            else:
-                print(f"{EMOJIS['success']} Анимационный скрипт актуален.")
-        else:
-            print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта: статус {response.status_code}")
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
 
@@ -208,6 +217,26 @@ async def animation_selection_handler(event):
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
 
+async def authenticate_client():
+    """Функция для авторизации с поддержкой двухэтапной аутентификации"""
+    try:
+        await client.start(PHONE_NUMBER)
+        print(f"{EMOJIS['success']} Авторизация успешна!")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка авторизации:", e)
+        sys.exit(1)
+
+async def handle_2fa():
+    """Обработка двухэтапной аутентификации"""
+    try:
+        print(f"{EMOJIS['auth']} Включена двухэтапная аутентификация. Введите облачный пароль:")
+        password = input(f"{EMOJIS['auth']} Пароль: ").strip()
+        await client.sign_in(password=password)
+        print(f"{EMOJIS['success']} Облачный пароль принят!")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка ввода пароля:", e)
+        sys.exit(1)
+
 async def close_client():
     if client.is_connected():
         await client.disconnect()
@@ -215,22 +244,43 @@ async def close_client():
 
 def signal_handler(sig, frame):
     print(f"\n{EMOJIS['exit']} Получен сигнал завершения. Останавливаем бота...")
-    client.loop.run_until_complete(close_client())
-    sys.exit(0)
+    try:
+        client.loop.run_until_complete(close_client())
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка остановки:", e)
+    finally:
+        sys.exit(0)
 
 def main():
+    kill_previous_instances()
     check_for_updates()
     check_for_animation_script_updates()
+    
     try:
-        client.start(PHONE_NUMBER)
-        print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-        me = client.loop.run_until_complete(client.get_me())
-        username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
-        print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
-        print("Телеграмм канал: t.me/kwotko")
-        print("Для остановки нажмите Ctrl+C")
-        signal.signal(signal.SIGINT, signal_handler)
-        client.run_until_disconnected()
+        # Запуск авторизации
+        client.loop.run_until_complete(authenticate_client())
+        
+        # Проверка на двухэтапную аутентификацию
+        if client.is_user_authorized():
+            print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
+            me = client.loop.run_until_complete(client.get_me())
+            username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
+            print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
+            print("Телеграмм канал: t.me/kwotko")
+            print("Для остановки нажмите Ctrl+C")
+            signal.signal(signal.SIGINT, signal_handler)
+            client.run_until_disconnected()
+        else:
+            # Если требуется двухэтапная аутентификация
+            client.loop.run_until_complete(handle_2fa())
+            print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
+            me = client.loop.run_until_complete(client.get_me())
+            username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
+            print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
+            print("Телеграмм канал: t.me/kwotko")
+            print("Для остановки нажмите Ctrl+C")
+            signal.signal(signal.SIGINT, signal_handler)
+            client.run_until_disconnected()
     except Exception as e:
         print(f"{EMOJIS['error']} Критическая ошибка:", e)
     finally:
