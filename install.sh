@@ -1,60 +1,51 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/bin/bash
 
-# Завершаем все процессы Python перед запуском бота
-kill -9 $(ps aux | grep '[p]ython' | awk '{print $2}')
+# Проверка наличия Python
+if ! command -v python3 &>/dev/null; then
+    echo "Python3 не найден. Устанавливаем Python3..."
+    pkg install python -y
+fi
 
-# Ждем несколько секунд, чтобы процессы завершились
-sleep 5
+# Проверка наличия pip
+if ! command -v pip3 &>/dev/null; then
+    echo "pip3 не найден. Устанавливаем pip..."
+    python3 -m ensurepip --upgrade
+fi
 
-# Далее выполняем установку зависимостей и запуск бота
-echo "-----------------------------------------"
-echo "Обновляем пакеты..."
-pkg update -y && pkg upgrade -y
+# Установка зависимостей
+echo "Устанавливаем зависимости..."
+pip3 install -r <(echo -e "requests\ntelethon\npsutil")
 
-echo "-----------------------------------------"
-echo "Устанавливаем Python..."
-pkg install python -y
+# Обновление репозитория
+echo "Обновляем репозиторий..."
+git pull || git clone https://github.com/sdfasdgasdfwe3/rade.git
 
-echo "-----------------------------------------"
-echo "Устанавливаем Git..."
-pkg install git -y
+# Переход в папку с репозиторием
+cd rade || { echo "Ошибка перехода в папку 'rade'"; exit 1; }
 
-echo "-----------------------------------------"
-echo "Удаляем старую версию репозитория (если есть)..."
-rm -rf rade
+# Проверка наличия файла с зависимостями и его установка
+echo "Устанавливаем Python зависимости..."
+pip3 install -r requirements.txt
 
-echo "-----------------------------------------"
-echo "Клонируем репозиторий..."
-git clone https://github.com/sdfasdgasdfwe3/rade.git
-
-# Переходим в директорию репозитория
-cd rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
-
-echo "-----------------------------------------"
-echo "Устанавливаем зависимости Python..."
-pip install telethon requests
-
-echo "-----------------------------------------"
-echo "Делаем главный файл исполняемым..."
+# Делаем главный файл исполняемым
 chmod +x bot.py
 
-# Переходим к tmux сессии
-echo "-----------------------------------------"
+# Проверка на существование сессии tmux и запуск бота
+SESSION_NAME="bot_session"
 echo "Проверка наличия активной tmux сессии..."
-tmux has-session -t session_name 2>/dev/null
+
+tmux has-session -t $SESSION_NAME 2>/dev/null
 
 if [ $? != 0 ]; then
     echo "Сессия не найдена, создаем новую сессию..."
-    tmux new-session -d -s session_name "python3 bot.py"
+    tmux new-session -d -s $SESSION_NAME "python3 bot.py"
 else
-    echo "Подключаемся к существующей сессии..."
-    tmux attach -t session_name
+    echo "Сессия найдена, подключаемся к существующей сессии..."
+    tmux attach -t $SESSION_NAME
 fi
 
-# Создаем .bashrc и добавляем автозапуск
-echo "-----------------------------------------"
-echo "Создаем .bashrc, если его нет, и добавляем автозапуск..."
-touch ~/.bashrc
-echo 'cd ~/rade && git pull && tmux has-session -t session_name 2>/dev/null || tmux new-session -d -s session_name "python3 bot.py"' >> ~/.bashrc
+# Добавляем автозапуск при старте
+echo "Добавляем автозапуск в .bashrc..."
+echo "tmux has-session -t $SESSION_NAME 2>/dev/null || tmux new-session -d -s $SESSION_NAME 'python3 ~/rade/bot.py'" >> ~/.bashrc
 
-echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
+echo "Установка завершена. Бот успешно запущен!"
