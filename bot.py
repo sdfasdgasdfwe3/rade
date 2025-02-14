@@ -6,6 +6,7 @@ import subprocess
 import asyncio
 import signal
 from telethon import TelegramClient, events
+import psutil
 from animation_script import animations
 import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 
@@ -28,6 +29,14 @@ EMOJIS = {
     "menu": "📋",
     "bot": "🤖"
 }
+
+def is_bot_running():
+    current_pid = os.getpid()  # Получаем ID текущего процесса
+    for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+        if 'python' in process.info['name'] and 'bot.py' in ' '.join(process.info['cmdline']):
+            if process.info['pid'] != current_pid:  # Если это не текущий процесс
+                return True
+    return False
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -70,6 +79,11 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
+
+# Проверка, запущен ли уже бот
+if is_bot_running():
+    print("⚠️ Бот уже запущен! Второй экземпляр запускать нельзя.")
+    sys.exit(1)
 
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
 
@@ -210,5 +224,4 @@ def main():
     client.run_until_disconnected()
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
-    main()
+    signal.signal(signal.S
