@@ -6,6 +6,8 @@ import subprocess
 import asyncio
 import signal
 from telethon import TelegramClient, events
+from telethon.sessions import SQLiteSession
+import sqlite3
 from animation_script import animations
 import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 
@@ -29,6 +31,24 @@ EMOJIS = {
     "bot": "🤖"
 }
 
+# Создание кастомной сессии
+class CustomSQLiteSession(SQLiteSession):
+    def __init__(self, session_file: str):
+        # Создаем подключение с check_same_thread=False
+        self._db = sqlite3.connect(session_file, check_same_thread=False)
+        self._db.row_factory = sqlite3.Row
+        self._session_file = session_file
+        self._is_open = True
+
+    def get_db(self):
+        return self._db
+
+    def close(self):
+        if self._db:
+            self._db.close()
+        self._is_open = False
+
+# Функции загрузки и сохранения конфигурации
 def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
@@ -48,6 +68,7 @@ def save_config(config):
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка сохранения конфигурации:", e)
 
+# Основные переменные
 config = load_config()
 API_ID = config.get("API_ID")
 API_HASH = config.get("API_HASH")
@@ -71,22 +92,18 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
 
-# Путь к файлу сессии
-session_path = f"session_{PHONE_NUMBER.replace('+', '')}.session"
+# Используем кастомную сессию
+session_file = f"session_{PHONE_NUMBER.replace('+', '')}.session"
+client = TelegramClient(session_file, API_ID, API_HASH, session=CustomSQLiteSession(session_file))
 
-# Проверяем, существует ли файл сессии и удаляем его
-if os.path.exists(session_path):
-    os.remove(session_path)
-    print(f"{EMOJIS['info']} Старая сессия удалена.")
-
-client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
-
+# Функция для сброса локальных изменений
 def discard_local_changes():
     try:
         subprocess.run(["git", "checkout", "--", os.path.basename(__file__)], check=True)
     except Exception:
         pass
 
+# Функция для проверки обновлений скрипта
 def check_for_updates():
     try:
         response = requests.get(GITHUB_RAW_URL)
@@ -112,6 +129,7 @@ def check_for_updates():
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений:", e)
 
+# Функция для проверки обновлений анимационного скрипта
 def check_for_animation_script_updates():
     try:
         response = requests.get(ANIMATION_SCRIPT_GITHUB_URL)
@@ -138,6 +156,7 @@ def check_for_animation_script_updates():
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
 
+# Переменные для работы с анимациями
 animation_selection_mode = False
 current_user_id = None  # Переменная для хранения ID пользователя, вызвавшего команду /m
 
