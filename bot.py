@@ -93,8 +93,9 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         sys.exit(1)
 
 # Используем кастомную сессию
-session_file = f"session_{PHONE_NUMBER.replace('+', '')}.session"
-client = TelegramClient(session_file, API_ID, API_HASH, session=CustomSQLiteSession(session_file))
+client = TelegramClient(SQLiteSession(SESSION_FILE, check_same_thread=False), API_ID, API_HASH)
+
+def discard_local_changes():
 
 # Функция для сброса локальных изменений
 def discard_local_changes():
