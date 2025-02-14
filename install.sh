@@ -5,6 +5,7 @@
 # =============================================
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
+SESSION_NAME="bot_session"
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -22,6 +23,16 @@ install_git() {
     if ! command -v git &>/dev/null; then
         echo "Устанавливаем git..."
         pkg install git -y || error_exit "Ошибка установки git"
+    fi
+}
+
+# =============================================
+# Установка tmux, если он отсутствует
+# =============================================
+install_tmux() {
+    if ! command -v tmux &>/dev/null; then
+        echo "Устанавливаем tmux..."
+        pkg install tmux -y || error_exit "Ошибка установки tmux"
     fi
 }
 
@@ -69,7 +80,7 @@ setup_autostart() {
     echo "Настраиваем автозапуск через termux-boot..."
     mkdir -p ~/.termux/boot
     echo '#!/data/data/com.termux/files/usr/bin/sh
-cd ~/rade && nohup python3 bot.py > bot.log 2>&1 &' > "$boot_script"
+tmux new-session -d -s bot_session "python3 ~/rade/bot.py"' > "$boot_script"
     chmod +x "$boot_script"
     echo "Автозапуск настроен через termux-boot."
 }
@@ -79,11 +90,13 @@ cd ~/rade && nohup python3 bot.py > bot.log 2>&1 &' > "$boot_script"
 # =============================================
 main() {
     install_git  # Устанавливаем git, если он отсутствует
+    install_tmux  # Устанавливаем tmux, если он отсутствует
     install_deps
     setup_repo
     setup_autostart
     
     echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
+    echo "Для подключения к сессии используйте: tmux attach -t bot_session"
 }
 
 # Запуск главной функции
