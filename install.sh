@@ -96,6 +96,7 @@ setup_tmux() {
 setup_autostart() {
     local autostart_cmd="tmux has-session -t $SESSION_NAME 2>/dev/null || tmux new-session -d -s $SESSION_NAME 'python3 $REPO_DIR/bot.py'"
     
+    # Добавляем команду в ~/.bashrc, если её там нет
     if ! grep -qF "$autostart_cmd" ~/.bashrc; then
         echo "Добавляем автозапуск в .bashrc..."
         echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
@@ -115,9 +116,7 @@ main() {
     setup_tmux
     setup_autostart
     
-    echo -e "\nУстановка завершена! Состояние бота:"
-    tmux list-sessions | grep "$SESSION_NAME"
-    echo "Для подключения используйте: tmux attach -t $SESSION_NAME"
+    echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
 }
 
 # Запуск главной функции
