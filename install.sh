@@ -33,12 +33,8 @@ echo "Делаем главный файл исполняемым..."
 chmod +x bot.py
 
 echo "-----------------------------------------"
-echo "Настроим автозапуск бота в Termux..."
-
-# Очищаем .bashrc
-echo "" > ~/.bashrc
-
-# Добавляем строку для автозапуска
-echo 'pgrep -f bot.py > /dev/null || (cd ~/rade && git pull && python3 bot.py)' >> ~/.bashrc
+echo "Создаем .bashrc, если его нет, и добавляем автозапуск..."
+touch ~/.bashrc
+echo 'cd ~/rade && git pull && python3 bot.py' >> ~/.bashrc
 
 echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
