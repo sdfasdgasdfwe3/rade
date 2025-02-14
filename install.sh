@@ -79,3 +79,30 @@ touch ~/.bashrc
 echo 'tmux has-session -t session_name 2>/dev/null || tmux new-session -d -s session_name "python3 ~/rade/bot.py"' >> ~/.bashrc
 
 echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
+
+# Решение проблемы с блокировкой базы данных SQLite
+
+echo "-----------------------------------------"
+echo "Пытаемся подключиться к базе данных с обработкой ошибок..."
+python3 - <<EOF
+import sqlite3
+import time
+
+def connect_with_retry(db_name):
+    retries = 5
+    for _ in range(retries):
+        try:
+            conn = sqlite3.connect(db_name)
+            conn.execute('PRAGMA journal_mode=WAL;')  # Включаем режим WAL для улучшения работы с блокировками
+            return conn
+        except sqlite3.OperationalError:
+            print("Ошибка подключения к базе данных. Попробуем снова...")
+            time.sleep(1)  # Подождите 1 секунду перед повторной попыткой
+    raise Exception("Не удалось подключиться к базе данных после нескольких попыток.")
+
+# Подключаемся к базе данных
+db_name = '/data/data/com.termux/files/home/rade/your_database.db'
+connect_with_retry(db_name)
+EOF
+
+echo "Установка завершена."
