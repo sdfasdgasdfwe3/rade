@@ -17,6 +17,16 @@ error_exit() {
 }
 
 # =============================================
+# Установка git, если он отсутствует
+# =============================================
+install_git() {
+    if ! command -v git &>/dev/null; then
+        echo "Устанавливаем git..."
+        pkg install git -y || error_exit "Ошибка установки git"
+    fi
+}
+
+# =============================================
 # Проверка и установка зависимостей
 # =============================================
 install_deps() {
@@ -48,11 +58,6 @@ setup_repo() {
         echo "Клонируем репозиторий..."
         git clone "$REPO_URL" "$REPO_DIR" || error_exit "Ошибка клонирования"
         cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию"
-    fi
-
-    # Установка зависимостей из requirements.txt
-    if [ -f "requirements.txt" ]; then
-        pip3 install -U -r requirements.txt || echo "Предупреждение: проблемы с requirements.txt"
     fi
 }
 
@@ -93,6 +98,7 @@ setup_autostart() {
 # Главный процесс выполнения
 # =============================================
 main() {
+    install_git  # Устанавливаем git, если он отсутствует
     install_deps
     setup_repo
     setup_tmux
