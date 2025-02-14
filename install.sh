@@ -61,27 +61,17 @@ setup_repo() {
 }
 
 # =============================================
-# Запуск бота в фоновом режиме
-# =============================================
-start_bot() {
-    echo "Запускаем бота в фоновом режиме..."
-    nohup python3 "$REPO_DIR/bot.py" > "$REPO_DIR/bot.log" 2>&1 &
-    echo "Бот запущен. Логи будут сохранены в $REPO_DIR/bot.log"
-}
-
-# =============================================
-# Настройка автозапуска
+# Настройка автозапуска через termux-boot
 # =============================================
 setup_autostart() {
-    local autostart_cmd="cd $REPO_DIR && nohup python3 bot.py > bot.log 2>&1 &"
+    local boot_script="$HOME/.termux/boot/start_bot"
     
-    # Добавляем команду в ~/.bashrc, если её там нет
-    if ! grep -qF "$autostart_cmd" ~/.bashrc; then
-        echo "Добавляем автозапуск в .bashrc..."
-        echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
-    else
-        echo "Автозапуск уже настроен"
-    fi
+    echo "Настраиваем автозапуск через termux-boot..."
+    mkdir -p ~/.termux/boot
+    echo '#!/data/data/com.termux/files/usr/bin/sh
+cd ~/rade && nohup python3 bot.py > bot.log 2>&1 &' > "$boot_script"
+    chmod +x "$boot_script"
+    echo "Автозапуск настроен через termux-boot."
 }
 
 # =============================================
@@ -91,7 +81,6 @@ main() {
     install_git  # Устанавливаем git, если он отсутствует
     install_deps
     setup_repo
-    start_bot
     setup_autostart
     
     echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
