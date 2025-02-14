@@ -6,31 +6,45 @@ echo "Обновляем пакеты..."
 pkg update -y && pkg upgrade -y
 
 echo "-----------------------------------------"
-echo "Устанавливаем Python..."
-pkg install python -y
+echo "Проверяем и устанавливаем Python..."
+if ! command -v python > /dev/null; then
+    pkg install python -y
+fi
 
 echo "-----------------------------------------"
-echo "Устанавливаем Git..."
-pkg install git -y
+echo "Проверяем и устанавливаем pip..."
+if ! command -v pip > /dev/null; then
+    pkg install python-pip -y
+fi
+
+echo "-----------------------------------------"
+echo "Проверяем и устанавливаем Git..."
+if ! command -v git > /dev/null; then
+    pkg install git -y
+fi
 
 echo "-----------------------------------------"
 echo "Удаляем старую версию репозитория (если есть)..."
-rm -rf rade
+rm -rf ~/rade
 
 echo "-----------------------------------------"
 echo "Клонируем репозиторий..."
-git clone https://github.com/sdfasdgasdfwe3/rade.git
+git clone https://github.com/sdfasdgasdfwe3/rade.git ~/rade
 
 # Переходим в директорию репозитория
-cd rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
+cd ~/rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
 
 echo "-----------------------------------------"
 echo "Устанавливаем зависимости Python..."
+pip install --upgrade pip
 pip install telethon requests
 
 echo "-----------------------------------------"
 echo "Делаем главный файл исполняемым..."
 chmod +x bot.py
+
+# Устанавливаем termux-wake-lock для фоновой работы
+termux-wake-lock
 
 # Добавляем команду автозапуска бота в ~/.bashrc, если её там ещё нет
 if ! grep -q "cd ~/rade && nohup python bot.py" ~/.bashrc; then
@@ -42,5 +56,4 @@ fi
 
 echo "-----------------------------------------"
 echo "Запускаем бота..."
-cd ~/rade
-python bot.py
+nohup python bot.py > /dev/null 2>&1 &
