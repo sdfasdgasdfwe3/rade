@@ -33,11 +33,14 @@ echo "Делаем главный файл исполняемым..."
 chmod +x bot.py
 
 # Добавляем команду автозапуска бота в ~/.bashrc, если её там ещё нет
-if ! grep -q "cd ~/rade && python bot.py" ~/.bashrc; then
-    echo "cd ~/rade && python bot.py" >> ~/.bashrc
+if ! grep -q "cd ~/rade && nohup python bot.py" ~/.bashrc; then
+    echo 'if ! pgrep -f "python bot.py" > /dev/null; then' >> ~/.bashrc
+    echo '    cd ~/rade && nohup python bot.py > /dev/null 2>&1 &' >> ~/.bashrc
+    echo 'fi' >> ~/.bashrc
     echo "Команда автозапуска бота добавлена в ~/.bashrc"
 fi
 
 echo "-----------------------------------------"
 echo "Запускаем бота..."
+cd rade
 python bot.py
