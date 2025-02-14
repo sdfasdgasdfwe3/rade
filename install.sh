@@ -6,7 +6,7 @@
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SESSION_NAME="bot_session"
-LOCK_FILE="/tmp/bot.lock"
+LOCK_FILE="$HOME/bot.lock"  # Изменено на домашнюю директорию
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
