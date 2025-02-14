@@ -224,4 +224,5 @@ def main():
     client.run_until_disconnected()
 
 if __name__ == "__main__":
-    signal.signal(signal.S
+    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))  # Закрытая скобка
+    main()
