@@ -6,13 +6,11 @@ import subprocess
 import asyncio
 import signal
 from telethon import TelegramClient, events
-from telethon.sessions import SQLiteSession
 from animation_script import animations
 import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 
 # Константы
 CONFIG_FILE = "config.json"
-SESSION_FILE = "session.session"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
 SCRIPT_VERSION = "0.2.39"
@@ -73,15 +71,13 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
 
-# Используем SQLite-сессию с `check_same_thread=False`
-client = TelegramClient(SQLiteSession(SESSION_FILE, check_same_thread=False), API_ID, API_HASH)
+client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
 
 def discard_local_changes():
-    """Откатывает локальные изменения скрипта"""
     try:
         subprocess.run(["git", "checkout", "--", os.path.basename(__file__)], check=True)
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка отката локальных изменений:", e)
+    except Exception:
+        pass
 
 def check_for_updates():
     try:
@@ -103,8 +99,39 @@ def check_for_updates():
                     f.write(remote_script)
                 print(f"{EMOJIS['success']} Скрипт обновлён. Перезапустите программу.")
                 exit()
+        else:
+            print(f"{EMOJIS['error']} Ошибка проверки обновлений: статус {response.status_code}")
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений:", e)
+
+def check_for_animation_script_updates():
+    try:
+        response = requests.get(ANIMATION_SCRIPT_GITHUB_URL)
+        if response.status_code == 200:
+            remote_file = response.text
+            remote_version = None
+            for line in remote_file.splitlines():
+                if "ANIMATION_SCRIPT_VERSION" in line:
+                    try:
+                        remote_version = line.split('=')[1].strip().strip('"')
+                    except Exception:
+                        pass
+                    break
+            if remote_version and remote_version != animation_script.ANIMATION_SCRIPT_VERSION:
+                print(f"{EMOJIS['update']} Обнаружена новая версия анимационного скрипта {remote_version} (текущая {animation_script.ANIMATION_SCRIPT_VERSION}). Обновление...")
+                with open("animation_script.py", "w", encoding="utf-8") as f:
+                    f.write(remote_file)
+                print(f"{EMOJIS['success']} Файл animation_script.py обновлён. Перезапустите программу.")
+                exit()
+            else:
+                print(f"{EMOJIS['success']} Анимационный скрипт актуален.")
+        else:
+            print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта: статус {response.status_code}")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
+
+animation_selection_mode = False
+current_user_id = None  # Переменная для хранения ID пользователя, вызвавшего команду /m
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
@@ -125,11 +152,16 @@ async def animate_handler(event):
 
 @client.on(events.NewMessage(pattern='/m'))
 async def animation_menu(event):
-    global selected_animation, config
+    global animation_selection_mode, current_user_id
 
+    # Обработка команды /m только для исходящих сообщений (т.е. только если бот сам отправил сообщение /m)
     if not event.out:
         return
 
+    # Запоминаем ID пользователя (бота), который вызвал команду
+    current_user_id = event.sender_id
+
+    animation_selection_mode = True
     menu_text = "Выберите анимацию:\n"
     for num, (name, _) in sorted(animations.items()):
         menu_text += f"{num}) {name}\n"
@@ -138,8 +170,9 @@ async def animation_menu(event):
 
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
-    global selected_animation, config
-    if event.out:
+    global animation_selection_mode, selected_animation, config
+    # Обрабатываем только исходящие сообщения (т.е. те, которые отправлены ботом)
+    if animation_selection_mode and event.out:
         text = event.raw_text.strip()
         if text.isdigit():
             number = int(text)
@@ -148,11 +181,25 @@ async def animation_selection_handler(event):
                 config["selected_animation"] = selected_animation
                 save_config(config)
                 await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
+                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
+                messages = await client.get_messages(event.chat_id, limit=10)
+                deleted_count = 0
+                for msg in messages:
+                    if msg.out:
+                        try:
+                            await msg.delete()
+                            deleted_count += 1
+                        except Exception as e:
+                            print(f"{EMOJIS['error']} Ошибка удаления сообщения:", e)
+                        if deleted_count >= 4:
+                            break
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
+            animation_selection_mode = False
 
 def main():
     check_for_updates()
+    check_for_animation_script_updates()
     client.start(PHONE_NUMBER)
     print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
     me = client.loop.run_until_complete(client.get_me())
