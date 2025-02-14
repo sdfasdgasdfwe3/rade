@@ -1,46 +1,41 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# Завершаем все процессы Python перед запуском бота
-kill -9 $(ps aux | grep '[p]ython' | awk '{print $2}')
+# Завершаем процессы бота
+pkill -9 python3
+sleep 3
 
-# Ждем несколько секунд, чтобы процессы завершились
-sleep 5
+# Удаляем заблокированную сессию (если есть)
+rm -f ~/.telethon.session
 
-# Далее выполняем установку зависимостей и запуск бота
 echo "-----------------------------------------"
 echo "Обновляем пакеты..."
 pkg update -y && pkg upgrade -y
 
 echo "-----------------------------------------"
-echo "Устанавливаем Python..."
-pkg install python -y
+echo "Устанавливаем Python и Git..."
+pkg install python git -y
 
 echo "-----------------------------------------"
-echo "Устанавливаем Git..."
-pkg install git -y
+echo "Проверяем репозиторий..."
+if [ ! -d "$HOME/rade" ]; then
+    echo "Репозиторий не найден, клонируем..."
+    git clone https://github.com/sdfasdgasdfwe3/rade.git ~/rade
+else
+    echo "Репозиторий найден, обновляем..."
+    cd ~/rade || exit
+    git pull
+fi
 
-echo "-----------------------------------------"
-echo "Удаляем старую версию репозитория (если есть)..."
-rm -rf rade
-
-echo "-----------------------------------------"
-echo "Клонируем репозиторий..."
-git clone https://github.com/sdfasdgasdfwe3/rade.git
-
-# Переходим в директорию репозитория
-cd rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
+# Переходим в директорию с ботом
+cd ~/rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
 
 echo "-----------------------------------------"
 echo "Устанавливаем зависимости Python..."
-pip install telethon requests
+pip install -r requirements.txt
 
 echo "-----------------------------------------"
-echo "Делаем главный файл исполняемым..."
-chmod +x bot.py
+echo "Запускаем бота..."
+nohup python3 bot.py > ~/bot.log 2>&1 &
 
-echo "-----------------------------------------"
-echo "Создаем .bashrc, если его нет, и добавляем автозапуск..."
-touch ~/.bashrc
-echo 'cd ~/rade && git pull && python3 bot.py' >> ~/.bashrc
+echo "Бот запущен в фоновом режиме."
 
-echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
