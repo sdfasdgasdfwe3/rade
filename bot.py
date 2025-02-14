@@ -71,6 +71,14 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
 
+# Путь к файлу сессии
+session_path = f"session_{PHONE_NUMBER.replace('+', '')}.session"
+
+# Проверяем, существует ли файл сессии и удаляем его
+if os.path.exists(session_path):
+    os.remove(session_path)
+    print(f"{EMOJIS['info']} Старая сессия удалена.")
+
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
 
 def discard_local_changes():
