@@ -38,9 +38,23 @@ echo "-----------------------------------------"
 echo "Делаем главный файл исполняемым..."
 chmod +x bot.py
 
+# Переходим к tmux сессии
+echo "-----------------------------------------"
+echo "Проверка наличия активной tmux сессии..."
+tmux has-session -t session_name 2>/dev/null
+
+if [ $? != 0 ]; then
+    echo "Сессия не найдена, создаем новую сессию..."
+    tmux new-session -d -s session_name "python3 bot.py"
+else
+    echo "Подключаемся к существующей сессии..."
+    tmux attach -t session_name
+fi
+
+# Создаем .bashrc и добавляем автозапуск
 echo "-----------------------------------------"
 echo "Создаем .bashrc, если его нет, и добавляем автозапуск..."
 touch ~/.bashrc
-echo 'cd ~/rade && git pull && python3 bot.py' >> ~/.bashrc
+echo 'cd ~/rade && git pull && tmux has-session -t session_name 2>/dev/null || tmux new-session -d -s session_name "python3 bot.py"' >> ~/.bashrc
 
 echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
