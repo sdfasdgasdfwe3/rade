@@ -6,7 +6,6 @@
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SESSION_NAME="bot_session"
-LOCK_FILE="$HOME/bot.lock"  # Изменено на домашнюю директорию
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -14,20 +13,18 @@ SCRIPT_NAME=$(basename "$0")
 # =============================================
 error_exit() {
     echo "ОШИБКА: $1" >&2
-    rm -f "$LOCK_FILE"
     exit 1
 }
 
 # =============================================
-# Проверка блокировки и создание lock-файла
+# Проверка запущенных процессов
 # =============================================
-if [ -e "$LOCK_FILE" ]; then
-    error_exit "Скрипт уже запущен! (обнаружен lock-файл)"
-fi
-touch "$LOCK_FILE" || error_exit "Не могу создать lock-файл"
-
-# Очистка lock-файла при выходе
-trap 'rm -f "$LOCK_FILE"' EXIT
+check_running() {
+    # Поиск существующих процессов бота
+    if pgrep -f "python3.*bot\.py" >/dev/null; then
+        error_exit "Бот уже запущен! (обнаружен running process)"
+    fi
+}
 
 # =============================================
 # Проверка и установка зависимостей
@@ -70,16 +67,6 @@ setup_repo() {
 }
 
 # =============================================
-# Управление процессами
-# =============================================
-check_running() {
-    # Поиск существующих процессов бота
-    if pgrep -f "python3.*bot\.py" >/dev/null; then
-        error_exit "Бот уже запущен! (обнаружен running process)"
-    fi
-}
-
-# =============================================
 # Настройка tmux
 # =============================================
 setup_tmux() {
@@ -114,8 +101,8 @@ setup_autostart() {
 # Главный процесс выполнения
 # =============================================
 main() {
+    check_running  # Проверяем, запущен ли бот
     install_deps
-    check_running
     setup_repo
     setup_tmux
     setup_autostart
