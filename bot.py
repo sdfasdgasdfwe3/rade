@@ -4,10 +4,7 @@ import requests
 import sys
 import subprocess
 import asyncio
-import signal
 from telethon import TelegramClient, events
-import psutil
-from animation_script import animations
 import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
 
 # Константы
@@ -29,14 +26,6 @@ EMOJIS = {
     "menu": "📋",
     "bot": "🤖"
 }
-
-def is_bot_running():
-    current_pid = os.getpid()  # Получаем ID текущего процесса
-    for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
-        if 'python' in process.info['name'] and 'bot.py' in ' '.join(process.info['cmdline']):
-            if process.info['pid'] != current_pid:  # Если это не текущий процесс
-                return True
-    return False
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -80,18 +69,7 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
 
-# Проверка, запущен ли уже бот
-if is_bot_running():
-    print("⚠️ Бот уже запущен! Второй экземпляр запускать нельзя.")
-    sys.exit(1)
-
 client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
-
-def discard_local_changes():
-    try:
-        subprocess.run(["git", "checkout", "--", os.path.basename(__file__)], check=True)
-    except Exception:
-        pass
 
 def check_for_updates():
     try:
@@ -108,7 +86,6 @@ def check_for_updates():
                     break
             if remote_version and SCRIPT_VERSION != remote_version:
                 print(f"{EMOJIS['update']} Обнаружена новая версия {remote_version} (текущая {SCRIPT_VERSION}). Обновление...")
-                discard_local_changes()
                 with open(os.path.abspath(__file__), 'w', encoding='utf-8') as f:
                     f.write(remote_script)
                 print(f"{EMOJIS['success']} Скрипт обновлён. Перезапустите программу.")
@@ -144,9 +121,6 @@ def check_for_animation_script_updates():
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
 
-animation_selection_mode = False
-current_user_id = None  # Переменная для хранения ID пользователя, вызвавшего команду /m
-
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
     command_text = event.raw_text
@@ -166,27 +140,15 @@ async def animate_handler(event):
 
 @client.on(events.NewMessage(pattern='/m'))
 async def animation_menu(event):
-    global animation_selection_mode, current_user_id
-
-    # Обработка команды /m только для исходящих сообщений (т.е. только если бот сам отправил сообщение /m)
-    if not event.out:
-        return
-
-    # Запоминаем ID пользователя (бота), который вызвал команду
-    current_user_id = event.sender_id
-
-    animation_selection_mode = True
+    global selected_animation, config
     menu_text = "Выберите анимацию:\n"
     for num, (name, _) in sorted(animations.items()):
         menu_text += f"{num}) {name}\n"
     menu_text += "\nВведите номер желаемой анимации."
     await event.reply(menu_text)
 
-@client.on(events.NewMessage)
-async def animation_selection_handler(event):
-    global animation_selection_mode, selected_animation, config
-    # Обрабатываем только исходящие сообщения (т.е. те, которые отправлены ботом)
-    if animation_selection_mode and event.out:
+    @client.on(events.NewMessage)
+    async def animation_selection_handler(event):
         text = event.raw_text.strip()
         if text.isdigit():
             number = int(text)
@@ -195,34 +157,22 @@ async def animation_selection_handler(event):
                 config["selected_animation"] = selected_animation
                 save_config(config)
                 await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
-                # Удаляем 4 последних исходящих (своих) сообщения бота в чате
-                messages = await client.get_messages(event.chat_id, limit=10)
-                deleted_count = 0
-                for msg in messages:
-                    if msg.out:
-                        try:
-                            await msg.delete()
-                            deleted_count += 1
-                        except Exception as e:
-                            print(f"{EMOJIS['error']} Ошибка удаления сообщения:", e)
-                        if deleted_count >= 4:
-                            break
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
-            animation_selection_mode = False
 
 def main():
     check_for_updates()
     check_for_animation_script_updates()
     client.start(PHONE_NUMBER)
+    if client.is_user_authorized():
+        if client.get_me().username:
+            print(f"{EMOJIS['success']} Авторизация успешна.")
+        else:
+            print(f"{EMOJIS['error']} Необходима двухэтапная авторизация.")
+            password = input("Введите пароль: ")
+            client.start(PHONE_NUMBER, password=password)
     print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-    me = client.loop.run_until_complete(client.get_me())
-    username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
-    print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
-    print("Телеграмм канал: t.me/kwotko")
-    print("Для остановки нажмите Ctrl+C")
     client.run_until_disconnected()
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))  # Закрытая скобка
     main()
