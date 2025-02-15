@@ -64,15 +64,15 @@ setup_repo() {
 # Настройка автозапуска через ~/.bashrc
 # =============================================
 setup_autostart() {
-    local autostart_cmd="nohup python3 ~/rade/bot.py > ~/rade/bot.log 2>&1 &"
+    local autostart_cmd="python3 ~/rade/bot.py"
     
-    # Добавляем команду в ~/.bashrc, если её там нет
-    if ! grep -qF "$autostart_cmd" ~/.bashrc; then
-        echo "Добавляем автозапуск в .bashrc..."
-        echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
-    else
-        echo "Автозапуск уже настроен"
-    fi
+    # Удаляем старую команду автозапуска, если она есть
+    sed -i '/# Telegram bot autostart/d' ~/.bashrc
+    sed -i '/python3 ~\/rade\/bot.py/d' ~/.bashrc
+
+    # Добавляем новую команду автозапуска
+    echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
+    echo "Автозапуск настроен."
 }
 
 # =============================================
@@ -84,8 +84,8 @@ main() {
     setup_repo
     setup_autostart
     
-    echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
-    echo "Логи будут сохранены в ~/rade/bot.log"
+    echo -e "\nУстановка завершена! Бот будет запускаться при старте Termux."
+    echo "Чтобы запустить бота сейчас, выполните: python3 ~/rade/bot.py"
 }
 
 # Запуск главной функции
