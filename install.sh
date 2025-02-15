@@ -77,15 +77,22 @@ setup_autostart() {
     local job_script="$HOME/.termux/job-scheduler/start_bot.sh"
     
     echo "Настраиваем автозапуск через termux-job-scheduler..."
-    mkdir -p ~/.termux/job-scheduler
+    
+    # Создаем директорию, если её нет
+    mkdir -p ~/.termux/job-scheduler || error_exit "Не удалось создать директорию ~/.termux/job-scheduler"
+    
+    # Создаем скрипт для запуска бота
     echo '#!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 python3 ~/rade/bot.py
-termux-wake-unlock' > "$job_script"
-    chmod +x "$job_script"
+termux-wake-unlock' > "$job_script" || error_exit "Не удалось создать файл $job_script"
+    
+    # Даем права на выполнение
+    chmod +x "$job_script" || error_exit "Не удалось установить права на выполнение для $job_script"
     
     # Планируем задачу на запуск при старте Termux
-    termux-job-scheduler --job-id 1 --script "$job_script" --persisted true
+    termux-job-scheduler --job-id 1 --script "$job_script" --persisted true || error_exit "Не удалось настроить termux-job-scheduler"
+    
     echo "Автозапуск настроен через termux-job-scheduler."
 }
 
