@@ -14,22 +14,35 @@ if ! command -v pip3 &> /dev/null; then
     exit 1
 fi
 
-# Список зависимостей
-DEPENDENCIES=(
-    "telethon"
-    "requests"
-    "psutil"
-)
+# Скачивание и анализ зависимостей из кода бота
+echo "Скачивание кода бота для анализа зависимостей..."
+curl -fsSL https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py -o bot.py
+if [ $? -ne 0 ]; then
+    echo "Ошибка при скачивании кода бота."
+    exit 1
+fi
+
+# Поиск импортов в коде бота
+echo "Анализ зависимостей..."
+DEPENDENCIES=($(grep -oP '^(?:from|import)\s+\K\w+' bot.py | sort -u))
 
 # Установка зависимостей
 echo "Установка зависимостей..."
 for package in "${DEPENDENCIES[@]}"; do
-    echo "Установка $package..."
-    pip3 install "$package"
-    if [ $? -ne 0 ]; then
-        echo "Ошибка при установке $package."
-        exit 1
+    # Исключение стандартных библиотек Python
+    if ! python3 -c "import $package" 2>/dev/null; then
+        echo "Установка $package..."
+        pip3 install "$package"
+        if [ $? -ne 0 ]; then
+            echo "Ошибка при установке $package."
+            exit 1
+        fi
+    else
+        echo "$package уже установлен (стандартная библиотека)."
     fi
 done
+
+# Очистка временных файлов
+rm -f bot.py
 
 echo "Все зависимости успешно установлены!"
