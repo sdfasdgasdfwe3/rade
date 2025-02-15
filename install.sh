@@ -61,84 +61,6 @@ setup_repo() {
 }
 
 # =============================================
-# Запрос данных для авторизации
-# =============================================
-get_auth_data() {
-    if [ -t 0 ]; then
-        # Интерактивный режим: запрашиваем данные у пользователя
-        echo "🔑 Необходима авторизация. Введите данные от Telegram:"
-        read -p "🔑 Введите API ID: " API_ID
-        read -p "🔑 Введите API HASH: " API_HASH
-        read -p "📱 Введите номер телефона (формат +79991234567): " PHONE_NUMBER
-    else
-        # Автоматический режим: используем переменные окружения
-        API_ID=${API_ID:-""}
-        API_HASH=${API_HASH:-""}
-        PHONE_NUMBER=${PHONE_NUMBER:-""}
-
-        if [ -z "$API_ID" ] || [ -z "$API_HASH" ] || [ -z "$PHONE_NUMBER" ]; then
-            error_exit "Переменные окружения API_ID, API_HASH и PHONE_NUMBER не установлены."
-        fi
-    fi
-
-    # Сохраняем данные в config.json
-    echo "Создаем config.json..."
-    cat > "$REPO_DIR/config.json" <<EOF
-{
-    "API_ID": "$API_ID",
-    "API_HASH": "$API_HASH",
-    "PHONE_NUMBER": "$PHONE_NUMBER"
-}
-EOF
-}
-
-# =============================================
-# Автоматическая проверка на облачный пароль
-# =============================================
-check_cloud_password() {
-    echo "Проверяем наличие облачного пароля..."
-
-    # Создаем временный Python-скрипт для проверки
-    cat > "$REPO_DIR/check_2fa.py" <<EOF
-from telethon import TelegramClient
-from telethon.errors import SessionPasswordNeededError
-import json
-
-with open("config.json", "r") as f:
-    config = json.load(f)
-
-client = TelegramClient("session_name", config["API_ID"], config["API_HASH"])
-
-async def main():
-    try:
-        await client.start(phone=config["PHONE_NUMBER"])
-        print("Облачный пароль не требуется.")
-    except SessionPasswordNeededError:
-        print("Облачный пароль требуется.")
-    finally:
-        await client.disconnect()
-
-with client:
-    client.loop.run_until_complete(main())
-EOF
-
-    # Запускаем проверку
-    CLOUD_PASSWORD_REQUIRED=$(python3 "$REPO_DIR/check_2fa.py" | grep "Облачный пароль требуется")
-
-    if [ -n "$CLOUD_PASSWORD_REQUIRED" ]; then
-        read -p "🔐 Введите облачный пароль: " CLOUD_PASSWORD
-        echo "Добавляем облачный пароль в config.json..."
-        jq --arg password "$CLOUD_PASSWORD" '. + {CLOUD_PASSWORD: $password}' "$REPO_DIR/config.json" > "$REPO_DIR/config.tmp.json"
-        mv "$REPO_DIR/config.tmp.json" "$REPO_DIR/config.json"
-    else
-        echo "Облачный пароль не требуется."
-    fi
-
-    # Удаляем временный скрипт
-    rm "$REPO_DIR/check_2fa.py"
-}
-
-# =============================================
 # Настройка автозапуска через ~/.bashrc
 # =============================================
 setup_autostart() {
@@ -160,8 +82,6 @@ main() {
     install_git  # Устанавливаем git, если он отсутствует
     install_deps
     setup_repo
-    get_auth_data
-    check_cloud_password
     setup_autostart
     
     echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
