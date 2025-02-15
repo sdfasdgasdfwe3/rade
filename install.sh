@@ -6,7 +6,6 @@
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SESSION_NAME="bot_session"
-LOCK_FILE="/tmp/bot.lock"
 SCRIPT_NAME=$(basename "$0")
 
 # =============================================
@@ -14,20 +13,8 @@ SCRIPT_NAME=$(basename "$0")
 # =============================================
 error_exit() {
     echo "ОШИБКА: $1" >&2
-    rm -f "$LOCK_FILE"
     exit 1
 }
-
-# =============================================
-# Проверка блокировки и создание lock-файла
-# =============================================
-if [ -e "$LOCK_FILE" ]; then
-    error_exit "Скрипт уже запущен! (обнаружен lock-файл)"
-fi
-touch "$LOCK_FILE" || error_exit "Не могу создать lock-файл"
-
-# Очистка lock-файла при выходе
-trap 'rm -f "$LOCK_FILE"' EXIT
 
 # =============================================
 # Проверка и установка зависимостей
