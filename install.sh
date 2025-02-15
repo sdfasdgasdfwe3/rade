@@ -6,6 +6,7 @@
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SCRIPT_NAME=$(basename "$0")
+LOCK_FILE="$REPO_DIR/bot.lock"
 
 # Зависимости Python
 PYTHON_DEPS="requests telethon psutil"
@@ -93,8 +94,18 @@ setup_autostart() {
     fi
     echo "Автозапуск настроен."
 }
-# Завершение всех процессов бота при выходе из Termux
-trap 'pkill -f "python.*bot.py"' EXIT
+
+# =============================================
+# Завершение бота при выходе из Termux
+# =============================================
+setup_exit_hook() {
+    echo "-----------------------------------------"
+    echo "Настраиваем завершение бота при выходе из Termux..."
+    if ! grep -q "pkill -f 'python.*bot.py'" ~/.bashrc; then
+        echo 'trap "pkill -f \"python.*bot.py\"" EXIT' >> ~/.bashrc
+    fi
+    echo "Хук завершения настроен."
+}
 
 # =============================================
 # Главный процесс выполнения
@@ -105,6 +116,7 @@ main() {
     setup_repo
     install_python_deps
     setup_autostart
+    setup_exit_hook
 
     echo "-----------------------------------------"
     echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
