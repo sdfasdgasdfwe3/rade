@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 
 # =============================================
 # Настройки
@@ -16,62 +16,67 @@ error_exit() {
 }
 
 # =============================================
-# Установка git, если он отсутствует
+# Обновление пакетов
 # =============================================
-install_git() {
-    if ! command -v git &>/dev/null; then
-        echo "Устанавливаем git..."
-        pkg install git -y || error_exit "Ошибка установки git"
-    fi
+update_packages() {
+    echo "-----------------------------------------"
+    echo "Обновляем пакеты..."
+    pkg update -y && pkg upgrade -y || error_exit "Ошибка обновления пакетов"
 }
 
 # =============================================
-# Проверка и установка зависимостей
+# Установка git и Python
 # =============================================
-install_deps() {
-    # Проверка Python
-    if ! command -v python3 &>/dev/null; then
-        echo "Устанавливаем Python3..."
-        pkg install python -y || error_exit "Ошибка установки Python"
-    fi
-
-    # Проверка pip
-    if ! command -v pip3 &>/dev/null; then
-        echo "Устанавливаем pip..."
-        python3 -m ensurepip --upgrade || error_exit "Ошибка установки pip"
-    fi
-
-    # Установка базовых зависимостей
-    echo "Устанавливаем зависимости..."
-    pip3 install -U requests telethon psutil || error_exit "Ошибка установки зависимостей"
+install_git_python() {
+    echo "-----------------------------------------"
+    echo "Устанавливаем Python и Git..."
+    pkg install python git -y || error_exit "Ошибка установки Python или Git"
 }
 
 # =============================================
 # Работа с репозиторием
 # =============================================
 setup_repo() {
-    if [ -d "$REPO_DIR/.git" ]; then
-        echo "Обновляем репозиторий..."
-        cd "$REPO_DIR" && git pull || error_exit "Ошибка обновления репозитория"
-    else
-        echo "Клонируем репозиторий..."
-        git clone "$REPO_URL" "$REPO_DIR" || error_exit "Ошибка клонирования"
-        cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию"
+    echo "-----------------------------------------"
+    echo "Удаляем старую версию репозитория (если есть), но сохраняем config.json..."
+    if [ -d "$REPO_DIR" ]; then
+        mv "$REPO_DIR/config.json" "$HOME/config_backup.json" 2>/dev/null
+        rm -rf "$REPO_DIR"
+    fi
+
+    echo "-----------------------------------------"
+    echo "Клонируем репозиторий..."
+    git clone "$REPO_URL" "$REPO_DIR" || error_exit "Ошибка клонирования репозитория"
+
+    echo "-----------------------------------------"
+    echo "Восстанавливаем config.json, если он был..."
+    if [ -f "$HOME/config_backup.json" ]; then
+        mv "$HOME/config_backup.json" "$REPO_DIR/config.json"
     fi
 }
 
 # =============================================
-# Настройка автозапуска через ~/.bashrc
+# Установка зависимостей
+# =============================================
+install_deps() {
+    echo "-----------------------------------------"
+    echo "Создаем виртуальное окружение и устанавливаем зависимости..."
+    cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию репозитория"
+    python -m venv venv || error_exit "Ошибка создания виртуального окружения"
+    source venv/bin/activate || error_exit "Ошибка активации виртуального окружения"
+    pip install --upgrade pip || error_exit "Ошибка обновления pip"
+    pip install -r requirements.txt || error_exit "Ошибка установки зависимостей"
+}
+
+# =============================================
+# Настройка автозапуска
 # =============================================
 setup_autostart() {
-    local autostart_cmd="python3 ~/rade/bot.py"
-    
-    # Удаляем старую команду автозапуска, если она есть
-    sed -i '/# Telegram bot autostart/d' ~/.bashrc
-    sed -i '/python3 ~\/rade\/bot.py/d' ~/.bashrc
-
-    # Добавляем новую команду автозапуска
-    echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
+    echo "-----------------------------------------"
+    echo "Настраиваем автозапуск..."
+    if ! grep -q "cd ~/rade && source venv/bin/activate && git pull && python bot.py" ~/.bashrc; then
+        echo 'cd ~/rade && source venv/bin/activate && git pull && python bot.py' >> ~/.bashrc
+    fi
     echo "Автозапуск настроен."
 }
 
@@ -79,13 +84,14 @@ setup_autostart() {
 # Главный процесс выполнения
 # =============================================
 main() {
-    install_git  # Устанавливаем git, если он отсутствует
-    install_deps
+    update_packages
+    install_git_python
     setup_repo
+    install_deps
     setup_autostart
-    
-    echo -e "\nУстановка завершена! Бот будет запускаться при старте Termux."
-    echo "Чтобы запустить бота сейчас, выполните: python3 ~/rade/bot.py"
+
+    echo "-----------------------------------------"
+    echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
 }
 
 # Запуск главной функции
