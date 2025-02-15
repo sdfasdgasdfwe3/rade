@@ -77,7 +77,9 @@ install_python_deps() {
     
     # Устанавливаем зависимости
     echo "Устанавливаем зависимости: $PYTHON_DEPS"
-    pip install $PYTHON_DEPS || error_exit "Ошибка установки зависимостей"
+    for dep in $PYTHON_DEPS; do
+        pip install "$dep" || error_exit "Ошибка установки зависимости: $dep"
+    done
 }
 
 # =============================================
