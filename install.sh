@@ -26,21 +26,6 @@ install_git() {
 }
 
 # =============================================
-# Установка termux-api и termux-scheduler, если они отсутствуют
-# =============================================
-install_termux_tools() {
-    if ! command -v termux-wake-lock &>/dev/null; then
-        echo "Устанавливаем termux-api..."
-        pkg install termux-api -y || error_exit "Ошибка установки termux-api"
-    fi
-
-    if ! command -v termux-job-scheduler &>/dev/null; then
-        echo "Устанавливаем termux-scheduler..."
-        pkg install termux-scheduler -y || error_exit "Ошибка установки termux-scheduler"
-    fi
-}
-
-# =============================================
 # Проверка и установка зависимостей
 # =============================================
 install_deps() {
@@ -76,29 +61,18 @@ setup_repo() {
 }
 
 # =============================================
-# Настройка автозапуска через termux-job-scheduler
+# Настройка автозапуска через ~/.bashrc
 # =============================================
 setup_autostart() {
-    local job_script="$HOME/.termux/job-scheduler/start_bot.sh"
+    local autostart_cmd="nohup python3 ~/rade/bot.py > ~/rade/bot.log 2>&1 &"
     
-    echo "Настраиваем автозапуск через termux-job-scheduler..."
-    
-    # Создаем директорию, если её нет
-    mkdir -p ~/.termux/job-scheduler || error_exit "Не удалось создать директорию ~/.termux/job-scheduler"
-    
-    # Создаем скрипт для запуска бота
-    echo '#!/data/data/com.termux/files/usr/bin/sh
-termux-wake-lock
-python3 ~/rade/bot.py
-termux-wake-unlock' > "$job_script" || error_exit "Не удалось создать файл $job_script"
-    
-    # Даем права на выполнение
-    chmod +x "$job_script" || error_exit "Не удалось установить права на выполнение для $job_script"
-    
-    # Планируем задачу на запуск при старте Termux
-    termux-job-scheduler --job-id 1 --script "$job_script" --persisted true || error_exit "Не удалось настроить termux-job-scheduler"
-    
-    echo "Автозапуск настроен через termux-job-scheduler."
+    # Добавляем команду в ~/.bashrc, если её там нет
+    if ! grep -qF "$autostart_cmd" ~/.bashrc; then
+        echo "Добавляем автозапуск в .bashrc..."
+        echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
+    else
+        echo "Автозапуск уже настроен"
+    fi
 }
 
 # =============================================
@@ -106,12 +80,12 @@ termux-wake-unlock' > "$job_script" || error_exit "Не удалось созд�
 # =============================================
 main() {
     install_git  # Устанавливаем git, если он отсутствует
-    install_termux_tools  # Устанавливаем termux-api и termux-scheduler, если они отсутствуют
     install_deps
     setup_repo
     setup_autostart
     
     echo -e "\nУстановка завершена! Бот будет автоматически запускаться при старте Termux."
+    echo "Логи будут сохранены в ~/rade/bot.log"
 }
 
 # Запуск главной функции
