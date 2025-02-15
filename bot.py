@@ -10,13 +10,14 @@ from telethon import TelegramClient, events
 import psutil
 from animation_script import animations
 import animation_script
-import sqlite3  # Добавлен импорт sqlite3
+import sqlite3
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
 ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
 SCRIPT_VERSION = "0.2.41"
+LOCK_FILE = "bot.lock"
 
 # Emoji
 EMOJIS = {
@@ -32,61 +33,72 @@ EMOJIS = {
     "bot": "🤖"
 }
 
-# Функция для установки режима WAL
+# region Вспомогательные функции
+def create_lock_file():
+    """Создает файл блокировки"""
+    if os.path.exists(LOCK_FILE):
+        print(f"{EMOJIS['error']} Бот уже запущен!")
+        sys.exit(1)
+    with open(LOCK_FILE, 'w') as f:
+        f.write(str(os.getpid()))
+
+def remove_lock_file():
+    """Удаляет файл блокировки"""
+    if os.path.exists(LOCK_FILE):
+        os.remove(LOCK_FILE)
+
+def kill_previous_instances():
+    """Завершает все предыдущие экземпляры бота"""
+    current_pid = os.getpid()
+    try:
+        output = subprocess.check_output(["pgrep", "-f", "python.*bot.py"]).decode().split()
+        for pid_str in output:
+            pid = int(pid_str)
+            if pid != current_pid:
+                print(f"{EMOJIS['exit']} Завершаем процесс PID {pid}")
+                os.kill(pid, signal.SIGTERM)
+                time.sleep(1)
+    except subprocess.CalledProcessError:
+        pass
+
 def set_wal_mode():
+    """Устанавливает режим WAL для SQLite"""
     db_path = f"session_{PHONE_NUMBER.replace('+', '')}.session"
     try:
         conn = sqlite3.connect(db_path)
-        conn.execute("PRAGMA journal_mode=WAL")  # Включаем режим WAL
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.close()
-        print(f"{EMOJIS['success']} Режим WAL включен для базы данных.")
+        print(f"{EMOJIS['success']} Режим WAL активирован")
     except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка при включении режима WAL: {e}")
+        print(f"{EMOJIS['error']} Ошибка WAL: {str(e)}")
 
-def kill_previous_instances():
-    """Безопасно завершает предыдущие экземпляры бота"""
-    current_pid = os.getpid()
-    killed = []
-    
-    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-        try:
-            cmdline = ' '.join(proc.info.get('cmdline', []))
-            if ('python' in proc.info['name'].lower() 
-                and 'bot.py' in cmdline 
-                and proc.info['pid'] != current_pid):
-                
-                print(f"{EMOJIS['exit']} Завершаем процесс PID {proc.info['pid']}")
-                proc.terminate()
-                killed.append(proc.info['pid'])
-                
-        except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError, AttributeError):
-            continue
-    
-    if killed:
-        print(f"{EMOJIS['success']} Завершено процессов: {len(killed)}")
-        time.sleep(2)
-    
-    return len(killed) > 0
+def signal_handler(sig, frame):
+    """Обработчик сигналов завершения"""
+    print(f"\n{EMOJIS['exit']} Получен сигнал завершения")
+    sys.exit(0)
+# endregion
 
+# region Основная логика
 def load_config():
+    """Загружает конфигурацию"""
     if os.path.exists(CONFIG_FILE):
         try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            with open(CONFIG_FILE, 'r') as f:
                 config = json.load(f)
-            if "selected_animation" not in config:
-                config["selected_animation"] = 1
+            config.setdefault("selected_animation", 1)
             return config
         except Exception as e:
-            print(f"{EMOJIS['error']} Ошибка загрузки конфига:", e)
+            print(f"{EMOJIS['error']} Ошибка конфига: {str(e)}")
             return {}
     return {}
 
 def save_config(config):
+    """Сохраняет конфигурацию"""
     try:
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
     except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка сохранения конфига:", e)
+        print(f"{EMOJIS['error']} Ошибка сохранения: {str(e)}")
 
 config = load_config()
 API_ID = config.get("API_ID")
@@ -96,24 +108,21 @@ selected_animation = config.get("selected_animation", 1)
 
 if not all([API_ID, API_HASH, PHONE_NUMBER]):
     try:
-        print(f"{EMOJIS['auth']} Необходима авторизация. Введите данные от Telegram:")
-        API_ID = int(input(f"{EMOJIS['auth']} Введите API ID: "))
-        API_HASH = input(f"{EMOJIS['auth']} Введите API HASH: ").strip()
-        PHONE_NUMBER = input(f"{EMOJIS['phone']} Введите номер телефона (формат +79991234567): ").strip()
-        config = {
+        print(f"{EMOJIS['auth']} Требуется авторизация:")
+        API_ID = int(input(f"{EMOJIS['auth']} API ID: "))
+        API_HASH = input(f"{EMOJIS['auth']} API HASH: ").strip()
+        PHONE_NUMBER = input(f"{EMOJIS['phone']} Номер (+79991234567): ").strip()
+        config.update({
             "API_ID": API_ID,
             "API_HASH": API_HASH,
-            "PHONE_NUMBER": PHONE_NUMBER,
-            "selected_animation": selected_animation
-        }
+            "PHONE_NUMBER": PHONE_NUMBER
+        })
         save_config(config)
     except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка:", e)
+        print(f"{EMOJIS['error']} Ошибка: {str(e)}")
         sys.exit(1)
 
-# Включаем режим WAL перед созданием клиента
 set_wal_mode()
-
 client = TelegramClient(
     f"session_{PHONE_NUMBER.replace('+', '')}",
     API_ID,
@@ -121,62 +130,26 @@ client = TelegramClient(
     connection_retries=0
 )
 
-def discard_local_changes():
-    try:
-        subprocess.run(["git", "checkout", "--", os.path.basename(__file__)], check=True)
-    except Exception:
-        pass
+async def safe_shutdown():
+    """Безопасное завершение работы"""
+    if client.is_connected():
+        await client.disconnect()
+    remove_lock_file()
+    print(f"\n{EMOJIS['success']} Бот полностью остановлен")
 
-def check_for_updates():
-    try:
-        response = requests.get(GITHUB_RAW_URL)
-        if response.status_code == 200:
-            remote_script = response.text
-            remote_version = None
-            for line in remote_script.splitlines():
-                if "SCRIPT_VERSION" in line:
-                    try:
-                        remote_version = line.split('=')[1].strip().strip('"')
-                    except Exception:
-                        pass
-                    break
-            if remote_version and SCRIPT_VERSION != remote_version:
-                print(f"{EMOJIS['update']} Обнаружена новая версия {remote_version} (текущая {SCRIPT_VERSION}). Обновление...")
-                discard_local_changes()
-                with open(os.path.abspath(__file__), 'w', encoding='utf-8') as f:
-                    f.write(remote_script)
-                print(f"{EMOJIS['success']} Скрипт обновлён. Перезапустите программу.")
-                exit()
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка проверки обновлений:", e)
+async def close_client():
+    """Завершает клиент Telegram"""
+    await safe_shutdown()
 
-def check_for_animation_script_updates():
-    try:
-        response = requests.get(ANIMATION_SCRIPT_GITHUB_URL)
-        if response.status_code == 200:
-            remote_file = response.text
-            remote_version = None
-            for line in remote_file.splitlines():
-                if "ANIMATION_SCRIPT_VERSION" in line:
-                    try:
-                        remote_version = line.split('=')[1].strip().strip('"')
-                    except Exception:
-                        pass
-                    break
-            if remote_version and remote_version != animation_script.ANIMATION_SCRIPT_VERSION:
-                print(f"{EMOJIS['update']} Обнаружена новая версия анимационного скрипта {remote_version} (текущая {animation_script.ANIMATION_SCRIPT_VERSION}). Обновление...")
-                with open("animation_script.py", "w", encoding="utf-8") as f:
-                    f.write(remote_file)
-                print(f"{EMOJIS['success']} Файл animation_script.py обновлён. Перезапустите программу.")
-                exit()
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
-
-animation_selection_mode = False
-current_user_id = None
+def exit_handler():
+    """Финализатор при завершении"""
+    if client.loop.is_running():
+        client.loop.run_until_complete(safe_shutdown())
+    sys.exit(0)
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
+    """Обработчик команды /p"""
     command_text = event.raw_text
     parts = command_text.split(maxsplit=1)
     if len(parts) < 2:
@@ -188,12 +161,13 @@ async def animate_handler(event):
         try:
             await anim_func(event, text_to_animate)
         except Exception as e:
-            print(f"{EMOJIS['error']} Ошибка анимации:", e)
+            print(f"{EMOJIS['error']} Ошибка анимации: {str(e)}")
     else:
         await event.reply("Выбрана недопустимая анимация.")
 
 @client.on(events.NewMessage(pattern='/m'))
 async def animation_menu(event):
+    """Обработчик команды /m"""
     global animation_selection_mode, current_user_id
     if not event.out:
         return
@@ -207,6 +181,7 @@ async def animation_menu(event):
 
 @client.on(events.NewMessage)
 async def animation_selection_handler(event):
+    """Обработчик выбора анимации"""
     global animation_selection_mode, selected_animation, config
     if animation_selection_mode and event.out:
         text = event.raw_text.strip()
@@ -225,82 +200,42 @@ async def animation_selection_handler(event):
                             await msg.delete()
                             deleted_count += 1
                         except Exception as e:
-                            print(f"{EMOJIS['error']} Ошибка удаления:", e)
+                            print(f"{EMOJIS['error']} Ошибка удаления: {str(e)}")
                         if deleted_count >= 4:
                             break
             else:
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
 
-async def authenticate_client():
-    """Функция для авторизации с поддержкой двухэтапной аутентификации"""
+async def authenticate():
+    """Процесс авторизации"""
     try:
         await client.start(PHONE_NUMBER)
+        if not await client.is_user_authorized():
+            password = input(f"{EMOJIS['auth']} Пароль 2FA: ").strip()
+            await client.sign_in(password=password)
         print(f"{EMOJIS['success']} Авторизация успешна!")
     except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка авторизации:", e)
-        sys.exit(1)
-
-async def handle_2fa():
-    """Обработка двухэтапной аутентификации"""
-    try:
-        print(f"{EMOJIS['auth']} Включена двухэтапная аутентификация. Введите облачный пароль:")
-        password = input(f"{EMOJIS['auth']} Пароль: ").strip()
-        await client.sign_in(password=password)
-        print(f"{EMOJIS['success']} Облачный пароль принят!")
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка ввода пароля:", e)
-        sys.exit(1)
-
-async def close_client():
-    if client.is_connected():
-        await client.disconnect()
-    print(f"\n{EMOJIS['exit']} Бот успешно остановлен.")
-
-def signal_handler(sig, frame):
-    print(f"\n{EMOJIS['exit']} Получен сигнал завершения. Останавливаем бота...")
-    try:
-        client.loop.run_until_complete(close_client())
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка остановки:", e)
-    finally:
-        sys.exit(0)
+        print(f"{EMOJIS['error']} Ошибка авторизации: {str(e)}")
+        exit_handler()
 
 def main():
+    """Основная функция"""
+    create_lock_file()
     kill_previous_instances()
-    check_for_updates()
-    check_for_animation_script_updates()
     
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
-        # Запуск авторизации
-        client.loop.run_until_complete(authenticate_client())
-        
-        # Проверка на двухэтапную аутентификацию
-        if client.is_user_authorized():
-            print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-            me = client.loop.run_until_complete(client.get_me())
-            username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
-            print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
-            print("Телеграмм канал: t.me/kwotko")
-            print("Для остановки нажмите Ctrl+C")
-            signal.signal(signal.SIGINT, signal_handler)
-            client.run_until_disconnected()
-        else:
-            # Если требуется двухэтапная аутентификация
-            client.loop.run_until_complete(handle_2fa())
-            print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-            me = client.loop.run_until_complete(client.get_me())
-            username = me.username if me.username else (me.first_name if me.first_name else "Unknown")
-            print(f"{EMOJIS['bot']} Вы авторизованы как: {username}")
-            print("Телеграмм канал: t.me/kwotko")
-            print("Для остановки нажмите Ctrl+C")
-            signal.signal(signal.SIGINT, signal_handler)
-            client.run_until_disconnected()
+        client.loop.run_until_complete(authenticate())
+        print(f"{EMOJIS['bot']} Бот запущен (v{SCRIPT_VERSION})")
+        client.run_until_disconnected()
     except Exception as e:
-        print(f"{EMOJIS['error']} Критическая ошибка:", e)
+        print(f"{EMOJIS['error']} Критическая ошибка: {str(e)}")
     finally:
-        client.loop.run_until_complete(close_client())
+        exit_handler()
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, signal_handler)
     main()
+# endregion
