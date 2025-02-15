@@ -10,6 +10,7 @@ from telethon import TelegramClient, events
 import psutil
 from animation_script import animations
 import animation_script
+import sqlite3  # Добавлен импорт sqlite3
 
 # Константы
 CONFIG_FILE = "config.json"
@@ -30,6 +31,17 @@ EMOJIS = {
     "menu": "📋",
     "bot": "🤖"
 }
+
+# Функция для установки режима WAL
+def set_wal_mode():
+    db_path = f"session_{PHONE_NUMBER.replace('+', '')}.session"
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA journal_mode=WAL")  # Включаем режим WAL
+        conn.close()
+        print(f"{EMOJIS['success']} Режим WAL включен для базы данных.")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка при включении режима WAL: {e}")
 
 def kill_previous_instances():
     """Безопасно завершает предыдущие экземпляры бота"""
@@ -98,6 +110,9 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
     except Exception as e:
         print(f"{EMOJIS['error']} Ошибка:", e)
         sys.exit(1)
+
+# Включаем режим WAL перед созданием клиента
+set_wal_mode()
 
 client = TelegramClient(
     f"session_{PHONE_NUMBER.replace('+', '')}",
