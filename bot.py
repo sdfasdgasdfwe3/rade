@@ -2,22 +2,14 @@ import os
 import json
 import requests
 import sys
-import subprocess
 import asyncio
-import signal
-import time
 from telethon import TelegramClient, events
-import psutil
-from animation_script import animations
-import animation_script
 import sqlite3
 
 # Константы
 CONFIG_FILE = "config.json"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
-ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
 SCRIPT_VERSION = "0.2.41"
-LOCK_FILE = "bot.lock"
 
 # Emoji
 EMOJIS = {
@@ -34,53 +26,7 @@ EMOJIS = {
 }
 
 # Глобальные переменные
-animation_selection_mode = False
 current_user_id = None
-
-# region Вспомогательные функции
-def create_lock_file():
-    """Создает файл блокировки"""
-    if os.path.exists(LOCK_FILE):
-        print(f"{EMOJIS['error']} Бот уже запущен!")
-        sys.exit(1)
-    with open(LOCK_FILE, 'w') as f:
-        f.write(str(os.getpid()))
-
-def remove_lock_file():
-    """Удаляет файл блокировки"""
-    if os.path.exists(LOCK_FILE):
-        os.remove(LOCK_FILE)
-
-def kill_previous_instances():
-    """Завершает все предыдущие экземпляры бота"""
-    current_pid = os.getpid()
-    try:
-        output = subprocess.check_output(["pgrep", "-f", "python.*bot.py"]).decode().split()
-        for pid_str in output:
-            pid = int(pid_str)
-            if pid != current_pid:
-                print(f"{EMOJIS['exit']} Завершаем процесс PID {pid}")
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(1)
-    except subprocess.CalledProcessError:
-        pass
-
-def set_wal_mode():
-    """Устанавливает режим WAL для SQLite"""
-    db_path = f"session_{PHONE_NUMBER.replace('+', '')}.session"
-    try:
-        conn = sqlite3.connect(db_path)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.close()
-        print(f"{EMOJIS['success']} Режим WAL активирован")
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка WAL: {str(e)}")
-
-def signal_handler(sig, frame):
-    """Обработчик сигналов завершения"""
-    print(f"\n{EMOJIS['exit']} Получен сигнал завершения")
-    sys.exit(0)
-# endregion
 
 # region Основная логика
 def load_config():
@@ -89,7 +35,6 @@ def load_config():
         try:
             with open(CONFIG_FILE, 'r') as f:
                 config = json.load(f)
-            config.setdefault("selected_animation", 1)
             return config
         except Exception as e:
             print(f"{EMOJIS['error']} Ошибка конфига: {str(e)}")
@@ -108,7 +53,6 @@ config = load_config()
 API_ID = config.get("API_ID")
 API_HASH = config.get("API_HASH")
 PHONE_NUMBER = config.get("PHONE_NUMBER")
-selected_animation = config.get("selected_animation", 1)
 
 if not all([API_ID, API_HASH, PHONE_NUMBER]):
     try:
@@ -126,7 +70,6 @@ if not all([API_ID, API_HASH, PHONE_NUMBER]):
         print(f"{EMOJIS['error']} Ошибка: {str(e)}")
         sys.exit(1)
 
-set_wal_mode()
 client = TelegramClient(
     f"session_{PHONE_NUMBER.replace('+', '')}",
     API_ID,
@@ -138,18 +81,38 @@ async def safe_shutdown():
     """Безопасное завершение работы"""
     if client.is_connected():
         await client.disconnect()
-    remove_lock_file()
     print(f"\n{EMOJIS['success']} Бот полностью остановлен")
 
 async def close_client():
     """Завершает клиент Telegram"""
     await safe_shutdown()
 
-def exit_handler():
-    """Финализатор при завершении"""
-    if client.loop.is_running():
-        client.loop.run_until_complete(safe_shutdown())
-    sys.exit(0)
+async def authenticate():
+    """Процесс авторизации"""
+    try:
+        await client.start(PHONE_NUMBER)
+        if not await client.is_user_authorized():
+            password = input(f"{EMOJIS['auth']} Пароль 2FA: ").strip()
+            await client.sign_in(password=password)
+        print(f"{EMOJIS['success']} Авторизация успешна!")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка авторизации: {str(e)}")
+        sys.exit(1)
+
+async def update_bot():
+    """Обновление бота с GitHub"""
+    try:
+        response = requests.get(GITHUB_RAW_URL)
+        if response.status_code == 200:
+            with open("bot.py", "w", encoding="utf-8") as f:
+                f.write(response.text)
+            print(f"{EMOJIS['update']} Бот успешно обновлен!")
+            # Перезапуск бота
+            os.execv(sys.executable, [sys.executable, "bot.py"])
+        else:
+            print(f"{EMOJIS['error']} Ошибка при обновлении: {response.status_code}")
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка обновления: {str(e)}")
 
 @client.on(events.NewMessage(pattern='/p'))
 async def animate_handler(event):
@@ -211,26 +174,8 @@ async def animation_selection_handler(event):
                 await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
             animation_selection_mode = False
 
-async def authenticate():
-    """Процесс авторизации"""
-    try:
-        await client.start(PHONE_NUMBER)
-        if not await client.is_user_authorized():
-            password = input(f"{EMOJIS['auth']} Пароль 2FA: ").strip()
-            await client.sign_in(password=password)
-        print(f"{EMOJIS['success']} Авторизация успешна!")
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка авторизации: {str(e)}")
-        exit_handler()
-
 def main():
     """Основная функция"""
-    create_lock_file()
-    kill_previous_instances()
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
     try:
         client.loop.run_until_complete(authenticate())
         print(f"{EMOJIS['bot']} Бот запущен (v{SCRIPT_VERSION})")
@@ -238,7 +183,7 @@ def main():
     except Exception as e:
         print(f"{EMOJIS['error']} Критическая ошибка: {str(e)}")
     finally:
-        exit_handler()
+        client.loop.run_until_complete(safe_shutdown())
 
 if __name__ == "__main__":
     main()
