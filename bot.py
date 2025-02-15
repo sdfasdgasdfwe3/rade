@@ -2,7 +2,6 @@ import os
 import json
 import requests
 import sys
-import subprocess
 import asyncio
 from telethon import TelegramClient, events
 import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
