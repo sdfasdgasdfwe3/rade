@@ -26,12 +26,17 @@ install_git() {
 }
 
 # =============================================
-# Установка termux-api, если он отсутствует
+# Установка termux-api и termux-scheduler, если они отсутствуют
 # =============================================
-install_termux_api() {
+install_termux_tools() {
     if ! command -v termux-wake-lock &>/dev/null; then
         echo "Устанавливаем termux-api..."
         pkg install termux-api -y || error_exit "Ошибка установки termux-api"
+    fi
+
+    if ! command -v termux-job-scheduler &>/dev/null; then
+        echo "Устанавливаем termux-scheduler..."
+        pkg install termux-scheduler -y || error_exit "Ошибка установки termux-scheduler"
     fi
 }
 
@@ -101,7 +106,7 @@ termux-wake-unlock' > "$job_script" || error_exit "Не удалось созд�
 # =============================================
 main() {
     install_git  # Устанавливаем git, если он отсутствует
-    install_termux_api  # Устанавливаем termux-api, если он отсутствует
+    install_termux_tools  # Устанавливаем termux-api и termux-scheduler, если они отсутствуют
     install_deps
     setup_repo
     setup_autostart
