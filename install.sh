@@ -70,11 +70,20 @@ get_auth_data() {
         read -p "🔑 Введите API ID: " API_ID
         read -p "🔑 Введите API HASH: " API_HASH
         read -p "📱 Введите номер телефона (формат +79991234567): " PHONE_NUMBER
+
+        # Проверка на облачный пароль (Two-Step Verification)
+        read -p "🔐 У вас включена двухфакторная аутентификация? (y/n): " HAS_2FA
+        if [[ "$HAS_2FA" == "y" || "$HAS_2FA" == "Y" ]]; then
+            read -p "🔐 Введите облачный пароль: " CLOUD_PASSWORD
+        else
+            CLOUD_PASSWORD=""
+        fi
     else
         # Автоматический режим: используем переменные окружения
         API_ID=${API_ID:-""}
         API_HASH=${API_HASH:-""}
         PHONE_NUMBER=${PHONE_NUMBER:-""}
+        CLOUD_PASSWORD=${CLOUD_PASSWORD:-""}
 
         if [ -z "$API_ID" ] || [ -z "$API_HASH" ] || [ -z "$PHONE_NUMBER" ]; then
             error_exit "Переменные окружения API_ID, API_HASH и PHONE_NUMBER не установлены."
@@ -87,7 +96,8 @@ get_auth_data() {
 {
     "API_ID": "$API_ID",
     "API_HASH": "$API_HASH",
-    "PHONE_NUMBER": "$PHONE_NUMBER"
+    "PHONE_NUMBER": "$PHONE_NUMBER",
+    "CLOUD_PASSWORD": "$CLOUD_PASSWORD"
 }
 EOF
 }
