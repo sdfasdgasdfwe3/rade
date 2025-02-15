@@ -7,6 +7,9 @@ REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
 SCRIPT_NAME=$(basename "$0")
 
+# Зависимости Python
+PYTHON_DEPS="requests telethon psutil"
+
 # =============================================
 # Функции для обработки ошибок
 # =============================================
@@ -56,16 +59,16 @@ setup_repo() {
 }
 
 # =============================================
-# Установка зависимостей
+# Установка зависимостей Python
 # =============================================
-install_deps() {
+install_python_deps() {
     echo "-----------------------------------------"
     echo "Создаем виртуальное окружение и устанавливаем зависимости..."
     cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию репозитория"
     python -m venv venv || error_exit "Ошибка создания виртуального окружения"
     source venv/bin/activate || error_exit "Ошибка активации виртуального окружения"
     pip install --upgrade pip || error_exit "Ошибка обновления pip"
-    pip install -r requirements.txt || error_exit "Ошибка установки зависимостей"
+    pip install $PYTHON_DEPS || error_exit "Ошибка установки зависимостей"
 }
 
 # =============================================
@@ -87,7 +90,7 @@ main() {
     update_packages
     install_git_python
     setup_repo
-    install_deps
+    install_python_deps
     setup_autostart
 
     echo "-----------------------------------------"
