@@ -1,18 +1,24 @@
 import os
 import json
-import requests
 import sys
+import aiohttp
 import asyncio
 from telethon import TelegramClient, events
-import animation_script  # для доступа к ANIMATION_SCRIPT_VERSION
+from telethon.errors import SessionPasswordNeededError
+
+try:
+    import animation_script
+    animations = animation_script.ANIMATIONS
+except (ImportError, AttributeError) as e:
+    print("❌ Ошибка загрузки анимационного скрипта:", e)
+    animations = {}
 
 # Константы
 CONFIG_FILE = "config.json"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py"
-ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/.../bot.py"
+ANIMATION_SCRIPT_GITHUB_URL = "https://raw.githubusercontent.com/.../animation_script.py"
 SCRIPT_VERSION = "0.2.39"
 
-# Emoji
 EMOJIS = {
     "auth": "🔑",
     "phone": "📱",
@@ -27,151 +33,125 @@ EMOJIS = {
 }
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            if "selected_animation" not in config:
-                config["selected_animation"] = 1
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            config.setdefault("selected_animation", 1)
             return config
-        except Exception:
-            return {}
-    return {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"selected_animation": 1}
 
 def save_config(config):
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(config, f)
+
+async def check_for_updates():
     try:
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(config, f)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(GITHUB_RAW_URL) as response:
+                if response.status == 200:
+                    remote_script = await response.text()
+                    if 'SCRIPT_VERSION' in remote_script:
+                        remote_version = remote_script.split('SCRIPT_VERSION = "')[1].split('"')[0]
+                        if remote_version != SCRIPT_VERSION:
+                            print(f"{EMOJIS['update']} Найдено обновление {remote_version}")
+                            with open(__file__, 'w', encoding='utf-8') as f:
+                                f.write(remote_script)
+                            print(f"{EMOJIS['success']} Перезапустите скрипт")
+                            sys.exit(0)
     except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка сохранения конфигурации:", e)
+        print(f"{EMOJIS['error']} Ошибка обновления:", e)
 
-config = load_config()
-API_ID = config.get("API_ID")
-API_HASH = config.get("API_HASH")
-PHONE_NUMBER = config.get("PHONE_NUMBER")
-selected_animation = config.get("selected_animation", 1)
-
-if not all([API_ID, API_HASH, PHONE_NUMBER]):
+async def check_animation_script_updates():
     try:
-        print(f"{EMOJIS['auth']} Необходима авторизация. Введите данные от Telegram:")
-        API_ID = int(input(f"{EMOJIS['auth']} Введите API ID: "))
-        API_HASH = input(f"{EMOJIS['auth']} Введите API HASH: ").strip()
-        PHONE_NUMBER = input(f"{EMOJIS['phone']} Введите номер телефона (формат +79991234567): ").strip()
-        config = {
-            "API_ID": API_ID,
-            "API_HASH": API_HASH,
-            "PHONE_NUMBER": PHONE_NUMBER,
-            "selected_animation": selected_animation
-        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(ANIMATION_SCRIPT_GITHUB_URL) as response:
+                if response.status == 200:
+                    remote_script = await response.text()
+                    if 'ANIMATION_SCRIPT_VERSION' in remote_script:
+                        remote_version = remote_script.split('ANIMATION_SCRIPT_VERSION = "')[1].split('"')[0]
+                        if hasattr(animation_script, 'ANIMATION_SCRIPT_VERSION'):
+                            if remote_version != animation_script.ANIMATION_SCRIPT_VERSION:
+                                print(f"{EMOJIS['update']} Обновление анимаций до {remote_version}")
+                                with open('animation_script.py', 'w', encoding='utf-8') as f:
+                                    f.write(remote_script)
+                                sys.exit(0)
+    except Exception as e:
+        print(f"{EMOJIS['error']} Ошибка обновления анимаций:", e)
+
+async def main():
+    config = load_config()
+    
+    if not all(config.get(k) for k in ["API_ID", "API_HASH", "PHONE_NUMBER"]):
+        print(f"{EMOJIS['auth']} Требуется настройка:")
+        config["API_ID"] = int(input("API ID: "))
+        config["API_HASH"] = input("API HASH: ").strip()
+        config["PHONE_NUMBER"] = input("Номер телефона (+7999...): ").strip()
         save_config(config)
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка:", e)
-        sys.exit(1)
 
-client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
+    client = TelegramClient(
+        session=f"session_{config['PHONE_NUMBER'].replace('+', '')}",
+        api_id=config["API_ID"],
+        api_hash=config["API_HASH"]
+    )
 
-def check_for_updates():
     try:
-        response = requests.get(GITHUB_RAW_URL)
-        if response.status_code == 200:
-            remote_script = response.text
-            remote_version = None
-            for line in remote_script.splitlines():
-                if "SCRIPT_VERSION" in line:
-                    try:
-                        remote_version = line.split('=')[1].strip().strip('"')
-                    except Exception:
-                        pass
-                    break
-            if remote_version and SCRIPT_VERSION != remote_version:
-                print(f"{EMOJIS['update']} Обнаружена новая версия {remote_version} (текущая {SCRIPT_VERSION}). Обновление...")
-                with open(os.path.abspath(__file__), 'w', encoding='utf-8') as f:
-                    f.write(remote_script)
-                print(f"{EMOJIS['success']} Скрипт обновлён. Перезапустите программу.")
-                exit()
-        else:
-            print(f"{EMOJIS['error']} Ошибка проверки обновлений: статус {response.status_code}")
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка проверки обновлений:", e)
-
-def check_for_animation_script_updates():
-    try:
-        response = requests.get(ANIMATION_SCRIPT_GITHUB_URL)
-        if response.status_code == 200:
-            remote_file = response.text
-            remote_version = None
-            for line in remote_file.splitlines():
-                if "ANIMATION_SCRIPT_VERSION" in line:
-                    try:
-                        remote_version = line.split('=')[1].strip().strip('"')
-                    except Exception:
-                        pass
-                    break
-            if remote_version and remote_version != animation_script.ANIMATION_SCRIPT_VERSION:
-                print(f"{EMOJIS['update']} Обнаружена новая версия анимационного скрипта {remote_version} (текущая {animation_script.ANIMATION_SCRIPT_VERSION}). Обновление...")
-                with open("animation_script.py", "w", encoding="utf-8") as f:
-                    f.write(remote_file)
-                print(f"{EMOJIS['success']} Файл animation_script.py обновлён. Перезапустите программу.")
-                exit()
-            else:
-                print(f"{EMOJIS['success']} Анимационный скрипт актуален.")
-        else:
-            print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта: статус {response.status_code}")
-    except Exception as e:
-        print(f"{EMOJIS['error']} Ошибка проверки обновлений анимационного скрипта:", e)
-
-@client.on(events.NewMessage(pattern='/p'))
-async def animate_handler(event):
-    command_text = event.raw_text
-    parts = command_text.split(maxsplit=1)
-    if len(parts) < 2:
-        await event.reply("Использование: /p текст")
+        await client.start(
+            phone=config["PHONE_NUMBER"],
+            password=lambda: input("Пароль двухфакторной аутентификации: ")
+        )
+    except SessionPasswordNeededError:
+        password = input("Введите пароль двухфакторной аутентификации: ")
+        await client.start(phone=config["PHONE_NUMBER"], password=password)
+    
+    if await client.is_user_authorized():
+        me = await client.get_me()
+        print(f"{EMOJIS['success']} Авторизован как @{me.username}")
+    else:
+        print(f"{EMOJIS['error']} Ошибка авторизации")
         return
-    text_to_animate = parts[1]
-    if selected_animation in animations:
-        anim_func = animations[selected_animation][1]
+
+    @client.on(events.NewMessage(pattern='/p'))
+    async def animate_handler(event):
+        text = event.raw_text.split(maxsplit=1)
+        if len(text) < 2:
+            await event.reply("Формат: /p текст")
+            return
+        
+        anim_id = config["selected_animation"]
+        if anim_id not in animations:
+            await event.reply("Анимация не найдена")
+            return
+        
         try:
-            await anim_func(event, text_to_animate)
+            await animations[anim_id][1](event, text[1])
         except Exception as e:
             print(f"{EMOJIS['error']} Ошибка анимации:", e)
-    else:
-        await event.reply("Выбрана недопустимая анимация.")
+            await event.reply("Ошибка выполнения анимации")
 
-@client.on(events.NewMessage(pattern='/m'))
-async def animation_menu(event):
-    global selected_animation, config
-    menu_text = "Выберите анимацию:\n"
-    for num, (name, _) in sorted(animations.items()):
-        menu_text += f"{num}) {name}\n"
-    menu_text += "\nВведите номер желаемой анимации."
-    await event.reply(menu_text)
+    @client.on(events.NewMessage(pattern='/m'))
+    async def animation_menu(event):
+        menu = "Выберите анимацию:\n" + "\n".join(
+            f"{num}) {name}" for num, (name, _) in sorted(animations.items())
+        )
+        sent = await event.reply(menu)
+        
+        async with client.conversation(event.chat_id, timeout=60) as conv:
+            try:
+                response = await conv.get_response()
+                if response.raw_text.isdigit():
+                    num = int(response.raw_text)
+                    if num in animations:
+                        config["selected_animation"] = num
+                        save_config(config)
+                        await conv.send_message(f"{EMOJIS['success']} Выбрана анимация: {animations[num][0]}")
+                    else:
+                        await conv.send_message(f"{EMOJIS['error']} Неверный номер")
+            except asyncio.TimeoutError:
+                await event.reply(f"{EMOJIS['error']} Время вышло")
 
-    @client.on(events.NewMessage)
-    async def animation_selection_handler(event):
-        text = event.raw_text.strip()
-        if text.isdigit():
-            number = int(text)
-            if number in animations:
-                selected_animation = number
-                config["selected_animation"] = selected_animation
-                save_config(config)
-                await event.reply(f"{EMOJIS['success']} Вы выбрали анимацию: {animations[selected_animation][0]}")
-            else:
-                await event.reply(f"{EMOJIS['error']} Неверный номер анимации.")
-
-def main():
-    check_for_updates()
-    check_for_animation_script_updates()
-    client.start(PHONE_NUMBER)
-    if client.is_user_authorized():
-        if client.get_me().username:
-            print(f"{EMOJIS['success']} Авторизация успешна.")
-        else:
-            print(f"{EMOJIS['error']} Необходима двухэтапная авторизация.")
-            password = input("Введите пароль: ")
-            client.start(PHONE_NUMBER, password=password)
-    print(f"{EMOJIS['bot']} Скрипт запущен. Версия: {SCRIPT_VERSION}")
-    client.run_until_disconnected()
+    print(f"{EMOJIS['bot']} Бот запущен (v{SCRIPT_VERSION})")
+    await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
