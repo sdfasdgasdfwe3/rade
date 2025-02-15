@@ -1,12 +1,25 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# Завершаем все процессы Python перед запуском бота
-kill -9 $(ps aux | grep '[p]ython' | awk '{print $2}')
+# Включаем режим немедленного выхода при ошибках
+set -e
 
-# Ждем, пока база данных освободится
-sleep 5
+# Функция для обработки ошибок
+handle_error() {
+    echo "Произошла ошибка в строке $1. Прерывание выполнения."
+    exit 1
+}
 
-# Далее выполняем установку зависимостей и запуск бота
+trap 'handle_error $LINENO' ERR
+
+# Завершаем только процессы бота, игнорируя ошибки если процессов нет
+echo "-----------------------------------------"
+echo "Останавливаем предыдущие запуски бота..."
+pkill -f "python3 bot.py" || true
+
+# Короткая пауза вместо 5 секунд (можно настроить при необходимости)
+echo "Ожидаем 2 секунды..."
+sleep 2
+
 echo "-----------------------------------------"
 echo "Обновляем пакеты..."
 pkg update -y && pkg upgrade -y
@@ -20,7 +33,7 @@ echo "Устанавливаем Git..."
 pkg install git -y
 
 echo "-----------------------------------------"
-echo "Удаляем старую версию репозитория (если есть)..."
+echo "Удаляем старую версию репозитория..."
 rm -rf rade
 
 echo "-----------------------------------------"
@@ -28,22 +41,37 @@ echo "Клонируем репозиторий..."
 git clone https://github.com/sdfasdgasdfwe3/rade.git
 
 # Переходим в директорию репозитория
-cd rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
+cd rade
+
+echo "-----------------------------------------"
+echo "Обновляем pip..."
+pip install --upgrade pip
 
 echo "-----------------------------------------"
 echo "Устанавливаем зависимости Python..."
-pip3 install telethon requests aiohttp
+pip install telethon requests
 
 echo "-----------------------------------------"
 echo "Делаем главный файл исполняемым..."
 chmod +x bot.py
 
 echo "-----------------------------------------"
-echo "Создаем .bashrc, если его нет, и добавляем автозапуск..."
-touch ~/.bashrc
-echo 'cd ~/rade && git pull && python3 bot.py' >> ~/.bashrc
+echo "Настраиваем автозапуск..."
+BASHRC=~/.bashrc
+AUTOSTART_CMD='cd ~/rade && git pull -q && python3 bot.py'
 
-# Обновляем cron для автоматического перезапуска (если нужно)
-crontab -l | { cat; echo "@reboot cd ~/rade && git pull && python3 bot.py"; } | crontab -
+# Проверяем, не добавлена ли уже команда
+if ! grep -Fxq "$AUTOSTART_CMD" "$BASHRC"; then
+    echo "$AUTOSTART_CMD" >> "$BASHRC"
+    echo "Автозапуск добавлен в .bashrc"
+else
+    echo "Автозапуск уже настроен"
+fi
 
-echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
+echo "-----------------------------------------"
+echo "Запускаем бота..."
+python3 bot.py &
+
+echo "Установка успешно завершена!"
+echo "Для ручного запуска: cd ~/rade && python3 bot.py"
+echo "Перезапустите Termux или выполните: source ~/.bashrc"
