@@ -5,7 +5,6 @@
 # =============================================
 REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
-SCRIPT_NAME=$(basename "$0")
 LOCK_FILE="$REPO_DIR/bot.lock"
 
 # Зависимости Python
@@ -67,44 +66,56 @@ install_python_deps() {
     echo "Создаем виртуальное окружение и устанавливаем зависимости..."
     cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию репозитория"
     
-    # Создаем виртуальное окружение
     python -m venv venv || error_exit "Ошибка создания виртуального окружения"
-    
-    # Активируем виртуальное окружение
     source venv/bin/activate || error_exit "Ошибка активации виртуального окружения"
-    
-    # Обновляем pip (если нужно)
     pip install --upgrade pip || error_exit "Ошибка обновления pip"
     
-    # Устанавливаем зависимости
-    echo "Устанавливаем зависимости: $PYTHON_DEPS"
     for dep in $PYTHON_DEPS; do
         pip install "$dep" || error_exit "Ошибка установки зависимости: $dep"
     done
 }
 
 # =============================================
-# Настройка автозапуска
+# Настройка автозапуска с обработкой сигналов
 # =============================================
 setup_autostart() {
     echo "-----------------------------------------"
-    echo "Настраиваем автозапуск..."
-    if ! grep -q "cd ~/rade && source venv/bin/activate && git pull && python bot.py" ~/.bashrc; then
-        echo 'cd ~/rade && source venv/bin/activate && git pull && python bot.py' >> ~/.bashrc
-    fi
-    echo "Автозапуск настроен."
+    echo "Создаем скрипт-обертку для обработки сигналов..."
+    cat << 'EOF' > "$REPO_DIR/start_bot.sh"
+#!/bin/bash
+
+REPO_DIR="$HOME/rade"
+LOCK_FILE="$REPO_DIR/bot.lock"
+
+if [ -f "$LOCK_FILE" ]; then
+    echo "Бот уже запущен. Для перезапуска удалите $LOCK_FILE."
+    exit 1
+fi
+
+touch "$LOCK_FILE"
+
+cleanup() {
+    echo "Завершаем бота..."
+    kill -TERM "$BOT_PID" 2>/dev/null
+    rm -f "$LOCK_FILE"
 }
 
-# =============================================
-# Настройка завершения бота
-# =============================================
-setup_exit_hook() {
-    echo "-----------------------------------------"
-    echo "Настраиваем завершение бота при выходе из Termux..."
-    if ! grep -q "termux-wake-unlock" ~/.bashrc; then
-        echo 'termux-wake-unlock' >> ~/.bashrc
+trap cleanup EXIT
+
+cd "$REPO_DIR" || exit 1
+source venv/bin/activate
+git pull
+python bot.py &
+BOT_PID=$!
+wait $BOT_PID
+EOF
+
+    chmod +x "$REPO_DIR/start_bot.sh"
+
+    echo "Настраиваем автозапуск..."
+    if ! grep -q "cd $REPO_DIR && ./start_bot.sh" ~/.bashrc; then
+        echo "cd $REPO_DIR && ./start_bot.sh" >> ~/.bashrc
     fi
-    echo "Хук завершения настроен."
 }
 
 # =============================================
@@ -116,11 +127,10 @@ main() {
     setup_repo
     install_python_deps
     setup_autostart
-    setup_exit_hook
 
-    echo "-----------------------------------------"
-    echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
+    echo "========================================="
+    echo "Установка завершена. Перезапустите Termux."
+    echo "Бот будет автоматически остановлен при выходе."
 }
 
-# Запуск главной функции
 main
