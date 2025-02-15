@@ -34,7 +34,7 @@ update_packages() {
 install_git_python() {
     echo "-----------------------------------------"
     echo "Устанавливаем Python и Git..."
-    pkg install python git -y || error_exit "Ошибка установки Python или Git"
+    pkg install python git termux-api -y || error_exit "Ошибка установки Python или Git"
 }
 
 # =============================================
@@ -96,13 +96,13 @@ setup_autostart() {
 }
 
 # =============================================
-# Завершение бота при выходе из Termux
+# Настройка завершения бота
 # =============================================
 setup_exit_hook() {
     echo "-----------------------------------------"
     echo "Настраиваем завершение бота при выходе из Termux..."
-    if ! grep -q "pkill -f 'python.*bot.py'" ~/.bashrc; then
-        echo 'trap "pkill -f \"python.*bot.py\"" EXIT' >> ~/.bashrc
+    if ! grep -q "termux-wake-unlock" ~/.bashrc; then
+        echo 'termux-wake-unlock' >> ~/.bashrc
     fi
     echo "Хук завершения настроен."
 }
