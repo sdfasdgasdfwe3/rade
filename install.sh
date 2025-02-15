@@ -3,9 +3,7 @@
 # =============================================
 # Настройки
 # =============================================
-REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
 REPO_DIR="$HOME/rade"
-LOCK_FILE="$REPO_DIR/bot.lock"
 
 # Зависимости Python
 PYTHON_DEPS="requests telethon psutil"
@@ -19,53 +17,14 @@ error_exit() {
 }
 
 # =============================================
-# Обновление пакетов
-# =============================================
-update_packages() {
-    echo "-----------------------------------------"
-    echo "Обновляем пакеты..."
-    pkg update -y && pkg upgrade -y || error_exit "Ошибка обновления пакетов"
-}
-
-# =============================================
-# Установка git и Python
-# =============================================
-install_git_python() {
-    echo "-----------------------------------------"
-    echo "Устанавливаем Python и Git..."
-    pkg install python git termux-api -y || error_exit "Ошибка установки Python или Git"
-}
-
-# =============================================
-# Работа с репозиторием
-# =============================================
-setup_repo() {
-    echo "-----------------------------------------"
-    echo "Удаляем старую версию репозитория (если есть), но сохраняем config.json..."
-    if [ -d "$REPO_DIR" ]; then
-        mv "$REPO_DIR/config.json" "$HOME/config_backup.json" 2>/dev/null
-        rm -rf "$REPO_DIR"
-    fi
-
-    echo "-----------------------------------------"
-    echo "Клонируем репозиторий..."
-    git clone "$REPO_URL" "$REPO_DIR" || error_exit "Ошибка клонирования репозитория"
-
-    echo "-----------------------------------------"
-    echo "Восстанавливаем config.json, если он был..."
-    if [ -f "$HOME/config_backup.json" ]; then
-        mv "$HOME/config_backup.json" "$REPO_DIR/config.json"
-    fi
-}
-
-# =============================================
 # Установка зависимостей Python
 # =============================================
 install_python_deps() {
     echo "-----------------------------------------"
-    echo "Создаем виртуальное окружение и устанавливаем зависимости..."
+    echo "Переходим в директорию $REPO_DIR..."
     cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию репозитория"
-    
+
+    echo "Создаем виртуальное окружение и устанавливаем зависимости..."
     python -m venv venv || error_exit "Ошибка создания виртуального окружения"
     source venv/bin/activate || error_exit "Ошибка активации виртуального окружения"
     pip install --upgrade pip || error_exit "Ошибка обновления pip"
@@ -76,61 +35,36 @@ install_python_deps() {
 }
 
 # =============================================
-# Настройка автозапуска с обработкой сигналов
+# Настройка автоматической активации виртуального окружения
 # =============================================
-setup_autostart() {
+setup_auto_activation() {
     echo "-----------------------------------------"
-    echo "Создаем скрипт-обертку для обработки сигналов..."
-    cat << 'EOF' > "$REPO_DIR/start_bot.sh"
-#!/bin/bash
+    echo "Настраиваем автоматическую активацию виртуального окружения..."
 
-REPO_DIR="$HOME/rade"
-LOCK_FILE="$REPO_DIR/bot.lock"
-
-if [ -f "$LOCK_FILE" ]; then
-    echo "Бот уже запущен. Для перезапуска удалите $LOCK_FILE."
-    exit 1
-fi
-
-touch "$LOCK_FILE"
-
-cleanup() {
-    echo "Завершаем бота..."
-    kill -TERM "$BOT_PID" 2>/dev/null
-    rm -f "$LOCK_FILE"
-}
-
-trap cleanup EXIT
-
-cd "$REPO_DIR" || exit 1
-source venv/bin/activate
-git pull
-python bot.py &
-BOT_PID=$!
-wait $BOT_PID
-EOF
-
-    chmod +x "$REPO_DIR/start_bot.sh"
-
-    echo "Настраиваем автозапуск..."
-    if ! grep -q "cd $REPO_DIR && ./start_bot.sh" ~/.bashrc; then
-        echo "cd $REPO_DIR && ./start_bot.sh" >> ~/.bashrc
+    # Добавляем активацию виртуального окружения в .bashrc
+    if ! grep -q "source $REPO_DIR/venv/bin/activate" ~/.bashrc; then
+        echo "source $REPO_DIR/venv/bin/activate" >> ~/.bashrc
     fi
+
+    echo "Автоматическая активация виртуального окружения настроена."
 }
 
 # =============================================
 # Главный процесс выполнения
 # =============================================
 main() {
-    update_packages
-    install_git_python
-    setup_repo
+    # Устанавливаем зависимости
     install_python_deps
-    setup_autostart
 
+    # Настраиваем автоматическую активацию виртуального окружения
+    setup_auto_activation
+
+    # Выводим сообщение о том, как запустить бота
     echo "========================================="
-    echo "Установка завершена. Перезапустите Termux."
-    echo "Бот будет автоматически остановлен при выходе."
+    echo "Установка завершена."
+    echo "Чтобы запустить бота, выполните команду:"
+    echo "   python bot.py"
+    echo "========================================="
 }
 
 main
