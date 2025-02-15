@@ -33,6 +33,10 @@ EMOJIS = {
     "bot": "🤖"
 }
 
+# Глобальные переменные
+animation_selection_mode = False
+current_user_id = None
+
 # region Вспомогательные функции
 def create_lock_file():
     """Создает файл блокировки"""
