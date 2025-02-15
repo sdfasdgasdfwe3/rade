@@ -1,49 +1,129 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/bin/bash
 
-# Завершаем все процессы Python перед запуском бота
-kill -9 $(ps aux | grep '[p]ython' | awk '{print $2}')
+# =============================================
+# Настройки
+# =============================================
+REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
+REPO_DIR="$HOME/rade"
+SESSION_NAME="bot_session"
+LOCK_FILE="/tmp/bot.lock"
+SCRIPT_NAME=$(basename "$0")
 
-# Ждем, пока база данных освободится
-sleep 5
+# =============================================
+# Функции для обработки ошибок
+# =============================================
+error_exit() {
+    echo "ОШИБКА: $1" >&2
+    rm -f "$LOCK_FILE"
+    exit 1
+}
 
-# Далее выполняем установку зависимостей и запуск бота
-echo "-----------------------------------------"
-echo "Обновляем пакеты..."
-pkg update -y && pkg upgrade -y
+# =============================================
+# Проверка блокировки и создание lock-файла
+# =============================================
+if [ -e "$LOCK_FILE" ]; then
+    error_exit "Скрипт уже запущен! (обнаружен lock-файл)"
+fi
+touch "$LOCK_FILE" || error_exit "Не могу создать lock-файл"
 
-echo "-----------------------------------------"
-echo "Устанавливаем Python..."
-pkg install python -y
+# Очистка lock-файла при выходе
+trap 'rm -f "$LOCK_FILE"' EXIT
 
-echo "-----------------------------------------"
-echo "Устанавливаем Git..."
-pkg install git -y
+# =============================================
+# Проверка и установка зависимостей
+# =============================================
+install_deps() {
+    # Проверка Python
+    if ! command -v python3 &>/dev/null; then
+        echo "Устанавливаем Python3..."
+        pkg install python -y || error_exit "Ошибка установки Python"
+    fi
 
-echo "-----------------------------------------"
-echo "Удаляем старую версию репозитория (если есть)..."
-rm -rf rade
+    # Проверка pip
+    if ! command -v pip3 &>/dev/null; then
+        echo "Устанавливаем pip..."
+        python3 -m ensurepip --upgrade || error_exit "Ошибка установки pip"
+    fi
 
-echo "-----------------------------------------"
-echo "Клонируем репозиторий..."
-git clone https://github.com/sdfasdgasdfwe3/rade.git
+    # Установка базовых зависимостей
+    echo "Устанавливаем зависимости..."
+    pip3 install -U requests telethon psutil || error_exit "Ошибка установки зависимостей"
+}
 
-# Переходим в директорию репозитория
-cd rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
+# =============================================
+# Работа с репозиторием
+# =============================================
+setup_repo() {
+    if [ -d "$REPO_DIR/.git" ]; then
+        echo "Обновляем репозиторий..."
+        cd "$REPO_DIR" && git pull || error_exit "Ошибка обновления репозитория"
+    else
+        echo "Клонируем репозиторий..."
+        git clone "$REPO_URL" "$REPO_DIR" || error_exit "Ошибка клонирования"
+        cd "$REPO_DIR" || error_exit "Ошибка перехода в директорию"
+    fi
 
-echo "-----------------------------------------"
-echo "Устанавливаем зависимости Python..."
-pip3 install telethon requests aiohttp
+    # Установка зависимостей из requirements.txt
+    if [ -f "requirements.txt" ]; then
+        pip3 install -U -r requirements.txt || echo "Предупреждение: проблемы с requirements.txt"
+    fi
+}
 
-echo "-----------------------------------------"
-echo "Делаем главный файл исполняемым..."
-chmod +x bot.py
+# =============================================
+# Управление процессами
+# =============================================
+check_running() {
+    # Поиск существующих процессов бота
+    if pgrep -f "python3.*bot\.py" >/dev/null; then
+        error_exit "Бот уже запущен! (обнаружен running process)"
+    fi
+}
 
-echo "-----------------------------------------"
-echo "Создаем .bashrc, если его нет, и добавляем автозапуск..."
-touch ~/.bashrc
-echo 'cd ~/rade && git pull && python3 bot.py' >> ~/.bashrc
+# =============================================
+# Настройка tmux
+# =============================================
+setup_tmux() {
+    echo "Проверка tmux сессии..."
+    if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+        echo "Запускаем бота в новой сессии..."
+        tmux new-session -d -s "$SESSION_NAME" "python3 $REPO_DIR/bot.py" || error_exit "Ошибка запуска tmux"
+        sleep 2
+    fi
 
-# Обновляем cron для автоматического перезапуска (если нужно)
-crontab -l | { cat; echo "@reboot cd ~/rade && git pull && python3 bot.py"; } | crontab -
+    # Проверка жизнеспособности сессии
+    if ! tmux list-sessions | grep -q "$SESSION_NAME"; then
+        error_exit "Сессия tmux не запустилась"
+    fi
+}
 
-echo "Установка завершена. Перезапустите Termux, чтобы бот запускался автоматически."
+# =============================================
+# Настройка автозапуска
+# =============================================
+setup_autostart() {
+    local autostart_cmd="tmux has-session -t $SESSION_NAME 2>/dev/null || tmux new-session -d -s $SESSION_NAME 'python3 $REPO_DIR/bot.py'"
+    
+    if ! grep -qF "$autostart_cmd" ~/.bashrc; then
+        echo "Добавляем автозапуск в .bashrc..."
+        echo -e "\n# Telegram bot autostart\n$autostart_cmd" >> ~/.bashrc
+    else
+        echo "Автозапуск уже настроен"
+    fi
+}
+
+# =============================================
+# Главный процесс выполнения
+# =============================================
+main() {
+    install_deps
+    check_running
+    setup_repo
+    setup_tmux
+    setup_autostart
+    
+    echo -e "\nУстановка завершена! Состояние бота:"
+    tmux list-sessions | grep "$SESSION_NAME"
+    echo "Для подключения используйте: tmux attach -t $SESSION_NAME"
+}
+
+# Запуск главной функции
+main
