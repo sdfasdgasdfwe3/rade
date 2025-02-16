@@ -85,7 +85,11 @@ if is_bot_running():
     print("⚠️ Бот уже запущен! Второй экземпляр запускать нельзя.")
     sys.exit(1)
 
-client = TelegramClient(f"session_{PHONE_NUMBER.replace('+', '')}", API_ID, API_HASH)
+# Проверка существования сессии
+session_file = f"session_{PHONE_NUMBER.replace('+', '')}.session"
+
+# Создаем объект клиента
+client = TelegramClient(session_file, API_ID, API_HASH)
 
 def discard_local_changes():
     try:
