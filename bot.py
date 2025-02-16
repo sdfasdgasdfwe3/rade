@@ -94,7 +94,7 @@ if not os.path.exists(session_file):
 else:
     print(f"{EMOJIS['info']} Сессия для {PHONE_NUMBER} найдена. Будет использоваться существующая сессия.")
 
-# Создаем объект клиента
+# Создаем объект клиента, используя файл сессии
 client = TelegramClient(session_file, API_ID, API_HASH)
 
 def discard_local_changes():
