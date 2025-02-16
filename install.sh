@@ -27,10 +27,17 @@ fi
 SESSION_FILE="session_$(cat config.json | jq -r '.PHONE_NUMBER' | sed 's/+/ /g').session"
 
 echo "-----------------------------------------"
-echo "Создаём резервную копию сессии..."
+echo "Проверяем наличие файла сессии..."
+
+# Проверка существования и содержимого файла сессии
 if [ -f "$SESSION_FILE" ]; then
-    cp "$SESSION_FILE" "${SESSION_FILE}.backup"
-    echo "Резервная копия сессии создана: ${SESSION_FILE}.backup"
+    if [ ! -s "$SESSION_FILE" ]; then
+        echo "Файл сессии пустой. Он будет перезаписан при следующем запуске бота."
+    else
+        echo "Сессия найдена. Создаём резервную копию..."
+        cp "$SESSION_FILE" "${SESSION_FILE}.backup"
+        echo "Резервная копия сессии создана: ${SESSION_FILE}.backup"
+    fi
 else
     echo "Сессия не найдена. Резервная копия не требуется."
 fi
