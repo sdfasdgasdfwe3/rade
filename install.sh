@@ -23,6 +23,18 @@ else
   echo "Git уже установлен."
 fi
 
+# Путь к файлу сессии
+SESSION_FILE="session_$(cat config.json | jq -r '.PHONE_NUMBER' | sed 's/+/ /g').session"
+
+echo "-----------------------------------------"
+echo "Создаём резервную копию сессии..."
+if [ -f "$SESSION_FILE" ]; then
+    cp "$SESSION_FILE" "${SESSION_FILE}.backup"
+    echo "Резервная копия сессии создана: ${SESSION_FILE}.backup"
+else
+    echo "Сессия не найдена. Резервная копия не требуется."
+fi
+
 echo "-----------------------------------------"
 echo "Удаляем старую версию репозитория (если есть)..."
 rm -rf rade
@@ -41,6 +53,15 @@ if ! pip show telethon &>/dev/null || ! pip show requests &>/dev/null || ! pip s
   pip install telethon requests psutil
 else
   echo "Все зависимости уже установлены."
+fi
+
+echo "-----------------------------------------"
+echo "Возвращаем резервную копию сессии, если она была создана..."
+if [ -f "${SESSION_FILE}.backup" ]; then
+    cp "${SESSION_FILE}.backup" "$SESSION_FILE"
+    echo "Резервная копия сессии восстановлена."
+else
+    echo "Резервная копия не найдена. Создайте новую сессию при первом запуске."
 fi
 
 echo "-----------------------------------------"
