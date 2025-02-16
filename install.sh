@@ -6,12 +6,22 @@ echo "Обновляем пакеты..."
 pkg update -y && pkg upgrade -y
 
 echo "-----------------------------------------"
-echo "Устанавливаем Python..."
-pkg install python -y
+echo "Проверяем установку Python..."
+if ! command -v python &>/dev/null; then
+  echo "Python не установлен. Устанавливаем..."
+  pkg install python -y
+else
+  echo "Python уже установлен."
+fi
 
 echo "-----------------------------------------"
-echo "Устанавливаем Git..."
-pkg install git -y
+echo "Проверяем установку Git..."
+if ! command -v git &>/dev/null; then
+  echo "Git не установлен. Устанавливаем..."
+  pkg install git -y
+else
+  echo "Git уже установлен."
+fi
 
 echo "-----------------------------------------"
 echo "Удаляем старую версию репозитория (если есть)..."
@@ -25,8 +35,28 @@ git clone https://github.com/sdfasdgasdfwe3/rade.git
 cd rade || { echo "Ошибка: не удалось перейти в директорию 'rade'"; exit 1; }
 
 echo "-----------------------------------------"
-echo "Устанавливаем зависимости Python..."
-pip install telethon requests psutil
+echo "Проверяем установленные зависимости..."
+if ! pip show telethon &>/dev/null || ! pip show requests &>/dev/null || ! pip show psutil &>/dev/null; then
+  echo "Зависимости не установлены. Устанавливаем..."
+  pip install telethon requests psutil
+else
+  echo "Все зависимости уже установлены."
+fi
+
+echo "-----------------------------------------"
+echo "Проверяем, была ли выполнена авторизация..."
+
+# Проверим, существует ли файл, указывающий на успешную авторизацию
+if [ -f "auth_token.txt" ]; then
+  echo "Авторизация уже выполнена."
+else
+  echo "Авторизация не выполнена. Пожалуйста, введите данные для авторизации..."
+  # Здесь будет запрос для авторизации (например, токен или логин/пароль)
+  # В этом примере создается файл с токеном (запросите свой механизм авторизации)
+  read -p "Введите ваш токен: " token
+  echo $token > auth_token.txt
+  echo "Авторизация успешно выполнена."
+fi
 
 echo "-----------------------------------------"
 echo "Запускаем бота..."
