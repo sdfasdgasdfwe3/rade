@@ -23,8 +23,8 @@ else
   echo "Git уже установлен."
 fi
 
-# Путь к файлу сессии
-SESSION_FILE="session_$(cat config.json | jq -r '.PHONE_NUMBER' | sed 's/+/ /g').session"
+# Используем абсолютный путь к файлу сессии
+SESSION_FILE="$HOME/session_$(cat config.json | jq -r '.PHONE_NUMBER' | sed 's/+/ /g').session"
 echo "Путь к файлу сессии: $SESSION_FILE"
 
 echo "-----------------------------------------"
