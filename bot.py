@@ -85,8 +85,14 @@ if is_bot_running():
     print("⚠️ Бот уже запущен! Второй экземпляр запускать нельзя.")
     sys.exit(1)
 
-# Проверка существования сессии
+# Создаем имя файла сессии
 session_file = f"session_{PHONE_NUMBER.replace('+', '')}.session"
+
+# Проверка, существует ли файл сессии
+if not os.path.exists(session_file):
+    print(f"{EMOJIS['info']} Сессия не найдена, будет создана новая сессия для {PHONE_NUMBER}")
+else:
+    print(f"{EMOJIS['info']} Сессия для {PHONE_NUMBER} найдена. Будет использоваться существующая сессия.")
 
 # Создаем объект клиента
 client = TelegramClient(session_file, API_ID, API_HASH)
