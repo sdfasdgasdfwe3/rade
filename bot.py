@@ -41,11 +41,12 @@ client = TelegramClient(f'session_{PHONE_NUMBER}', API_ID, API_HASH)
 
 async def authorize():
     try:
-        await client.start(phone=PHONE_NUMBER, code_callback=lambda: input("Введите код подтверждения: "))
+        await client.start(
+            phone=PHONE_NUMBER,
+            code_callback=lambda: input("Введите код подтверждения из Telegram: "),
+            password=lambda: input("Введите пароль двухэтапной аутентификации: ") if input("Требуется пароль? (y/n): ").lower() == "y" else None
+        )
         logger.info("Авторизация успешна!")
-    except SessionPasswordNeededError:
-        password = input("Введите пароль двухэтапной аутентификации: ")
-        await client.start(password=password)
     except Exception as e:
         logger.error(f"Ошибка авторизации: {e}")
         raise
@@ -54,20 +55,10 @@ async def main():
     try:
         await authorize()
         logger.info("Бот активен. Для выхода нажмите Ctrl+C.")
-        
         while True:
-            try:
-                # Пример проверки активности Termux
-                if os.system("pgrep termux > /dev/null") != 0:
-                    logger.warning("Termux не активен!")
-                
-                await asyncio.sleep(60)
-            except KeyboardInterrupt:
-                logger.info("Завершение работы...")
-                await client.disconnect()
-                break
-            except Exception as e:
-                logger.error(f"Ошибка в цикле: {e}")
+            await asyncio.sleep(3600)  # Бесконечный цикл
+    except KeyboardInterrupt:
+        logger.info("Завершение работы...")
     except Exception as e:
         logger.error(f"Фатальная ошибка: {e}")
     finally:
