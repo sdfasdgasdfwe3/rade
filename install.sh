@@ -15,9 +15,9 @@ error_exit() {
 echo "Обновление пакетов..."
 pkg update -y && pkg upgrade -y || error_exit "Не удалось обновить пакеты."
 
-# Установка зависимостей
-echo "Установка Python, Git и pip..."
-pkg install -y python git python-pip || error_exit "Не удалось установить зависимости."
+# Установка зависимостей (добавлен wget)
+echo "Установка Python, Git, pip и wget..."
+pkg install -y python git python-pip wget || error_exit "Не удалось установить зависимости."
 
 # Установка Telethon
 echo "Установка библиотеки Telethon..."
