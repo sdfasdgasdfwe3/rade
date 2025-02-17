@@ -8,38 +8,35 @@ error_exit() {
 echo "🔄 Обновление пакетов..."
 pkg update -y && pkg upgrade -y || error_exit "Не удалось обновить пакеты."
 
-echo "📦 Установка зависимостей..."
-pkg install -y python git python-pip wget psutil || error_exit "Не удалось установить зависимости."
+echo "📦 Установка системных зависимостей..."
+pkg install -y python git wget || error_exit "Не удалось установить зависимости."
 
 echo "🐍 Создание виртуального окружения..."
 python -m venv "$HOME/rade/venv" || error_exit "Ошибка при создании venv."
 source "$HOME/rade/venv/bin/activate" || error_exit "Ошибка активации venv."
 
-echo "🔧 Установка библиотек..."
-pip install telethon requests || error_exit "Ошибка установки библиотек."
+echo "🔧 Установка Python-библиотек..."
+pip install telethon requests psutil || error_exit "Ошибка установки библиотек."
 
 bot_dir="$HOME/rade"
 mkdir -p "$bot_dir" || error_exit "Не удалось создать директорию."
 cd "$bot_dir" || error_exit "Не удалось перейти в директорию."
 
 echo "⬇️ Скачивание файлов..."
-wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py || error_exit "Ошибка загрузки bot.py."
-wget -O animation_script.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py || error_exit "Ошибка загрузки animation_script.py."
+wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py
+wget -O animation_script.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py
 
 [ ! -f bot.py ] && error_exit "Файл bot.py не найден."
 [ ! -f animation_script.py ] && error_exit "Файл animation_script.py не найден."
 
-if [ ! -f config.json ]; then
+if [ ! -f config.txt ]; then
     read -p "📝 Введите API_ID: " api_id
     read -p "📝 Введите API_HASH: " api_hash
     read -p "📞 Введите номер телефона: " phone
-    cat > config.json << EOL
-{
-    "API_ID": "$api_id",
-    "API_HASH": "$api_hash",
-    "PHONE_NUMBER": "$phone",
-    "selected_animation": 1
-}
+    cat > config.txt << EOL
+API_ID=$api_id
+API_HASH=$api_hash
+PHONE_NUMBER=$phone
 EOL
     echo "✅ Конфиг создан!"
 fi
