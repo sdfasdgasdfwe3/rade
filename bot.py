@@ -1,7 +1,7 @@
 import os
 import asyncio
 import sys
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 
 def load_config():
@@ -44,12 +44,26 @@ async def authorize():
         print(f"❌ Ошибка авторизации: {e}")
         sys.exit(1)
 
+async def handle_message(event):
+    # Проверяем, что сообщение отправлено ботом и содержит команду /m
+    if event.sender_id == event.client.my_id and event.message.text == '/m':
+        # Список доступных анимаций (пример)
+        animations = ["Анимация 1", "Анимация 2", "Анимация 3"]
+        await event.reply("📃 Доступные анимации:\n" + "\n".join(animations))
+
 async def main():
     try:
         await authorize()
+        me = await client.get_me()
+        client.my_id = me.id  # Сохраняем ID бота для проверки в обработчике
         print("\n🤖 Бот активен. Закройте Termux для остановки.")
-        while True:
-            await asyncio.sleep(3600)
+
+        # Регистрируем обработчик сообщений
+        client.add_event_handler(handle_message)
+
+        # Запускаем бесконечное ожидание сообщений
+        await client.run_until_disconnected()
+
     except KeyboardInterrupt:
         print("\n👋 Завершение работы...")
     finally:
