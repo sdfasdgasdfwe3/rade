@@ -1,31 +1,30 @@
+#!/bin/bash
+
 error_exit() {
     echo "❌ Ошибка: $1"
     exit 1
 }
 
-echo "🔄 Обновление Termux..."
-pkg update -y && pkg upgrade -y || error_exit "Не удалось обновить Termux."
+echo "🔄 Обновление пакетов..."
+pkg update -y && pkg upgrade -y || error_exit "Не удалось обновить пакеты."
 
-echo "📦 Установка системных пакетов..."
-pkg install -y python wget git || error_exit "Не удалось установить системные пакеты."
+echo "📦 Установка зависимостей..."
+pkg install -y python git python-pip wget || error_exit "Не удалось установить зависимости."
 
 echo "🐍 Создание виртуального окружения..."
-python -m venv "$HOME/rade/venv" || error_exit "Ошибка создания venv."
+python -m venv "$HOME/rade/venv" || error_exit "Ошибка при создании venv."
 source "$HOME/rade/venv/bin/activate" || error_exit "Ошибка активации venv."
 
-echo "🔧 Установка Python-библиотек..."
-pip install telethon requests psutil || error_exit "Ошибка установки библиотек."
+echo "🔧 Установка Telethon..."
+pip install telethon || error_exit "Ошибка установки Telethon."
 
 bot_dir="$HOME/rade"
 mkdir -p "$bot_dir" || error_exit "Не удалось создать директорию."
 cd "$bot_dir" || error_exit "Не удалось перейти в директорию."
 
-echo "⬇️ Скачивание файлов..."
-wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py
-wget -O animation_script.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/animation_script.py
-
+echo "⬇️ Скачивание bot.py..."
+wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py || error_exit "Ошибка загрузки bot.py."
 [ ! -f bot.py ] && error_exit "Файл bot.py не найден."
-[ ! -f animation_script.py ] && error_exit "Файл animation_script.py не найден."
 
 if [ ! -f config.txt ]; then
     read -p "📝 Введите API_ID: " api_id
