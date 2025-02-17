@@ -2,55 +2,50 @@
 
 # Логирование установки
 log_file="install.log"
-echo "Логирование установки в файл: $log_file"
 exec > >(tee -a "$log_file") 2>&1
 
-# Функция для обработки ошибок
 error_exit() {
     echo "Ошибка: $1"
     exit 1
 }
 
-# Обновление пакетов Termux
 echo "Обновление пакетов..."
 pkg update -y && pkg upgrade -y || error_exit "Не удалось обновить пакеты."
 
-# Установка зависимостей (добавлен wget)
-echo "Установка Python, Git, pip и wget..."
+echo "Установка зависимостей..."
 pkg install -y python git python-pip wget || error_exit "Не удалось установить зависимости."
 
-# Установка Telethon
-echo "Установка библиотеки Telethon..."
-pip install telethon || error_exit "Не удалось установить Telethon."
+echo "Создание виртуального окружения..."
+python -m venv "$HOME/rade/venv" || error_exit "Ошибка при создании venv."
+source "$HOME/rade/venv/bin/activate" || error_exit "Ошибка активации venv."
 
-# Создание директории для бота
+echo "Установка Telethon..."
+pip install telethon || error_exit "Ошибка установки Telethon."
+
 bot_dir="$HOME/rade"
-echo "Создание директории для бота: $bot_dir"
 mkdir -p "$bot_dir" || error_exit "Не удалось создать директорию."
 cd "$bot_dir" || error_exit "Не удалось перейти в директорию."
 
-# Скачивание файла bot.py
-echo "Скачивание кода бота..."
-wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py || error_exit "Не удалось скачать bot.py."
+echo "Скачивание bot.py..."
+wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py || error_exit "Ошибка загрузки bot.py."
+[ ! -f bot.py ] && error_exit "Файл bot.py не найден."
 
-# Создание конфигурационного файла (если его нет)
 if [ ! -f config.txt ]; then
-    echo "Создание config.txt..."
+    read -p "Введите API_ID: " api_id
+    read -p "Введите API_HASH: " api_hash
+    read -p "Введите номер телефона: " phone
     cat > config.txt << EOL
-API_ID=your_api_id_here
-API_HASH=your_api_hash_here
-PHONE_NUMBER=your_phone_number_here
+API_ID=$api_id
+API_HASH=$api_hash
+PHONE_NUMBER=$phone
 EOL
-    echo "Замените данные в config.txt на свои!"
-else
-    echo "Файл config.txt уже существует."
 fi
 
-# Создание скрипта для запуска
 echo "Создание скрипта запуска..."
-echo "python3 bot.py" > start.sh
-chmod +x start.sh || error_exit "Не удалось добавить права на выполнение."
+echo -e '#!/bin/bash\nsource venv/bin/activate\npython3 bot.py' > start.sh
+chmod +x start.sh || error_exit "Ошибка прав на start.sh."
 
-# Запуск бота
 echo "Запуск бота..."
-./start.sh
+echo "При первом запуске введите код подтверждения из Telegram."
+nohup ./start.sh > bot.log 2>&1 &
+echo "Бот запущен в фоне. Логи: bot.log."
