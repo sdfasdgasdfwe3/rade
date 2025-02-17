@@ -1,4 +1,6 @@
+import os
 import asyncio
+import sys
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 
@@ -21,7 +23,7 @@ def load_config():
             return int(API_ID), API_HASH, PHONE_NUMBER
     except Exception as e:
         print(f"❌ Ошибка конфигурации: {e}")
-        exit(1)
+        sys.exit(1)
 
 API_ID, API_HASH, PHONE_NUMBER = load_config()
 client = TelegramClient(f'session_{PHONE_NUMBER}', API_ID, API_HASH)
@@ -35,17 +37,17 @@ async def authorize():
         print("✅ Успешная авторизация!")
     except SessionPasswordNeededError:
         print("🔐 Требуется пароль двухэтапной аутентификации!")
-        password = input("🔑 Введите пароль (видимый ввод): ")
+        password = input("🔑 Введите пароль: ")
         await client.sign_in(password=password)
         print("🎉 2FA пройдена!")
     except Exception as e:
         print(f"❌ Ошибка авторизации: {e}")
-        exit(1)
+        sys.exit(1)
 
 async def main():
     try:
         await authorize()
-        print("\n🤖 Бот активен. Для выхода нажмите Ctrl+C.")
+        print("\n🤖 Бот активен. Закройте Termux для остановки.")
         while True:
             await asyncio.sleep(3600)
     except KeyboardInterrupt:
@@ -57,4 +59,5 @@ if __name__ == "__main__":
     try:
         client.loop.run_until_complete(main())
     except Exception as e:
-        print(f"💥 Ошибка при запуске: {e}")
+        print(f"💥 Ошибка: {e}")
+        sys.exit(1)
