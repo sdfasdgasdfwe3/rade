@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Логирование установки
 log_file="install.log"
 exec > >(tee -a "$log_file") 2>&1
 
@@ -34,10 +33,13 @@ if [ ! -f config.txt ]; then
     read -p "Введите API_ID: " api_id
     read -p "Введите API_HASH: " api_hash
     read -p "Введите номер телефона: " phone
+    read -sp "Введите пароль двухэтапной аутентификации (если есть): " password
+    echo ""
     cat > config.txt << EOL
 API_ID=$api_id
 API_HASH=$api_hash
 PHONE_NUMBER=$phone
+PASSWORD=$password
 EOL
 fi
 
@@ -46,6 +48,5 @@ echo -e '#!/bin/bash\nsource venv/bin/activate\npython3 bot.py' > start.sh
 chmod +x start.sh || error_exit "Ошибка прав на start.sh."
 
 echo "Запуск бота..."
-echo "При первом запуске введите код подтверждения из Telegram."
 nohup ./start.sh > bot.log 2>&1 &
 echo "Бот запущен в фоне. Логи: bot.log."
