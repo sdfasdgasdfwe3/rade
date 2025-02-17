@@ -16,11 +16,11 @@ def load_config():
             PHONE_NUMBER = config.get("PHONE_NUMBER")
             
             if not all([API_ID, API_HASH, PHONE_NUMBER]):
-                raise ValueError("Проверьте config.txt!")
+                raise ValueError("🔍 Проверьте config.txt!")
             
             return int(API_ID), API_HASH, PHONE_NUMBER
     except Exception as e:
-        print(f"Ошибка конфигурации: {e}")
+        print(f"❌ Ошибка конфигурации: {e}")
         exit(1)
 
 API_ID, API_HASH, PHONE_NUMBER = load_config()
@@ -30,25 +30,26 @@ async def authorize():
     try:
         await client.start(
             phone=PHONE_NUMBER,
-            code_callback=lambda: input("Введите код из Telegram: ")
+            code_callback=lambda: input("🔢 Введите код из Telegram: ")
         )
-        print("✓ Авторизация успешна!")
+        print("✅ Успешная авторизация!")
     except SessionPasswordNeededError:
-        password = input("Введите пароль 2FA: ")
+        print("🔐 Требуется пароль двухэтапной аутентификации!")
+        password = input("🔑 Введите пароль (видимый ввод): ")
         await client.sign_in(password=password)
-        print("✓ 2FA пройдена!")
+        print("🎉 2FA пройдена!")
     except Exception as e:
-        print(f"Ошибка авторизации: {e}")
+        print(f"❌ Ошибка авторизации: {e}")
         exit(1)
 
 async def main():
     try:
         await authorize()
-        print("Бот активен. Нажмите Ctrl+C для выхода.")
+        print("\n🤖 Бот активен. Для выхода нажмите Ctrl+C.")
         while True:
             await asyncio.sleep(3600)
     except KeyboardInterrupt:
-        print("\nЗавершение работы...")
+        print("\n👋 Завершение работы...")
     finally:
         await client.disconnect()
 
@@ -56,4 +57,4 @@ if __name__ == "__main__":
     try:
         client.loop.run_until_complete(main())
     except Exception as e:
-        print(f"Ошибка при запуске: {e}")
+        print(f"💥 Ошибка при запуске: {e}")
