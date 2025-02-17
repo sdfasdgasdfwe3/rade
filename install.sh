@@ -39,8 +39,10 @@ EOL
 fi
 
 echo "🚀 Создание скрипта запуска..."
-echo -e '#!/bin/bash\nsource venv/bin/activate\npython3 bot.py' > start.sh
+echo -e '#!/bin/bash\nsource venv/bin/activate\ncd ~/rade\npython3 bot.py' > start.sh
 chmod +x start.sh || error_exit "Ошибка прав на start.sh."
 
-echo "🎉 Запуск бота..."
-./start.sh
+echo "⚙️ Настройка автозапуска..."
+echo -e '\n# Автозапуск бота\nif [ ! -f ~/rade/.bot_pid ]; then\n    cd ~/rade && ./start.sh\nfi' >> ~/.bashrc
+
+echo "🎉 Установка завершена! Перезапустите Termux."
