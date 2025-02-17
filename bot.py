@@ -4,7 +4,6 @@ import logging
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -27,26 +26,29 @@ def load_config():
             API_ID = config.get("API_ID")
             API_HASH = config.get("API_HASH")
             PHONE_NUMBER = config.get("PHONE_NUMBER")
+            PASSWORD = config.get("PASSWORD", "")  # Пароль может быть пустым
             
             if not all([API_ID, API_HASH, PHONE_NUMBER]):
                 raise ValueError("Не все параметры указаны в config.txt")
             
-            return int(API_ID), API_HASH, PHONE_NUMBER
+            return int(API_ID), API_HASH, PHONE_NUMBER, PASSWORD
     except Exception as e:
         logger.error(f"Ошибка конфигурации: {e}")
         raise
 
-API_ID, API_HASH, PHONE_NUMBER = load_config()
+API_ID, API_HASH, PHONE_NUMBER, PASSWORD = load_config()
 client = TelegramClient(f'session_{PHONE_NUMBER}', API_ID, API_HASH)
 
 async def authorize():
     try:
-        await client.start(
-            phone=PHONE_NUMBER,
-            code_callback=lambda: input("Введите код подтверждения из Telegram: "),
-            password=lambda: input("Введите пароль двухэтапной аутентификации: ") if input("Требуется пароль? (y/n): ").lower() == "y" else None
-        )
+        await client.start(phone=PHONE_NUMBER)
         logger.info("Авторизация успешна!")
+    except SessionPasswordNeededError:
+        if not PASSWORD:
+            logger.error("Требуется пароль двухэтапной аутентификации!")
+            raise
+        await client.sign_in(password=PASSWORD)
+        logger.info("2FA успешно пройдена!")
     except Exception as e:
         logger.error(f"Ошибка авторизации: {e}")
         raise
@@ -56,7 +58,7 @@ async def main():
         await authorize()
         logger.info("Бот активен. Для выхода нажмите Ctrl+C.")
         while True:
-            await asyncio.sleep(3600)  # Бесконечный цикл
+            await asyncio.sleep(3600)
     except KeyboardInterrupt:
         logger.info("Завершение работы...")
     except Exception as e:
