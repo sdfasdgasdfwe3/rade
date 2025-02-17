@@ -1,71 +1,47 @@
 #!/bin/bash
 
-# Устанавливаем необходимые зависимости
-pkg update && pkg upgrade -y
-pkg install python -y
-pkg install git -y
-pkg install python-pip -y
+# Настройка логирования
+log_file="setup.log"
+echo "Логирование установки в файл: $log_file"
+exec > >(tee -a "$log_file") 2>&1
 
-# Устанавливаем telethon для работы с Telegram
-pip install telethon
+# Установка зависимостей
+echo "Обновление пакетов..."
+pkg update && pkg upgrade -y || { echo "Ошибка при обновлении пакетов"; exit 1; }
 
-# Переходим в директорию для бота
-mkdir -p /data/data/com.termux/files/home/rade
-cd /data/data/com.termux/files/home/rade
+echo "Установка Python, Git и pip..."
+pkg install python -y || { echo "Ошибка при установке Python"; exit 1; }
+pkg install git -y || { echo "Ошибка при установке Git"; exit 1; }
+pkg install python-pip -y || { echo "Ошибка при установке pip"; exit 1; }
 
-# Скачиваем последние файлы с репозитория
-git clone https://raw.githubusercontent.com/sdfasdgasdfwe3/rade .
+echo "Установка Telethon..."
+pip install telethon || { echo "Ошибка при установке Telethon"; exit 1; }
 
-# Создаем конфигурационный файл с API-данными
-echo "API_ID=your_api_id_here" > config.txt
-echo "API_HASH=your_api_hash_here" >> config.txt
-echo "PHONE_NUMBER=your_phone_number_here" >> config.txt
+# Создание директории для бота
+bot_dir="/data/data/com.termux/files/home/rade"
+echo "Создание директории для бота: $bot_dir"
+mkdir -p "$bot_dir" || { echo "Ошибка при создании директории"; exit 1; }
+cd "$bot_dir" || { echo "Ошибка при переходе в директорию"; exit 1; }
 
-# Создаем Python-скрипт для бота (если он не был склонирован)
-cat > bot.py << EOL
-import os
-import time
-from telethon import TelegramClient
+# Скачивание файла бота
+echo "Скачивание файла бота..."
+wget -O bot.py https://raw.githubusercontent.com/sdfasdgasdfwe3/rade/main/bot.py || { echo "Ошибка при скачивании bot.py"; exit 1; }
 
-# Чтение данных авторизации
-with open("config.txt", "r") as config_file:
-    config = config_file.readlines()
+# Создание конфигурационного файла
+if [ ! -f config.txt ]; then
+    echo "Создание config.txt..."
+    echo "API_ID=your_api_id_here" > config.txt
+    echo "API_HASH=your_api_hash_here" >> config.txt
+    echo "PHONE_NUMBER=your_phone_number_here" >> config.txt
+else
+    echo "Файл config.txt уже существует."
+fi
 
-API_ID = config[0].strip().split('=')[1]
-API_HASH = config[1].strip().split('=')[1]
-PHONE_NUMBER = config[2].strip().split('=')[1]
-
-# Создание клиента для авторизации
-client = TelegramClient('session_name', API_ID, API_HASH)
-
-# Функция для авторизации
-async def authorize():
-    await client.start(phone=PHONE_NUMBER)
-    print("Авторизация успешна!")
-
-# Основная функция бота
-async def main():
-    await authorize()
-
-    # Ваши действия с ботом
-    print("Бот работает и готов к использованию.")
-    
-    # Периодически проверяем, что Termux открыт
-    while True:
-        try:
-            time.sleep(60)  # Проверяем раз в минуту
-        except KeyboardInterrupt:
-            print("Закрытие бота...")
-            await client.disconnect()
-            break
-
-# Запуск клиента
-client.loop.run_until_complete(main())
-EOL
-
-# Делаем скрипт запуска исполнимым
+# Создание скрипта для запуска
+echo "Создание скрипта запуска..."
 echo "python3 bot.py" > start.sh
-chmod +x start.sh
+chmod +x start.sh || { echo "Ошибка при добавлении прав на выполнение"; exit 1; }
 
-# Запуск бота сразу после установки
+# Запуск бота
+echo "Запуск бота..."
 ./start.sh
