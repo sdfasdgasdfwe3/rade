@@ -2,6 +2,7 @@ import os
 import sys
 import signal
 import atexit
+import sqlite3
 import configparser
 from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded, BadRequest
@@ -98,6 +99,30 @@ def graceful_shutdown(app):
         print(f"❌ Ошибка при завершении сессии: {e}")
     sys.exit(0)
 
+def check_database_lock():
+    """Проверка, заблокирована ли база данных"""
+    session_file = "session.session"
+    if not os.path.exists(session_file):
+        print("⚠️ Файл сессии отсутствует. Создаю новую сессию.")
+        return False  # Файл сессии отсутствует, блокировки нет
+
+    try:
+        # Пытаемся подключиться к базе данных
+        conn = sqlite3.connect(session_file, timeout=5)  # Увеличиваем таймаут
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        conn.close()
+        return False  # База данных не заблокирована
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            print("❌ База данных заблокирована.")
+            return True
+        print(f"⚠️ Ошибка при проверке базы данных: {e}")
+        return False  # Пропускаем другие ошибки
+    except Exception as e:
+        print(f"⚠️ Неизвестная ошибка при проверке базы данных: {e}")
+        return False  # Пропускаем другие ошибки
+
 def main():
     if not os.access(os.getcwd(), os.W_OK):
         print("❌ Нет прав на запись в текущую директорию!")
@@ -133,6 +158,13 @@ def main():
         message.reply("⚡ Бот работает стабильно!")
 
     try:
+        # Проверка блокировки базы данных перед запуском
+        if check_database_lock():
+            print("❌ База данных заблокирована. Очищаю сессию...")
+            cleanup_session()
+            print("🔄 Попробуйте запустить бота снова.")
+            sys.exit(1)
+
         with app:
             print("✅ Авторизация успешна!")
             app.run()  # Запускаем бота внутри контекстного менеджера
