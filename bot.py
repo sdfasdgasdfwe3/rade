@@ -1,19 +1,31 @@
 import os
 import sys
 import signal
+import logging
 import configparser
 from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded
 
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("bot.log"),  # Логи будут записываться в файл bot.log
+        logging.StreamHandler(sys.stdout)  # Логи также будут выводиться в консоль
+    ]
+)
+logger = logging.getLogger(__name__)
+
 def debug_config():
     """Функция для отладки конфига"""
-    print("\n=== ДЕБАГ КОНФИГА ===")
-    print(f"Файл существует: {os.path.exists('config.ini')}")
+    logger.debug("\n=== ДЕБАГ КОНФИГА ===")
+    logger.debug(f"Файл существует: {os.path.exists('config.ini')}")
     if os.path.exists('config.ini'):
         with open('config.ini', 'r') as f:
             content = f.read()
-            print(f"Содержимое:\n{content}")
-    print("====================\n")
+            logger.debug(f"Содержимое:\n{content}")
+    logger.debug("====================\n")
 
 def validate_config(config):
     """Проверка валидности конфига"""
@@ -34,14 +46,14 @@ def setup_config():
             with open(config_path, 'r', encoding='utf-8') as f:
                 config.read_file(f)
             validate_config(config)
-            print("✅ Конфиг валиден")
+            logger.info("✅ Конфиг валиден")
             return config
         except Exception as e:
-            print(f"❌ Ошибка в конфиге: {e}")
+            logger.error(f"❌ Ошибка в конфиге: {e}")
             debug_config()
     
     # Создание нового конфига
-    print("\n=== СОЗДАНИЕ НОВОГО КОНФИГА ===")
+    logger.info("\n=== СОЗДАНИЕ НОВОГО КОНФИГА ===")
     config['pyrogram'] = {}
     
     # Ввод данных с проверкой
@@ -49,7 +61,7 @@ def setup_config():
         api_id = input("Введите API_ID: ").strip()
         if api_id.isdigit():
             break
-        print("API_ID должен быть числом!")
+        logger.warning("API_ID должен быть числом!")
     config['pyrogram']['api_id'] = api_id
     
     config['pyrogram']['api_hash'] = input("Введите API_HASH: ").strip()
@@ -58,7 +70,7 @@ def setup_config():
         phone = input("Номер телефона (+7...): ").strip()
         if phone:
             break
-        print("Номер не может быть пустым!")
+        logger.warning("Номер не может быть пустым!")
     config['pyrogram']['phone_number'] = phone
     
     # Запись и проверка
@@ -70,16 +82,16 @@ def setup_config():
     new_config.read(config_path)
     try:
         validate_config(new_config)
-        print("\n✅ Конфиг успешно создан!")
+        logger.info("\n✅ Конфиг успешно создан!")
         return new_config
     except Exception as e:
-        print(f"❌ Критическая ошибка: {e}")
+        logger.critical(f"❌ Критическая ошибка: {e}")
         debug_config()
         raise
 
 def main():
     if not os.access(os.getcwd(), os.W_OK):
-        print("❌ Нет прав на запись в текущую директорию!")
+        logger.critical("❌ Нет прав на запись в текущую директорию!")
         sys.exit(1)
         
     config = setup_config()
@@ -94,14 +106,18 @@ def main():
             system_version="Termux 1.0"
         )
     except ValueError as e:
-        print(f"❌ Ошибка в данных: {e}")
+        logger.error(f"❌ Ошибка в данных: {e}")
         os.remove('config.ini')
         return main()
 
     # Обработчик сигналов для корректного завершения
     def signal_handler(signum, frame):
-        print("\n🛑 Получен сигнал завершения, останавливаю бота...")
-        app.stop()
+        logger.info("\n🛑 Получен сигнал завершения, останавливаю бота...")
+        try:
+            app.stop()
+            logger.info("✅ Бот успешно остановлен.")
+        except Exception as e:
+            logger.error(f"❌ Ошибка при остановке бота: {e}")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -110,23 +126,24 @@ def main():
     @app.on_message(filters.command("start"))
     def start(client, message):
         message.reply("⚡ Бот работает стабильно!")
+        logger.info("Получена команда /start")
 
     try:
         with app:
-            print("✅ Авторизация успешна!")
+            logger.info("✅ Авторизация успешна!")
             app.run()  # Запускаем бота внутри контекстного менеджера
     except SessionPasswordNeeded:
-        print("\n🔐 Требуется пароль двухэтапной аутентификации:")
+        logger.info("\n🔐 Требуется пароль двухэтапной аутентификации:")
         app.password = input("Пароль: ").strip()
         try:
             with app:
-                print("✅ Авторизация с паролем успешна!")
+                logger.info("✅ Авторизация с паролем успешна!")
                 app.run()  # Запускаем внутри контекста
         except Exception as e:
-            print(f"❌ Ошибка: {e}")
+            logger.error(f"❌ Ошибка: {e}")
             sys.exit(1)
     except Exception as e:
-        print(f"❌ Критическая ошибка: {e}")
+        logger.critical(f"❌ Критическая ошибка: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
