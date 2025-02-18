@@ -3,7 +3,7 @@ import sys
 import signal
 import configparser
 from pyrogram import Client, filters
-from pyrogram.errors import SessionPasswordNeeded
+from pyrogram.errors import SessionPasswordNeeded, BadRequest
 
 def debug_config():
     """Функция для отладки конфига"""
@@ -77,6 +77,16 @@ def setup_config():
         debug_config()
         raise
 
+def cleanup_session():
+    """Очистка сессии, если она заблокирована"""
+    session_file = "session.session"
+    if os.path.exists(session_file):
+        try:
+            os.remove(session_file)
+            print("⚠️ Удалена заблокированная сессия.")
+        except Exception as e:
+            print(f"❌ Не удалось удалить сессию: {e}")
+
 def main():
     if not os.access(os.getcwd(), os.W_OK):
         print("❌ Нет прав на запись в текущую директорию!")
@@ -125,6 +135,14 @@ def main():
         except Exception as e:
             print(f"❌ Ошибка: {e}")
             sys.exit(1)
+    except BadRequest as e:
+        if "database is locked" in str(e):
+            print("❌ База данных заблокирована. Очищаю сессию...")
+            cleanup_session()
+            print("🔄 Попробуйте запустить бота снова.")
+        else:
+            print(f"❌ Ошибка BadRequest: {e}")
+        sys.exit(1)
     except Exception as e:
         print(f"❌ Критическая ошибка: {e}")
         sys.exit(1)
