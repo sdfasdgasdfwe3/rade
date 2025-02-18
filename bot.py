@@ -1,7 +1,6 @@
 import os
 import sys
 import signal
-import asyncio
 import configparser
 from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded
@@ -78,27 +77,6 @@ def setup_config():
         debug_config()
         raise
 
-async def run_bot(app):
-    try:
-        await app.start()
-        print("✅ Авторизация успешна!")
-        await app.run_until_disconnected()
-    except SessionPasswordNeeded:
-        print("\n🔐 Требуется пароль двухэтапной аутентификации:")
-        app.password = input("Пароль: ").strip()
-        try:
-            await app.start()
-            print("✅ Авторизация с паролем успешна!")
-            await app.run_until_disconnected()
-        except Exception as e:
-            print(f"❌ Ошибка: {e}")
-            sys.exit(1)
-    except Exception as e:
-        print(f"❌ Критическая ошибка: {e}")
-        sys.exit(1)
-    finally:
-        await app.stop()
-
 def main():
     if not os.access(os.getcwd(), os.W_OK):
         print("❌ Нет прав на запись в текущую директорию!")
@@ -133,11 +111,23 @@ def main():
     def start(client, message):
         message.reply("⚡ Бот работает стабильно!")
 
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(run_bot(app))
-    finally:
-        loop.close()
+        with app:
+            print("✅ Авторизация успешна!")
+            app.run()  # Запускаем бота внутри контекстного менеджера
+    except SessionPasswordNeeded:
+        print("\n🔐 Требуется пароль двухэтапной аутентификации:")
+        app.password = input("Пароль: ").strip()
+        try:
+            with app:
+                print("✅ Авторизация с паролем успешна!")
+                app.run()  # Запускаем внутри контекста
+        except Exception as e:
+            print(f"❌ Ошибка: {e}")
+            sys.exit(1)
+    except Exception as e:
+        print(f"❌ Критическая ошибка: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    main()  # Убираем цикл while True
