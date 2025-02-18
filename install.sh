@@ -1,19 +1,21 @@
 #!/bin/bash
 
-# Обновление пакетов
 pkg update -y
-
-# Установка зависимостей
 pkg install -y git python
 
-# Клонирование/обновление репозитория
+# Используем публичный репозиторий
+REPO_URL="https://github.com/sdfasdgasdfwe3/rade.git"
+
 if [ -d "rade" ]; then
     cd rade
     git pull
 else
-    git clone https://github.com/yourusername/rade.git
+    echo "Клонируем репозиторий..."
+    git clone $REPO_URL
     cd rade
 fi
+
+# Остальная часть скрипта без изменений...
 
 # Установка Python-зависимостей
 pip install --upgrade pyrogram tgcrypto requests
