@@ -1,6 +1,7 @@
 import os
 import sys
 import signal
+import atexit
 import configparser
 from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded, BadRequest
@@ -87,6 +88,16 @@ def cleanup_session():
         except Exception as e:
             print(f"❌ Не удалось удалить сессию: {e}")
 
+def graceful_shutdown(app):
+    """Функция для корректного завершения работы"""
+    print("\n🛑 Завершение работы бота...")
+    try:
+        app.stop()
+        print("✅ Сессия Telegram завершена.")
+    except Exception as e:
+        print(f"❌ Ошибка при завершении сессии: {e}")
+    sys.exit(0)
+
 def main():
     if not os.access(os.getcwd(), os.W_OK):
         print("❌ Нет прав на запись в текущую директорию!")
@@ -110,12 +121,12 @@ def main():
 
     # Обработчик сигналов для корректного завершения
     def signal_handler(signum, frame):
-        print("\n🛑 Получен сигнал завершения, останавливаю бота...")
-        app.stop()
-        sys.exit(0)
+        graceful_shutdown(app)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    # Регистрация обработчиков сигналов
+    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler)  # Сигнал завершения
+    atexit.register(graceful_shutdown, app)  # При завершении работы Python
 
     @app.on_message(filters.command("start"))
     def start(client, message):
