@@ -1,11 +1,10 @@
 import os
 import sys
 import signal
-import atexit
-import sqlite3
+import asyncio
 import configparser
 from pyrogram import Client, filters
-from pyrogram.errors import SessionPasswordNeeded, BadRequest
+from pyrogram.errors import SessionPasswordNeeded
 
 def debug_config():
     """Функция для отладки конфига"""
@@ -79,49 +78,26 @@ def setup_config():
         debug_config()
         raise
 
-def cleanup_session():
-    """Очистка сессии, если она заблокирована"""
-    session_file = "session.session"
-    if os.path.exists(session_file):
+async def run_bot(app):
+    try:
+        await app.start()
+        print("✅ Авторизация успешна!")
+        await app.run_until_disconnected()
+    except SessionPasswordNeeded:
+        print("\n🔐 Требуется пароль двухэтапной аутентификации:")
+        app.password = input("Пароль: ").strip()
         try:
-            os.remove(session_file)
-            print("⚠️ Удалена заблокированная сессия.")
+            await app.start()
+            print("✅ Авторизация с паролем успешна!")
+            await app.run_until_disconnected()
         except Exception as e:
-            print(f"❌ Не удалось удалить сессию: {e}")
-
-def graceful_shutdown(app):
-    """Функция для корректного завершения работы"""
-    print("\n🛑 Завершение работы бота...")
-    try:
-        app.stop()
-        print("✅ Сессия Telegram завершена.")
+            print(f"❌ Ошибка: {e}")
+            sys.exit(1)
     except Exception as e:
-        print(f"❌ Ошибка при завершении сессии: {e}")
-    sys.exit(0)
-
-def check_database_lock():
-    """Проверка, заблокирована ли база данных"""
-    session_file = "session.session"
-    if not os.path.exists(session_file):
-        print("⚠️ Файл сессии отсутствует. Создаю новую сессию.")
-        return False  # Файл сессии отсутствует, блокировки нет
-
-    try:
-        # Пытаемся подключиться к базе данных
-        conn = sqlite3.connect(session_file, timeout=5)  # Увеличиваем таймаут
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        conn.close()
-        return False  # База данных не заблокирована
-    except sqlite3.OperationalError as e:
-        if "database is locked" in str(e):
-            print("❌ База данных заблокирована.")
-            return True
-        print(f"⚠️ Ошибка при проверке базы данных: {e}")
-        return False  # Пропускаем другие ошибки
-    except Exception as e:
-        print(f"⚠️ Неизвестная ошибка при проверке базы данных: {e}")
-        return False  # Пропускаем другие ошибки
+        print(f"❌ Критическая ошибка: {e}")
+        sys.exit(1)
+    finally:
+        await app.stop()
 
 def main():
     if not os.access(os.getcwd(), os.W_OK):
@@ -146,49 +122,22 @@ def main():
 
     # Обработчик сигналов для корректного завершения
     def signal_handler(signum, frame):
-        graceful_shutdown(app)
+        print("\n🛑 Получен сигнал завершения, останавливаю бота...")
+        app.stop()
+        sys.exit(0)
 
-    # Регистрация обработчиков сигналов
-    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
-    signal.signal(signal.SIGTERM, signal_handler)  # Сигнал завершения
-    atexit.register(graceful_shutdown, app)  # При завершении работы Python
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     @app.on_message(filters.command("start"))
     def start(client, message):
         message.reply("⚡ Бот работает стабильно!")
 
+    loop = asyncio.get_event_loop()
     try:
-        # Проверка блокировки базы данных перед запуском
-        if check_database_lock():
-            print("❌ База данных заблокирована. Очищаю сессию...")
-            cleanup_session()
-            print("🔄 Попробуйте запустить бота снова.")
-            sys.exit(1)
-
-        with app:
-            print("✅ Авторизация успешна!")
-            app.run()  # Запускаем бота внутри контекстного менеджера
-    except SessionPasswordNeeded:
-        print("\n🔐 Требуется пароль двухэтапной аутентификации:")
-        app.password = input("Пароль: ").strip()
-        try:
-            with app:
-                print("✅ Авторизация с паролем успешна!")
-                app.run()  # Запускаем внутри контекста
-        except Exception as e:
-            print(f"❌ Ошибка: {e}")
-            sys.exit(1)
-    except BadRequest as e:
-        if "database is locked" in str(e):
-            print("❌ База данных заблокирована. Очищаю сессию...")
-            cleanup_session()
-            print("🔄 Попробуйте запустить бота снова.")
-        else:
-            print(f"❌ Ошибка BadRequest: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"❌ Критическая ошибка: {e}")
-        sys.exit(1)
+        loop.run_until_complete(run_bot(app))
+    finally:
+        loop.close()
 
 if __name__ == "__main__":
-    main()  # Убираем цикл while True
+    main()
