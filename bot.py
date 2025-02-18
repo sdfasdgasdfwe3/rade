@@ -1,77 +1,57 @@
 import os
-import asyncio
-import sys
-from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError
+import configparser
+from pyrogram import Client, filters
+from pyrogram.errors import SessionPasswordNeeded, BadRequest
 
-def load_config():
+config = configparser.ConfigParser()
+
+def setup_config():
+    if not os.path.exists('config.ini'):
+        print("Первоначальная настройка:")
+        config['pyrogram'] = {
+            'api_id': input("Введите API_ID: "),
+            'api_hash': input("Введите API_HASH: "),
+            'phone_number': input("Введите номер телефона (с кодом страны): ")
+        }
+        with open('config.ini', 'w') as f:
+            config.write(f)
+    else:
+        config.read('config.ini')
+
+def get_client():
+    return Client(
+        "session",
+        api_id=config.get('pyrogram', 'api_id'),
+        api_hash=config.get('pyrogram', 'api_hash'),
+        phone_number=config.get('pyrogram', 'phone_number')
+    )
+
+def main():
+    setup_config()
+    app = get_client()
+    
     try:
-        with open("config.txt", "r") as f:
-            config = {}
-            for line in f:
-                if '=' in line:
-                    key, value = line.strip().split('=', 1)
-                    config[key.strip()] = value.strip()
-            
-            API_ID = config.get("API_ID")
-            API_HASH = config.get("API_HASH")
-            PHONE_NUMBER = config.get("PHONE_NUMBER")
-            
-            if not all([API_ID, API_HASH, PHONE_NUMBER]):
-                raise ValueError("🔍 Проверьте config.txt!")
-            
-            return int(API_ID), API_HASH, PHONE_NUMBER
+        with app:
+            print("✓ Успешная авторизация!")
+    except SessionPasswordNeeded:
+        print("⚠ Требуется двухэтапная аутентификация")
+        app.password = input("Введите пароль: ")
+        try:
+            with app:
+                print("✓ Успешная авторизация с паролем!")
+        except Exception as e:
+            print(f"❌ Ошибка: {e}")
+            exit()
     except Exception as e:
-        print(f"❌ Ошибка конфигурации: {e}")
-        sys.exit(1)
+        print(f"❌ Критическая ошибка: {e}")
+        exit()
 
-API_ID, API_HASH, PHONE_NUMBER = load_config()
-client = TelegramClient(f'session_{PHONE_NUMBER}', API_ID, API_HASH)
+    @app.on_message(filters.command("start"))
+    def handle_start(client, message):
+        message.reply("🚀 Бот успешно запущен!")
 
-async def authorize():
-    try:
-        await client.start(
-            phone=PHONE_NUMBER,
-            code_callback=lambda: input("🔢 Введите код из Telegram: ")
-        )
-        print("✅ Успешная авторизация!")
-    except SessionPasswordNeededError:
-        print("🔐 Требуется пароль двухэтапной аутентификации!")
-        password = input("🔑 Введите пароль: ")
-        await client.sign_in(password=password)
-        print("🎉 2FA пройдена!")
-    except Exception as e:
-        print(f"❌ Ошибка авторизации: {e}")
-        sys.exit(1)
-
-async def handle_message(event):
-    # Проверяем, что сообщение отправлено ботом и содержит команду /m
-    if event.sender_id == event.client.my_id and event.message.text == '/m':
-        # Список доступных анимаций (пример)
-        animations = ["Анимация 1", "Анимация 2", "Анимация 3"]
-        await event.reply("📃 Доступные анимации:\n" + "\n".join(animations))
-
-async def main():
-    try:
-        await authorize()
-        me = await client.get_me()
-        client.my_id = me.id  # Сохраняем ID бота для проверки в обработчике
-        print("\n🤖 Бот активен. Закройте Termux для остановки.")
-
-        # Регистрируем обработчик сообщений
-        client.add_event_handler(handle_message)
-
-        # Запускаем бесконечное ожидание сообщений
-        await client.run_until_disconnected()
-
-    except KeyboardInterrupt:
-        print("\n👋 Завершение работы...")
-    finally:
-        await client.disconnect()
+    print("\nБот работает...")
+    app.run()
 
 if __name__ == "__main__":
-    try:
-        client.loop.run_until_complete(main())
-    except Exception as e:
-        print(f"💥 Ошибка: {e}")
-        sys.exit(1)
+    main()
