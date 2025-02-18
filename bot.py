@@ -1,5 +1,6 @@
 import os
 import sys
+import signal
 import configparser
 from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded
@@ -97,32 +98,36 @@ def main():
         os.remove('config.ini')
         return main()
 
+    # Обработчик сигналов для корректного завершения
+    def signal_handler(signum, frame):
+        print("\n🛑 Получен сигнал завершения, останавливаю бота...")
+        app.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    @app.on_message(filters.command("start"))
+    def start(client, message):
+        message.reply("⚡ Бот работает стабильно!")
+
     try:
         with app:
             print("✅ Авторизация успешна!")
+            app.run()  # Запускаем бота внутри контекстного менеджера
     except SessionPasswordNeeded:
         print("\n🔐 Требуется пароль двухэтапной аутентификации:")
         app.password = input("Пароль: ").strip()
         try:
             with app:
                 print("✅ Авторизация с паролем успешна!")
+                app.run()  # Запускаем внутри контекста
         except Exception as e:
             print(f"❌ Ошибка: {e}")
             sys.exit(1)
-
-    @app.on_message(filters.command("start"))
-    def start(client, message):
-        message.reply("⚡ Бот работает стабильно!")
-
-    print("\n🚀 Бот запущен. Для выхода: Ctrl+C")
-    app.run()
+    except Exception as e:
+        print(f"❌ Критическая ошибка: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    while True:
-        try:
-            main()
-            break
-        except Exception as e:
-            print(f"🛑 Ошибка: {e}")
-            if input("Попробовать снова? (y/n): ").lower() != 'y':
-                break
+    main()  # Убираем цикл while True
