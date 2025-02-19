@@ -48,14 +48,17 @@ async def authorize():
 async def main():
     if await authorize():
         print("Бот работает...")
-        await asyncio.Future()  # Бот работает бесконечно
+        try:
+            await client.run_until_disconnected()  # Ожидаем событий бесконечно
+        except Exception as e:
+            print(f"Ошибка в работе бота: {e}")
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("Бот остановлен пользователем.")
     finally:
+        client.disconnect()
         loop.close()
