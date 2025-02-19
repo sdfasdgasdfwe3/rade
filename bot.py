@@ -4,11 +4,11 @@ import json
 import sqlite3
 from telethon import TelegramClient, errors
 
-# Автообновление репозитория (не трогает сессию)
+# Автообновляем репозиторий (не трогаем сессию)
 os.system('git pull')
 
 CONFIG_FILE = "config.json"
-SESSION_FILE = "session.session"
+SESSION_NAME = "session"  # имя сессии (файл session.session)
 
 def load_or_create_config():
     """Загружает API-данные из файла или запрашивает у пользователя и создает файл."""
@@ -17,49 +17,56 @@ def load_or_create_config():
             return json.load(f)
 
     print("Файл config.json не найден. Создаю новый...")
-
     config = {
         "api_id": int(input('Введите api_id: ')),
         "api_hash": input('Введите api_hash: '),
         "phone_number": input('Введите номер телефона: ')
     }
-
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
-
     print("Конфигурация сохранена в config.json.")
     return config
 
-def unlock_sqlite_session():
-    """Проверяет, заблокирована ли база данных сессии, и снимает блокировку без удаления файла."""
-    if os.path.exists(SESSION_FILE):
+async def safe_connect(client, retries=5, delay=2):
+    """Пытается подключиться к Telegram с повторными попытками, если сессия заблокирована."""
+    for attempt in range(1, retries + 1):
         try:
-            conn = sqlite3.connect(SESSION_FILE)
-            conn.execute("PRAGMA journal_mode=WAL;")  # Переключаем в WAL-режим
-            conn.execute("PRAGMA busy_timeout = 5000;")  # Устанавливаем таймаут ожидания
-            conn.close()
+            await client.connect()
+            return
         except sqlite3.OperationalError as e:
-            print(f"Ошибка при разблокировке сессии: {e}")
+            if "database is locked" in str(e):
+                print(f"База данных заблокирована. Попытка {attempt}/{retries} через {delay} сек...")
+                await asyncio.sleep(delay)
+            else:
+                raise
+    raise Exception("Не удалось подключиться к сессии, база данных постоянно заблокирована.")
 
-# Загружаем API-данные
-config = load_or_create_config()
+async def safe_disconnect(client, retries=5, delay=2):
+    """Пытается корректно отключиться с повторными попытками, если база данных заблокирована."""
+    for attempt in range(1, retries + 1):
+        try:
+            await client.disconnect()
+            return
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                print(f"Ошибка при отключении: база данных заблокирована. Попытка {attempt}/{retries} через {delay} сек...")
+                await asyncio.sleep(delay)
+            else:
+                raise
+    print("Предупреждение: не удалось корректно отключиться, возможно, сессия не сохранена.")
 
-# Снимаем блокировку сессии перед запуском бота
-unlock_sqlite_session()
+def create_client(config):
+    return TelegramClient(SESSION_NAME, config["api_id"], config["api_hash"])
 
-# Создаем клиент
-client = TelegramClient("session", config["api_id"], config["api_hash"])
-
-async def authorize():
+async def authorize(client, config):
     """Функция авторизации в Telegram."""
-    await client.connect()
+    await safe_connect(client)
 
     if await client.is_user_authorized():
         print("Вы уже авторизованы. Запускаем бота...")
         return True
 
     print("Вы не авторизованы. Начинаем процесс авторизации...")
-
     try:
         await client.send_code_request(config["phone_number"])
         code = input('Введите код из Telegram: ')
@@ -83,12 +90,15 @@ async def authorize():
     return True
 
 async def main():
-    if await authorize():
+    config = load_or_create_config()
+    client = create_client(config)
+    if await authorize(client, config):
         print("Бот работает...")
         try:
             await client.run_until_disconnected()
         except Exception as e:
             print(f"Ошибка в работе бота: {e}")
+    await safe_disconnect(client)
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
@@ -96,6 +106,7 @@ if __name__ == "__main__":
         loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("Бот остановлен пользователем.")
+    except Exception as e:
+        print(f"Ошибка: {e}")
     finally:
-        client.disconnect()
         loop.close()
