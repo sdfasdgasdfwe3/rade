@@ -3,12 +3,16 @@ import asyncio
 import json
 import sqlite3
 from telethon import TelegramClient, events, errors
+from animation_script import animations
 
-# Автообновление репозитория (не трогая сессию)
+# Автообновляем репозиторий (не трогая сессию)
 os.system('git pull')
 
 CONFIG_FILE = "config.json"
 SESSION_NAME = "session"  # имя сессии (файл session.session)
+
+# Словарь для хранения выбранных анимаций по чатам
+selected_animations = {}
 
 def load_or_create_config():
     """Загружает API-данные из файла или запрашивает у пользователя и создает файл."""
@@ -25,9 +29,6 @@ def load_or_create_config():
         json.dump(config, f, indent=4)
     print("Конфигурация сохранена в config.json.")
     return config
-
-def create_client(config):
-    return TelegramClient(SESSION_NAME, config["api_id"], config["api_hash"])
 
 async def safe_connect(client, retries=5, delay=2):
     """Пытается подключиться к Telegram с повторными попытками, если сессия заблокирована."""
@@ -57,6 +58,9 @@ async def safe_disconnect(client, retries=5, delay=2):
                 raise
     print("Предупреждение: не удалось корректно отключиться, возможно, сессия не сохранена.")
 
+def create_client(config):
+    return TelegramClient(SESSION_NAME, config["api_id"], config["api_hash"])
+
 async def authorize(client, config):
     """Функция авторизации в Telegram."""
     await safe_connect(client)
@@ -82,69 +86,53 @@ async def authorize(client, config):
     print("Успешная авторизация!")
     return True
 
-# Импортируем анимации из отдельного скрипта
-from animation_script import animations
-
-# Словарь для хранения выбранной анимации для каждого чата
-selected_animations = {}
-
-def get_animation_list():
-    msg = "Доступные анимации:\n"
-    for num, (name, _) in animations.items():
-        msg += f"{num}: {name}\n"
-    msg += "\nЧтобы выбрать анимацию, отправьте команду: /m <номер>"
-    return msg
-
-async def handle_commands(event):
-    """Обработчик команд: /m и /p (бот реагирует только на команды, начинающиеся с '/')"""
-    message = event.message.message.strip()
-    if not message.startswith('/'):
-        return
-
-    if message.startswith('/m'):
-        parts = message.split(maxsplit=1)
-        if len(parts) == 1:
-            # Отправляем список анимаций
-            await event.reply(get_animation_list())
-        else:
-            try:
-                selection = int(parts[1].strip())
-                if selection in animations:
-                    selected_animations[event.chat_id] = selection
-                    # Отправляем сообщение с подтверждением выбора анимации
-                    confirmation = await event.reply(f"Выбрана анимация ({animations[selection][0]})")
-                    # Получаем id бота
-                    me = await event.client.get_me()
-                    # Получаем 4 последних сообщения, отправленные ботом
-                    bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
-                    # Удаляем их
-                    await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
-                else:
-                    await event.reply("Неверный номер анимации. Попробуйте снова.")
-            except ValueError:
-                await event.reply("Пожалуйста, укажите корректный номер анимации после /m.")
-    elif message.startswith('/p'):
-        parts = message.split(maxsplit=1)
-        if len(parts) == 1:
-            await event.reply("Пожалуйста, укажите текст для анимации после команды /p.")
-        else:
-            text = parts[1]
-            anim_number = selected_animations.get(event.chat_id, 1)
-            animation_func = animations[anim_number][1]
-            try:
-                await animation_func(event, text)
-            except Exception as e:
-                await event.reply(f"Ошибка при анимации текста: {e}")
+@events.register(events.NewMessage(pattern=r'^/m\b'))
+async def handle_m_command(event):
+    """Обработка команды /m - выбор анимации."""
+    parts = event.message.text.split()
+    if len(parts) == 1:
+        # Отправляем список доступных анимаций
+        text = "Список доступных анимаций:\n"
+        for num, (name, _) in animations.items():
+            text += f"{num}. {name}\n"
+        await event.respond(text)
     else:
-        # Неизвестная команда – игнорируем
-        pass
+        try:
+            selection = int(parts[1])
+            if selection in animations:
+                selected_animations[event.chat_id] = selection
+                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+                # Удаляем 4 последних сообщения бота
+                me = await event.client.get_me()
+                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
+            else:
+                await event.respond("❌ Неверный номер анимации.")
+        except ValueError:
+            await event.respond("❌ Укажите корректный номер анимации после /m.")
+
+@events.register(events.NewMessage(pattern=r'^/p\b'))
+async def handle_p_command(event):
+    """Обработка команды /p - запуск анимации текста."""
+    parts = event.message.text.split(maxsplit=1)
+    if len(parts) == 1:
+        await event.respond("❌ Укажите текст после /p.")
+    else:
+        text = parts[1]
+        anim_number = selected_animations.get(event.chat_id, 1)
+        animation_func = animations[anim_number][1]
+        try:
+            await animation_func(event, text)
+        except Exception as e:
+            await event.respond(f"⚠ Ошибка анимации: {e}")
 
 async def main():
     config = load_or_create_config()
     client = create_client(config)
     if await authorize(client, config):
+        client.add_event_handler(handle_m_command)
+        client.add_event_handler(handle_p_command)
         print("Бот работает...")
-        client.add_event_handler(handle_commands, events.NewMessage)
         try:
             await client.run_until_disconnected()
         except Exception as e:
