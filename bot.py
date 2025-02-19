@@ -79,7 +79,7 @@ async def authorize(client, config):
     print("Успешная авторизация!")
     return True
 
-@events.register(events.NewMessage(pattern=r'^/m\b'))
+@events.register(events.NewMessage(pattern=r'^/m$'))
 async def handle_m_command(event):
     """Вывод списка анимаций и ожидание выбора."""
     text = "Список доступных анимаций:\n"
@@ -94,23 +94,21 @@ async def handle_message(event):
     """Обработка выбора анимации или анимации текста."""
     chat_id = event.chat_id
 
-    if chat_id in awaiting_animation_choice:
-        try:
-            selection = int(event.text.strip())
-            if selection in animations:
-                selected_animations[chat_id] = selection
-                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-                awaiting_animation_choice.remove(chat_id)
+    if chat_id in awaiting_animation_choice and event.text.isdigit():
+        selection = int(event.text.strip())
+        if selection in animations:
+            selected_animations[chat_id] = selection
+            confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+            awaiting_animation_choice.remove(chat_id)
 
-                me = await event.client.get_me()
-                bot_messages = await event.client.get_messages(chat_id, limit=4, from_user=me.id)
-                await event.client.delete_messages(chat_id, [msg.id for msg in bot_messages])
-            else:
-                await event.respond("❌ Неверный номер анимации. Попробуйте ещё раз.")
-        except ValueError:
-            await event.respond("❌ Введите номер анимации цифрой.")
+            me = await event.client.get_me()
+            bot_messages = await event.client.get_messages(chat_id, limit=4, from_user=me.id)
+            await event.client.delete_messages(chat_id, [msg.id for msg in bot_messages])
+        else:
+            await event.respond("❌ Неверный номер анимации. Попробуйте ещё раз.")
+        return
 
-    elif event.text.startswith("/p "):
+    if event.text.startswith("/p "):
         parts = event.text.split(maxsplit=1)
         if len(parts) == 1:
             await event.respond("❌ Укажите текст после /p.")
