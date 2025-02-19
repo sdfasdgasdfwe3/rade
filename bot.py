@@ -3,7 +3,7 @@ import sys
 import signal
 import configparser
 from pyrogram import Client, filters
-from pyrogram.errors import SessionPasswordNeeded
+from pyrogram.errors import SessionPasswordNeeded, BadRequest
 
 def debug_config():
     """Функция для отладки конфига"""
@@ -77,6 +77,15 @@ def setup_config():
         debug_config()
         raise
 
+def cleanup_session(client):
+    """Завершает незавершенные сессии"""
+    try:
+        if client.is_connected:
+            print("🛑 Обнаружена активная сессия, завершаю...")
+            client.stop()
+    except Exception as e:
+        print(f"❌ Ошибка при завершении сессии: {e}")
+
 def main():
     if not os.access(os.getcwd(), os.W_OK):
         print("❌ Нет прав на запись в текущую директорию!")
@@ -101,8 +110,7 @@ def main():
     # Обработчик сигналов для корректного завершения
     def signal_handler(signum, frame):
         print("\n🛑 Получен сигнал завершения, останавливаю бота...")
-        if app.is_connected:
-            app.stop()  # Корректное завершение сессии
+        cleanup_session(app)  # Завершаем сессию
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -113,27 +121,34 @@ def main():
         message.reply("⚡ Бот работает стабильно!")
 
     try:
-        if not app.is_connected:  # Проверяем, не подключен ли уже клиент
-            app.start()
-            print("✅ Авторизация успешна!")
-            app.idle()  # Ожидание сообщений
+        # Завершаем незавершенные сессии перед запуском
+        cleanup_session(app)
+
+        # Запускаем клиента
+        app.start()
+        print("✅ Авторизация успешна!")
+        app.idle()  # Ожидание сообщений
     except SessionPasswordNeeded:
         print("\n🔐 Требуется пароль двухэтапной аутентификации:")
         app.password = input("Пароль: ").strip()
         try:
-            if not app.is_connected:
-                app.start()
-                print("✅ Авторизация с паролем успешна!")
-                app.idle()  # Ожидание сообщений
+            app.start()
+            print("✅ Авторизация с паролем успешна!")
+            app.idle()  # Ожидание сообщений
         except Exception as e:
             print(f"❌ Ошибка: {e}")
             sys.exit(1)
+    except BadRequest as e:
+        print(f"❌ Ошибка в запросе: {e}")
+        print("🛑 Удаляю файл сессии и завершаю работу...")
+        if os.path.exists("session.session"):
+            os.remove("session.session")
+        sys.exit(1)
     except Exception as e:
         print(f"❌ Критическая ошибка: {e}")
         sys.exit(1)
     finally:
-        if app.is_connected:
-            app.stop()  # Корректное завершение сессии
+        cleanup_session(app)  # Завершаем сессию при завершении работы
 
 if __name__ == "__main__":
-    main()  # Убираем цикл while True
+    main()
