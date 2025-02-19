@@ -5,17 +5,15 @@ import sqlite3
 from telethon import TelegramClient, events, errors
 from animation_script import animations
 
-# Автообновляем репозиторий (не трогая сессию)
 os.system('git pull')
 
 CONFIG_FILE = "config.json"
-SESSION_NAME = "session"  # имя сессии (файл session.session)
+SESSION_NAME = "session"
 
-# Словарь для хранения выбранных анимаций по чатам
 selected_animations = {}
+awaiting_animation_choice = set()
 
 def load_or_create_config():
-    """Загружает API-данные из файла или запрашивает у пользователя и создает файл."""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
@@ -31,28 +29,24 @@ def load_or_create_config():
     return config
 
 async def safe_connect(client, retries=5, delay=2):
-    """Пытается подключиться к Telegram с повторными попытками, если сессия заблокирована."""
     for attempt in range(1, retries + 1):
         try:
             await client.connect()
             return
         except sqlite3.OperationalError as e:
             if "database is locked" in str(e):
-                print(f"База данных заблокирована. Попытка {attempt}/{retries} через {delay} сек...")
                 await asyncio.sleep(delay)
             else:
                 raise
     raise Exception("Не удалось подключиться к сессии, база данных постоянно заблокирована.")
 
 async def safe_disconnect(client, retries=5, delay=2):
-    """Пытается корректно отключиться с повторными попытками, если база данных заблокирована."""
     for attempt in range(1, retries + 1):
         try:
             await client.disconnect()
             return
         except sqlite3.OperationalError as e:
             if "database is locked" in str(e):
-                print(f"Ошибка при отключении: база данных заблокирована. Попытка {attempt}/{retries} через {delay} сек...")
                 await asyncio.sleep(delay)
             else:
                 raise
@@ -62,7 +56,6 @@ def create_client(config):
     return TelegramClient(SESSION_NAME, config["api_id"], config["api_hash"])
 
 async def authorize(client, config):
-    """Функция авторизации в Telegram."""
     await safe_connect(client)
     if await client.is_user_authorized():
         print("Вы уже авторизованы. Запускаем бота...")
@@ -88,50 +81,54 @@ async def authorize(client, config):
 
 @events.register(events.NewMessage(pattern=r'^/m\b'))
 async def handle_m_command(event):
-    """Обработка команды /m - выбор анимации."""
-    parts = event.message.text.split()
-    if len(parts) == 1:
-        # Отправляем список доступных анимаций
-        text = "Список доступных анимаций:\n"
-        for num, (name, _) in animations.items():
-            text += f"{num}. {name}\n"
-        await event.respond(text)
-    else:
-        try:
-            selection = int(parts[1])
-            if selection in animations:
-                selected_animations[event.chat_id] = selection
-                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-                # Удаляем 4 последних сообщения бота
-                me = await event.client.get_me()
-                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
-                await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
-            else:
-                await event.respond("❌ Неверный номер анимации.")
-        except ValueError:
-            await event.respond("❌ Укажите корректный номер анимации после /m.")
+    """Вывод списка анимаций и ожидание выбора."""
+    text = "Список доступных анимаций:\n"
+    for num, (name, _) in animations.items():
+        text += f"{num}. {name}\n"
+    text += "\nОтправьте номер анимации, чтобы выбрать её."
+    await event.respond(text)
+    awaiting_animation_choice.add(event.chat_id)
 
-@events.register(events.NewMessage(pattern=r'^/p\b'))
-async def handle_p_command(event):
-    """Обработка команды /p - запуск анимации текста."""
-    parts = event.message.text.split(maxsplit=1)
-    if len(parts) == 1:
-        await event.respond("❌ Укажите текст после /p.")
-    else:
-        text = parts[1]
-        anim_number = selected_animations.get(event.chat_id, 1)
-        animation_func = animations[anim_number][1]
+@events.register(events.NewMessage)
+async def handle_message(event):
+    """Обработка выбора анимации или анимации текста."""
+    chat_id = event.chat_id
+
+    if chat_id in awaiting_animation_choice:
         try:
-            await animation_func(event, text)
-        except Exception as e:
-            await event.respond(f"⚠ Ошибка анимации: {e}")
+            selection = int(event.text.strip())
+            if selection in animations:
+                selected_animations[chat_id] = selection
+                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+                awaiting_animation_choice.remove(chat_id)
+
+                me = await event.client.get_me()
+                bot_messages = await event.client.get_messages(chat_id, limit=4, from_user=me.id)
+                await event.client.delete_messages(chat_id, [msg.id for msg in bot_messages])
+            else:
+                await event.respond("❌ Неверный номер анимации. Попробуйте ещё раз.")
+        except ValueError:
+            await event.respond("❌ Введите номер анимации цифрой.")
+
+    elif event.text.startswith("/p "):
+        parts = event.text.split(maxsplit=1)
+        if len(parts) == 1:
+            await event.respond("❌ Укажите текст после /p.")
+        else:
+            text = parts[1]
+            anim_number = selected_animations.get(chat_id, 1)
+            animation_func = animations[anim_number][1]
+            try:
+                await animation_func(event, text)
+            except Exception as e:
+                await event.respond(f"⚠ Ошибка анимации: {e}")
 
 async def main():
     config = load_or_create_config()
     client = create_client(config)
     if await authorize(client, config):
         client.add_event_handler(handle_m_command)
-        client.add_event_handler(handle_p_command)
+        client.add_event_handler(handle_message)
         print("Бот работает...")
         try:
             await client.run_until_disconnected()
