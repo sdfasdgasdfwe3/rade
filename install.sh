@@ -4,15 +4,15 @@
 pkg install -y python git
 
 # Клонируем репозиторий
-git clone https://raw.githubusercontent.com/sdfasdgasdfwe3/rade.git
-cd your-bot
+git clone https://github.com/sdfasdgasdfwe3/rade.git
+cd rade
 
 # Устанавливаем зависимости
 pip install --quiet telethon
 
 # Добавляем автоматический переход в папку с ботом при запуске Termux
-if ! grep -q "your-bot" ~/.bashrc; then
-    echo 'cd ~/your-bot' >> ~/.bashrc
+if ! grep -q "rade" ~/.bashrc; then
+    echo 'cd ~/rade' >> ~/.bashrc
     echo 'echo "Для запуска бота напишите: python bot.py"' >> ~/.bashrc
 fi
 
