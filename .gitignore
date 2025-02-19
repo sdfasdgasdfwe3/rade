@@ -1,4 +1,0 @@
-session.*
-config.ini
-__pycache__/
-*.session-journal
