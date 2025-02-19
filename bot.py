@@ -9,27 +9,29 @@ os.system('git pull')
 CONFIG_FILE = "config.json"
 SESSION_FILE = "session"
 
-def load_config():
-    """Загружает API-данные из файла или запрашивает у пользователя."""
+def load_or_create_config():
+    """Загружает API-данные из файла или запрашивает у пользователя и создает файл."""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
 
-    # Запрашиваем данные у пользователя
+    print("Файл config.json не найден. Создаю новый...")
+
     config = {
         "api_id": int(input('Введите api_id: ')),
         "api_hash": input('Введите api_hash: '),
         "phone_number": input('Введите номер телефона: ')
     }
 
-    # Сохраняем конфиг
+    # Сохраняем данные в файл
     with open(CONFIG_FILE, "w") as f:
-        json.dump(config, f)
+        json.dump(config, f, indent=4)
 
+    print("Конфигурация сохранена в config.json.")
     return config
 
-# Загружаем API-данные
-config = load_config()
+# Загружаем или создаем API-данные
+config = load_or_create_config()
 
 # Создаем клиент с использованием файла сессии
 client = TelegramClient(SESSION_FILE, config["api_id"], config["api_hash"])
