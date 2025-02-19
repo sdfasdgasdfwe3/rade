@@ -4,7 +4,7 @@ import json
 import sqlite3
 from telethon import TelegramClient, errors
 
-# Автообновляем репозиторий (не трогаем сессию)
+# Автообновляем репозиторий (не трогая сессию)
 os.system('git pull')
 
 CONFIG_FILE = "config.json"
@@ -15,7 +15,6 @@ def load_or_create_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
-
     print("Файл config.json не найден. Создаю новый...")
     config = {
         "api_id": int(input('Введите api_id: ')),
@@ -61,31 +60,25 @@ def create_client(config):
 async def authorize(client, config):
     """Функция авторизации в Telegram."""
     await safe_connect(client)
-
     if await client.is_user_authorized():
         print("Вы уже авторизованы. Запускаем бота...")
         return True
-
     print("Вы не авторизованы. Начинаем процесс авторизации...")
     try:
         await client.send_code_request(config["phone_number"])
         code = input('Введите код из Telegram: ')
         await client.sign_in(config["phone_number"], code)
-
     except errors.SessionPasswordNeededError:
         password = input('Введите пароль 2FA: ')
         await client.sign_in(password=password)
-
     except errors.AuthRestartError:
         print("Telegram требует перезапуска авторизации. Повторяем попытку...")
         await client.send_code_request(config["phone_number"])
         code = input('Введите код из Telegram: ')
         await client.sign_in(config["phone_number"], code)
-
     except Exception as e:
         print(f'Ошибка авторизации: {e}')
         return False
-
     print("Успешная авторизация!")
     return True
 
@@ -101,12 +94,9 @@ async def main():
     await safe_disconnect(client)
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(main())
+        asyncio.run(main())
     except KeyboardInterrupt:
         print("Бот остановлен пользователем.")
     except Exception as e:
         print(f"Ошибка: {e}")
-    finally:
-        loop.close()
