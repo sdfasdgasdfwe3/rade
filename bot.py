@@ -4,7 +4,7 @@ import signal
 import logging
 import configparser
 from pyrogram import Client, filters
-from pyrogram.errors import SessionPasswordNeeded
+from pyrogram.errors import SessionPasswordNeeded, AuthKeyUnregistered, AuthKeyInvalid
 
 # Настройка логирования
 logging.basicConfig(
@@ -142,6 +142,15 @@ def main():
         except Exception as e:
             logger.error(f"❌ Ошибка: {e}")
             sys.exit(1)
+    except (AuthKeyUnregistered, AuthKeyInvalid) as e:
+        logger.error(f"❌ Ошибка сессии: {e}")
+        logger.info("Попытка удаления поврежденной сессии...")
+        try:
+            os.remove("session.session")
+            logger.info("Сессия удалена. Попробуйте запустить бота снова.")
+        except Exception as e:
+            logger.error(f"❌ Ошибка при удалении сессии: {e}")
+        sys.exit(1)
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка: {e}")
         sys.exit(1)
