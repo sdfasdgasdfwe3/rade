@@ -118,8 +118,9 @@ async def handle_message(event):
             anim_number = selected_animations.get(chat_id, 1)
             animation_func = animations[anim_number][1]
             try:
+                # Проверка на изменение текста перед редактированием
                 async def safe_edit(message, new_text):
-                    if message.text != new_text:  # ✅ Проверяем изменение текста перед редактированием
+                    if message.text != new_text:
                         await message.edit(new_text)
 
                 await animation_func(event, text, safe_edit)
