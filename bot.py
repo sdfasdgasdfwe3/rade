@@ -4,7 +4,7 @@ import signal
 import logging
 import configparser
 from pyrogram import Client, filters
-from pyrogram.errors import SessionPasswordNeeded, AuthKeyUnregistered, AuthKeyInvalid
+from pyrogram.errors import SessionPasswordNeeded
 
 # Настройка логирования
 logging.basicConfig(
@@ -114,7 +114,8 @@ def main():
     def signal_handler(signum, frame):
         logger.info("\n🛑 Получен сигнал завершения, останавливаю бота...")
         try:
-            app.stop()
+            if app.is_connected:
+                app.stop()
             logger.info("✅ Бот успешно остановлен.")
         except Exception as e:
             logger.error(f"❌ Ошибка при остановке бота: {e}")
@@ -129,28 +130,21 @@ def main():
         logger.info("Получена команда /start")
 
     try:
-        with app:
-            logger.info("✅ Авторизация успешна!")
-            app.run()  # Запускаем бота внутри контекстного менеджера
+        if not app.is_connected:
+            with app:
+                logger.info("✅ Авторизация успешна!")
+                app.run()  # Запускаем бота внутри контекстного менеджера
     except SessionPasswordNeeded:
         logger.info("\n🔐 Требуется пароль двухэтапной аутентификации:")
         app.password = input("Пароль: ").strip()
         try:
-            with app:
-                logger.info("✅ Авторизация с паролем успешна!")
-                app.run()  # Запускаем внутри контекста
+            if not app.is_connected:
+                with app:
+                    logger.info("✅ Авторизация с паролем успешна!")
+                    app.run()  # Запускаем внутри контекста
         except Exception as e:
             logger.error(f"❌ Ошибка: {e}")
             sys.exit(1)
-    except (AuthKeyUnregistered, AuthKeyInvalid) as e:
-        logger.error(f"❌ Ошибка сессии: {e}")
-        logger.info("Попытка удаления поврежденной сессии...")
-        try:
-            os.remove("session.session")
-            logger.info("Сессия удалена. Попробуйте запустить бота снова.")
-        except Exception as e:
-            logger.error(f"❌ Ошибка при удалении сессии: {e}")
-        sys.exit(1)
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка: {e}")
         sys.exit(1)
