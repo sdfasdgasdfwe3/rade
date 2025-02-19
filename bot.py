@@ -2,7 +2,7 @@ import os
 import asyncio
 from telethon import TelegramClient, errors
 
-# Автоматически обновляем репозиторий
+# Автоматически обновляем репозиторий (но не трогаем сессию)
 os.system('git pull')
 
 # Запрашиваем данные у пользователя
@@ -10,13 +10,15 @@ api_id = int(input('Введите api_id: '))
 api_hash = input('Введите api_hash: ')
 phone_number = input('Введите номер телефона: ')
 
-# Создаем клиент с сохранением сессии
-client = TelegramClient('session', api_id, api_hash)
+# Используем файл "session.session" для хранения авторизации
+session_file = "session"
+client = TelegramClient(session_file, api_id, api_hash)
 
 async def authorize():
     """Функция авторизации в Telegram."""
     await client.connect()
 
+    # Проверяем, есть ли активная сессия
     if await client.is_user_authorized():
         print("Вы уже авторизованы. Запускаем бота...")
         return True
@@ -49,7 +51,7 @@ async def main():
     if await authorize():
         print("Бот работает...")
         try:
-            await client.run_until_disconnected()  # Ожидаем событий бесконечно
+            await client.run_until_disconnected()  # Бесконечный режим работы
         except Exception as e:
             print(f"Ошибка в работе бота: {e}")
 
