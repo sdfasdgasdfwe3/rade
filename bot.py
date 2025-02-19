@@ -1,18 +1,38 @@
 import os
 import asyncio
+import json
 from telethon import TelegramClient, errors
 
 # Автоматически обновляем репозиторий (но не трогаем сессию)
 os.system('git pull')
 
-# Запрашиваем данные у пользователя
-api_id = int(input('Введите api_id: '))
-api_hash = input('Введите api_hash: ')
-phone_number = input('Введите номер телефона: ')
+CONFIG_FILE = "config.json"
+SESSION_FILE = "session"
 
-# Используем файл "session.session" для хранения авторизации
-session_file = "session"
-client = TelegramClient(session_file, api_id, api_hash)
+def load_config():
+    """Загружает API-данные из файла или запрашивает у пользователя."""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+
+    # Запрашиваем данные у пользователя
+    config = {
+        "api_id": int(input('Введите api_id: ')),
+        "api_hash": input('Введите api_hash: '),
+        "phone_number": input('Введите номер телефона: ')
+    }
+
+    # Сохраняем конфиг
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f)
+
+    return config
+
+# Загружаем API-данные
+config = load_config()
+
+# Создаем клиент с использованием файла сессии
+client = TelegramClient(SESSION_FILE, config["api_id"], config["api_hash"])
 
 async def authorize():
     """Функция авторизации в Telegram."""
@@ -26,9 +46,9 @@ async def authorize():
     print("Вы не авторизованы. Начинаем процесс авторизации...")
 
     try:
-        await client.send_code_request(phone_number)
+        await client.send_code_request(config["phone_number"])
         code = input('Введите код из Telegram: ')
-        await client.sign_in(phone_number, code)
+        await client.sign_in(config["phone_number"], code)
 
     except errors.SessionPasswordNeededError:
         password = input('Введите пароль 2FA: ')
@@ -36,9 +56,9 @@ async def authorize():
 
     except errors.AuthRestartError:
         print("Telegram требует перезапуска авторизации. Повторяем попытку...")
-        await client.send_code_request(phone_number)
+        await client.send_code_request(config["phone_number"])
         code = input('Введите код из Telegram: ')
-        await client.sign_in(phone_number, code)
+        await client.sign_in(config["phone_number"], code)
 
     except Exception as e:
         print(f'Ошибка авторизации: {e}')
