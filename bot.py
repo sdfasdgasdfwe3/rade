@@ -47,28 +47,20 @@ async def authorize(client, config):
     except errors.SessionPasswordNeededError:
         password = input('Введите пароль 2FA: ')
         await client.sign_in(password=password)
-    except errors.AuthRestartError:
-        print("Telegram требует перезапуска авторизации. Повторяем попытку...")
-        await client.send_code_request(config["phone_number"])
-        code = input('Введите код из Telegram: ')
-        await client.sign_in(config["phone_number"], code)
-    except Exception as e:
-        print(f'Ошибка авторизации: {e}')
-        return False
     print("Успешная авторизация!")
     return True
 
-@events.register(events.NewMessage(pattern=r'^/m\b'))
+@events.register(events.NewMessage(pattern=r'^/m$'))
 async def handle_m_command(event):
-    """Обработка команды /m - выбор анимации."""
+    """Обработка команды /m - вывод списка анимаций."""
     text = "Список доступных анимаций:\n"
     for num, (name, _) in animations.items():
         text += f"{num}. {name}\n"
     await event.respond(text)
 
-@events.register(events.NewMessage(pattern=r'^\d+$'))
+@events.register(events.NewMessage(pattern=r'^[1-9]\d*$'))
 async def handle_animation_selection(event):
-    """Обработка выбора анимации (ввод числа)."""
+    """Обработка выбора анимации цифрой."""
     try:
         selection = int(event.message.text)
         if selection in animations:
@@ -78,25 +70,19 @@ async def handle_animation_selection(event):
             me = await event.client.get_me()
             bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
             await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
-        else:
-            await event.respond("❌ Неверный номер анимации.")
     except ValueError:
-        await event.respond("❌ Введите номер анимации цифрой.")
+        pass  # Игнорируем неверный ввод
 
-@events.register(events.NewMessage(pattern=r'^/p\b'))
+@events.register(events.NewMessage(pattern=r'^/p\s+(.+)'))
 async def handle_p_command(event):
     """Обработка команды /p - запуск анимации текста."""
-    parts = event.message.text.split(maxsplit=1)
-    if len(parts) == 1:
-        await event.respond("❌ Укажите текст после /p.")
-    else:
-        text = parts[1]
-        anim_number = selected_animations.get(event.chat_id, 1)
-        animation_func = animations[anim_number][1]
-        try:
-            await animation_func(event.message, text)  # Передаём event.message вместо event
-        except Exception as e:
-            await event.respond(f"⚠ Ошибка анимации: {e}")
+    text = event.pattern_match.group(1)
+    anim_number = selected_animations.get(event.chat_id, 1)
+    animation_func = animations[anim_number][1]
+    try:
+        await animation_func(event, text)
+    except Exception as e:
+        await event.respond(f"⚠ Ошибка анимации: {e}")
 
 async def main():
     config = load_or_create_config()
@@ -106,16 +92,10 @@ async def main():
         client.add_event_handler(handle_animation_selection)
         client.add_event_handler(handle_p_command)
         print("Бот работает...")
-        try:
-            await client.run_until_disconnected()
-        except Exception as e:
-            print(f"Ошибка в работе бота: {e}")
-    await client.disconnect()
+        await client.run_until_disconnected()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Бот остановлен пользователем.")
-    except Exception as e:
-        print(f"Ошибка: {e}")
