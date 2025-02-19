@@ -102,7 +102,7 @@ def main():
     def signal_handler(signum, frame):
         print("\n🛑 Получен сигнал завершения, останавливаю бота...")
         if app.is_connected:
-            app.disconnect()  # Корректное отключение
+            app.stop()  # Корректное завершение сессии
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
