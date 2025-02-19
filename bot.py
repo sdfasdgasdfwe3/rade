@@ -28,7 +28,6 @@ def setup_config():
     config_path = os.path.abspath('config.ini')
     config = configparser.ConfigParser()
     
-    # Попытка чтения существующего конфига
     if os.path.exists(config_path):
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
@@ -40,11 +39,9 @@ def setup_config():
             print(f"❌ Ошибка в конфиге: {e}")
             debug_config()
     
-    # Создание нового конфига
     print("\n=== СОЗДАНИЕ НОВОГО КОНФИГА ===")
     config['pyrogram'] = {}
     
-    # Ввод данных с проверкой
     while True:
         api_id = input("Введите API_ID: ").strip()
         if api_id.isdigit():
@@ -61,11 +58,9 @@ def setup_config():
         print("Номер не может быть пустым!")
     config['pyrogram']['phone_number'] = phone
     
-    # Запись и проверка
     with open(config_path, 'w', encoding='utf-8') as f:
         config.write(f)
     
-    # Перечитываем для проверки
     new_config = configparser.ConfigParser()
     new_config.read(config_path)
     try:
@@ -77,25 +72,26 @@ def setup_config():
         debug_config()
         raise
 
-def cleanup_session(client):
-    """Завершает сессию, если она активна"""
+def cleanup_session():
+    """Завершает активные сессии и удаляет поврежденные файлы"""
     try:
-        if client.is_connected:
-            print("🛑 Завершаю активную сессию...")
-            client.stop()
+        if os.path.exists("session.session"):
+            os.remove("session.session")
+            print("🛑 Удален поврежденный файл сессии")
     except Exception as e:
-        print(f"❌ Ошибка при завершении сессии: {e}")
+        print(f"❌ Ошибка при очистке сессии: {e}")
 
 def main():
     if not os.access(os.getcwd(), os.W_OK):
         print("❌ Нет прав на запись в текущую директорию!")
         sys.exit(1)
-        
+    
+    cleanup_session()
     config = setup_config()
     
     try:
         app = Client(
-            "session",  # Имя файла сессии
+            "session",
             api_id=int(config.get('pyrogram', 'api_id')),
             api_hash=config.get('pyrogram', 'api_hash'),
             phone_number=config.get('pyrogram', 'phone_number'),
@@ -106,52 +102,44 @@ def main():
         print(f"❌ Ошибка в данных: {e}")
         os.remove('config.ini')
         return main()
-
-    # Обработчик сигналов для корректного завершения
+    
     def signal_handler(signum, frame):
         print("\n🛑 Получен сигнал завершения, останавливаю бота...")
-        cleanup_session(app)  # Завершаем сессию
+        app.stop()
         sys.exit(0)
-
+    
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-
+    
     @app.on_message(filters.command("start"))
     def start(client, message):
-        message.reply("⚡ Бот работает стабильно!")
-
+        message.reply("⚡️ Бот работает стабильно!")
+    
     try:
-        # Завершаем незавершенные сессии перед запуском
-        cleanup_session(app)
-
-        # Запускаем клиента
         app.start()
         print("✅ Авторизация успешна!")
-
-        # Основной цикл работы бота
         print("🚀 Бот запущен. Ожидание сообщений...")
-        app.run()  # Используем run для поддержания активного состояния
+        app.run()
     except SessionPasswordNeeded:
-        print("\n🔐 Требуется пароль двухэтапной аутентификации:")
+
+print("\n🔐 Требуется пароль 2FA:")
         app.password = input("Пароль: ").strip()
         try:
             app.start()
             print("✅ Авторизация с паролем успешна!")
-            app.run()  # Используем run для поддержания активного состояния
+            app.run()
         except Exception as e:
             print(f"❌ Ошибка: {e}")
             sys.exit(1)
     except BadRequest as e:
         print(f"❌ Ошибка в запросе: {e}")
-        print("🛑 Удаляю файл сессии и завершаю работу...")
-        if os.path.exists("session.session"):
-            os.remove("session.session")
+        cleanup_session()
         sys.exit(1)
     except Exception as e:
         print(f"❌ Критическая ошибка: {e}")
         sys.exit(1)
     finally:
-        cleanup_session(app)  # Завершаем сессию при завершении работы
+        app.stop()
 
-if __name__ == "__main__":
+if name == "main":
     main()
