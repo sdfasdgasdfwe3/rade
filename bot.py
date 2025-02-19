@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telethon import TelegramClient, errors
 
 # Автоматически обновляем репозиторий
@@ -21,7 +22,7 @@ async def authorize():
         return True
 
     print("Вы не авторизованы. Начинаем процесс авторизации...")
-    
+
     try:
         await client.send_code_request(phone_number)
         code = input('Введите код из Telegram: ')
@@ -46,16 +47,15 @@ async def authorize():
 
 async def main():
     if await authorize():
-        # Здесь можно добавить код для работы с Telegram
         print("Бот работает...")
-
-    await client.disconnect()
+        await asyncio.Future()  # Бот работает бесконечно
 
 if __name__ == "__main__":
-    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        asyncio.run(main())
+        loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("Бот остановлен пользователем.")
-    except Exception as e:
-        print(f"Ошибка: {e}")
+    finally:
+        loop.close()
