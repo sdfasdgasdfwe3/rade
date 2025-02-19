@@ -63,27 +63,43 @@ async def random_reveal(event, text):
     msg = await event.edit("".join(hidden_text))
     indices = list(range(len(text)))
     random.shuffle(indices)
+    previous_text = "".join(hidden_text)
+
     for index in indices:
         hidden_text[index] = text[index]
-        try:
-            await msg.edit("".join(hidden_text))
-        except Exception:
-            pass
+        new_text = "".join(hidden_text)
+        
+        if new_text != previous_text:  # Проверяем, изменился ли текст
+            try:
+                await msg.edit(new_text)
+                previous_text = new_text  # Обновляем предыдущее состояние
+            except Exception:
+                pass
         await asyncio.sleep(random_reveal_speed)
-    await msg.edit(text)
+
+    if previous_text != text:
+        await msg.edit(text)
 
 async def led_display(event, text):
     """Анимация 'Светодиодный экран': буквы появляются по частям, как на табло."""
     hidden_text = ["⬛" for _ in text]
     msg = await event.edit("".join(hidden_text))
+    previous_text = "".join(hidden_text)
+
     for i in range(len(text)):
         hidden_text[i] = text[i]
-        try:
-            await msg.edit("".join(hidden_text))
-        except Exception:
-            pass
+        new_text = "".join(hidden_text)
+        
+        if new_text != previous_text:  # Проверяем, изменился ли текст
+            try:
+                await msg.edit(new_text)
+                previous_text = new_text  # Обновляем предыдущее состояние
+            except Exception:
+                pass
         await asyncio.sleep(led_display_speed)
-    await msg.edit(text)
+
+    if previous_text != text:
+        await msg.edit(text)
 
 # Словарь доступных анимаций
 animations = {
