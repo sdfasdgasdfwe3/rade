@@ -1,13 +1,14 @@
 import os
 import asyncio
 import json
+import sqlite3
 from telethon import TelegramClient, errors
 
-# Автоматически обновляем репозиторий (но не трогаем сессию)
+# Автообновление репозитория (не трогает сессию)
 os.system('git pull')
 
 CONFIG_FILE = "config.json"
-SESSION_FILE = "session"
+SESSION_FILE = "session.session"
 
 def load_or_create_config():
     """Загружает API-данные из файла или запрашивает у пользователя и создает файл."""
@@ -23,24 +24,36 @@ def load_or_create_config():
         "phone_number": input('Введите номер телефона: ')
     }
 
-    # Сохраняем данные в файл
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
 
     print("Конфигурация сохранена в config.json.")
     return config
 
-# Загружаем или создаем API-данные
+def unlock_sqlite_session():
+    """Проверяет, заблокирована ли база данных сессии, и снимает блокировку без удаления файла."""
+    if os.path.exists(SESSION_FILE):
+        try:
+            conn = sqlite3.connect(SESSION_FILE)
+            conn.execute("PRAGMA journal_mode=WAL;")  # Переключаем в WAL-режим
+            conn.execute("PRAGMA busy_timeout = 5000;")  # Устанавливаем таймаут ожидания
+            conn.close()
+        except sqlite3.OperationalError as e:
+            print(f"Ошибка при разблокировке сессии: {e}")
+
+# Загружаем API-данные
 config = load_or_create_config()
 
-# Создаем клиент с использованием файла сессии
-client = TelegramClient(SESSION_FILE, config["api_id"], config["api_hash"])
+# Снимаем блокировку сессии перед запуском бота
+unlock_sqlite_session()
+
+# Создаем клиент
+client = TelegramClient("session", config["api_id"], config["api_hash"])
 
 async def authorize():
     """Функция авторизации в Telegram."""
     await client.connect()
 
-    # Проверяем, есть ли активная сессия
     if await client.is_user_authorized():
         print("Вы уже авторизованы. Запускаем бота...")
         return True
@@ -73,7 +86,7 @@ async def main():
     if await authorize():
         print("Бот работает...")
         try:
-            await client.run_until_disconnected()  # Бесконечный режим работы
+            await client.run_until_disconnected()
         except Exception as e:
             print(f"Ошибка в работе бота: {e}")
 
