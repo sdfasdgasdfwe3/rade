@@ -94,19 +94,20 @@ async def handle_message(event):
     """Обработка выбора анимации или анимации текста."""
     chat_id = event.chat_id
 
-    if chat_id in awaiting_animation_choice and event.text.isdigit():
-        selection = int(event.text.strip())
-        if selection in animations:
-            selected_animations[chat_id] = selection
-            confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-            awaiting_animation_choice.remove(chat_id)
+    if chat_id in awaiting_animation_choice:
+        if event.text.isdigit():
+            selection = int(event.text.strip())
+            if selection in animations:
+                selected_animations[chat_id] = selection
+                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+                awaiting_animation_choice.remove(chat_id)
 
-            me = await event.client.get_me()
-            bot_messages = await event.client.get_messages(chat_id, limit=4, from_user=me.id)
-            await event.client.delete_messages(chat_id, [msg.id for msg in bot_messages])
+                me = await event.client.get_me()
+                bot_messages = await event.client.get_messages(chat_id, limit=4, from_user=me.id)
+                await event.client.delete_messages(chat_id, [msg.id for msg in bot_messages])
+            return
         else:
-            await event.respond("❌ Неверный номер анимации. Попробуйте ещё раз.")
-        return
+            return  # Игнорируем нечисловой ввод, не отправляя лишних сообщений
 
     if event.text.startswith("/p "):
         parts = event.text.split(maxsplit=1)
@@ -117,7 +118,14 @@ async def handle_message(event):
             anim_number = selected_animations.get(chat_id, 1)
             animation_func = animations[anim_number][1]
             try:
-                await animation_func(event, text)
+                # Проверка на изменение текста перед редактированием
+                async def safe_edit(message, new_text):
+                    if message.text != new_text:
+                        await message.edit(new_text)
+
+                await animation_func(event, text, safe_edit)
+            except errors.rpcerrorlist.MessageNotModifiedError:
+                pass  # Игнорируем ошибку "Content of the message was not modified"
             except Exception as e:
                 await event.respond(f"⚠ Ошибка анимации: {e}")
 
