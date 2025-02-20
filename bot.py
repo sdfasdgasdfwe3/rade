@@ -83,8 +83,6 @@ async def authorize(client, config):
     print("Успешная авторизация!")
     return True
 
-# Новые функции для обработки команд /m и /p (оставлены без изменений)
-
 # Словарь для хранения выбранных анимаций по чатам
 selected_animations = {}
 
@@ -103,11 +101,14 @@ async def handle_m_command(event):
             selection = int(parts[1])
             if selection in animations:
                 selected_animations[event.chat_id] = selection
+                # Отправляем подтверждение выбора анимации
                 confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-                # Удаляем 4 последних сообщения бота
+                # Получаем 4 последних сообщения бота
                 me = await event.client.get_me()
                 bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
-                await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
+                # Фильтруем сообщения, чтобы не удалить сообщение подтверждения
+                filtered_bot_messages = [msg for msg in bot_messages if msg.id != confirmation.id]
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in filtered_bot_messages])
             else:
                 await event.respond("❌ Неверный номер анимации.")
         except ValueError:
@@ -131,8 +132,7 @@ async def handle_p_command(event):
 async def main():
     config = load_or_create_config()
     client = create_client(config)
-    # Регистрируем обработчики событий (при использовании декораторов __event__ уже сохранён,
-    # поэтому достаточно вызвать add_event_handler без второго аргумента)
+    # Регистрация обработчиков событий
     client.add_event_handler(handle_m_command)
     client.add_event_handler(handle_p_command)
     
