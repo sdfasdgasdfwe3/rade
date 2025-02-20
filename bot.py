@@ -2,7 +2,8 @@ import os
 import asyncio
 import json
 import sqlite3
-from telethon import TelegramClient, errors
+from telethon import TelegramClient, errors, events
+from animation_script import animations
 
 # Автообновляем репозиторий (не трогая сессию)
 os.system('git pull')
@@ -82,9 +83,59 @@ async def authorize(client, config):
     print("Успешная авторизация!")
     return True
 
+# Новые функции для обработки команд /m и /p (оставлены без изменений)
+
+# Словарь для хранения выбранных анимаций по чатам
+selected_animations = {}
+
+@events.register(events.NewMessage(pattern=r'^/m\b'))
+async def handle_m_command(event):
+    """Обработка команды /m - выбор анимации."""
+    parts = event.message.text.split()
+    if len(parts) == 1:
+        # Отправляем список доступных анимаций
+        text = "Список доступных анимаций:\n"
+        for num, (name, _) in animations.items():
+            text += f"{num}. {name}\n"
+        await event.respond(text)
+    else:
+        try:
+            selection = int(parts[1])
+            if selection in animations:
+                selected_animations[event.chat_id] = selection
+                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+                # Удаляем 4 последних сообщения бота
+                me = await event.client.get_me()
+                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
+            else:
+                await event.respond("❌ Неверный номер анимации.")
+        except ValueError:
+            await event.respond("❌ Укажите корректный номер анимации после /m.")
+
+@events.register(events.NewMessage(pattern=r'^/p\b'))
+async def handle_p_command(event):
+    """Обработка команды /p - запуск анимации текста."""
+    parts = event.message.text.split(maxsplit=1)
+    if len(parts) == 1:
+        await event.respond("❌ Укажите текст после /p.")
+    else:
+        text = parts[1]
+        anim_number = selected_animations.get(event.chat_id, 1)
+        animation_func = animations[anim_number][1]
+        try:
+            await animation_func(event, text)
+        except Exception as e:
+            await event.respond(f"⚠ Ошибка анимации: {e}")
+
 async def main():
     config = load_or_create_config()
     client = create_client(config)
+    # Регистрируем обработчики событий (при использовании декораторов __event__ уже сохранён,
+    # поэтому достаточно вызвать add_event_handler без второго аргумента)
+    client.add_event_handler(handle_m_command)
+    client.add_event_handler(handle_p_command)
+    
     if await authorize(client, config):
         print("Бот работает...")
         try:
