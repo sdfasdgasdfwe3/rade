@@ -129,12 +129,31 @@ async def handle_p_command(event):
         except Exception as e:
             await event.respond(f"⚠ Ошибка анимации: {e}")
 
+# Новый обработчик для выбора анимации по сообщению, содержащему только цифру (без /m)
+@events.register(events.NewMessage(pattern=r'^\d+$'))
+async def handle_digit_selection(event):
+    """Обработка выбора анимации по сообщению, содержащему только цифру."""
+    try:
+        selection = int(event.message.text)
+        if selection in animations:
+            selected_animations[event.chat_id] = selection
+            confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+            me = await event.client.get_me()
+            bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
+            filtered_bot_messages = [msg for msg in bot_messages if msg.id != confirmation.id]
+            await event.client.delete_messages(event.chat_id, [msg.id for msg in filtered_bot_messages])
+        else:
+            await event.respond("❌ Неверный номер анимации.")
+    except ValueError:
+        await event.respond("❌ Введите корректную цифру для выбора анимации.")
+
 async def main():
     config = load_or_create_config()
     client = create_client(config)
     # Регистрация обработчиков событий
     client.add_event_handler(handle_m_command)
     client.add_event_handler(handle_p_command)
+    client.add_event_handler(handle_digit_selection)
     
     if await authorize(client, config):
         print("Бот работает...")
