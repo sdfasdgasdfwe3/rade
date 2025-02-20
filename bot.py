@@ -105,13 +105,14 @@ async def handle_m_command(event):
             selection = int(parts[1])
             if selection in animations:
                 selected_animations[event.chat_id] = selection
+                # Отправляем подтверждение выбора анимации
                 confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-                # Получаем 4 последних сообщения бота
+                # Получаем больше сообщений для гарантии удаления 4 сообщений, исключая подтверждение
                 me = await event.client.get_me()
-                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
-                # Фильтруем сообщения, чтобы не удалить сообщение подтверждения
+                bot_messages = await event.client.get_messages(event.chat_id, limit=10, from_user=me.id)
                 filtered_bot_messages = [msg for msg in bot_messages if msg.id != confirmation.id]
-                await event.client.delete_messages(event.chat_id, [msg.id for msg in filtered_bot_messages])
+                messages_to_delete = filtered_bot_messages[:4]
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in messages_to_delete])
             else:
                 await event.respond("❌ Неверный номер анимации.")
         except ValueError:
@@ -127,11 +128,11 @@ async def handle_animation_digit(event):
                 selected_animations[event.chat_id] = selection
                 confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
                 awaiting_selection[event.chat_id] = False  # сбрасываем состояние ожидания
-                # Получаем 4 последних сообщения бота
                 me = await event.client.get_me()
-                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
+                bot_messages = await event.client.get_messages(event.chat_id, limit=10, from_user=me.id)
                 filtered_bot_messages = [msg for msg in bot_messages if msg.id != confirmation.id]
-                await event.client.delete_messages(event.chat_id, [msg.id for msg in filtered_bot_messages])
+                messages_to_delete = filtered_bot_messages[:4]
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in messages_to_delete])
             else:
                 await event.respond("❌ Неверный номер анимации.")
         except ValueError:
