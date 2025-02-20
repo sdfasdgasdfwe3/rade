@@ -66,10 +66,8 @@ async def authorize(client, config):
     await safe_connect(client)
     if await client.is_user_authorized():
         me = await client.get_me()
-        print(f"Вы авторизированы как: {me.first_name} (@{me.username})")
-        print("Наш TG: t.me/kwotko")
-        print("Бот работает на вашем аккаунте!")
-        print("Для завершения работы нажмите Cntrl+C")
+        print(f"Вы авторизированы как: {me.first_name} ({me.username})")
+        print("Наш TГ: t.me/kwotko")
         return True
     print("Вы не авторизованы. Начинаем процесс авторизации...")
     try:
@@ -88,30 +86,34 @@ async def authorize(client, config):
         print(f'Ошибка авторизации: {e}')
         return False
     me = await client.get_me()
-    print(f"Вы авторизированы как: {me.first_name} (@{me.username})")
-    print("Наш TG: t.me/kwotko")
-    print("Бот работает на вашем аккаунте!")
-    print("Для завершения работы нажмите Cntrl+C")
+    print(f"Вы авторизированы как: {me.first_name} ({me.username})")
+    print("Наш TГ: t.me/kwotko")
     return True
 
 @events.register(events.NewMessage(pattern=r'^/m\b'))
 async def handle_m_command(event):
     """Обработка команды /m - выбор анимации."""
-    text = "Список доступных анимаций:\n"
-    for num, (name, _) in animations.items():
-        text += f"{num}. {name}\n"
-    await event.respond(text)
-
-@events.register(events.NewMessage(pattern=r'^[1-9]+$'))
-async def handle_animation_selection(event):
-    """Обработка выбора анимации (число после /m)."""
-    selection = int(event.text.strip())
-    if selection in animations:
-        selected_animations[event.chat_id] = selection
-        confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-        me = await event.client.get_me()
-        bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
-        await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
+    parts = event.message.text.split()
+    if len(parts) == 1:
+        # Отправляем список доступных анимаций
+        text = "Список доступных анимаций:\n"
+        for num, (name, _) in animations.items():
+            text += f"{num}. {name}\n"
+        await event.respond(text)
+    else:
+        try:
+            selection = int(parts[1])
+            if selection in animations:
+                selected_animations[event.chat_id] = selection
+                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+                # Удаляем 4 последних сообщения бота
+                me = await event.client.get_me()
+                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in bot_messages])
+            else:
+                await event.respond("❌ Неверный номер анимации.")
+        except ValueError:
+            await event.respond("❌ Укажите корректный номер анимации после /m.")
 
 @events.register(events.NewMessage(pattern=r'^/p\b'))
 async def handle_p_command(event):
@@ -133,9 +135,7 @@ async def main():
     client = create_client(config)
     if await authorize(client, config):
         client.add_event_handler(handle_m_command)
-        client.add_event_handler(handle_animation_selection)
         client.add_event_handler(handle_p_command)
-        print("Бот работает...")
         try:
             await client.run_until_disconnected()
         except Exception as e:
