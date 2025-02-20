@@ -107,9 +107,9 @@ async def handle_m_command(event):
                 selected_animations[event.chat_id] = selection
                 # Отправляем подтверждение выбора анимации
                 confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-                # Ждём небольшую паузу, чтобы сообщение успело сохраниться
+                # Ждем небольшую паузу, чтобы сообщение успело сохраниться
                 await asyncio.sleep(0.5)
-                # Получаем 3 сообщения перед подтверждением
+                # Получаем 3 предыдущих сообщения относительно подтверждения и удаляем их вместе с подтверждением
                 older_msgs = await event.client.get_messages(event.chat_id, limit=3, offset_id=confirmation.id)
                 ids_to_delete = [confirmation.id] + [msg.id for msg in older_msgs]
                 await event.client.delete_messages(event.chat_id, ids_to_delete)
@@ -162,6 +162,11 @@ async def main():
     client.add_event_handler(handle_p_command)
     
     if await authorize(client, config):
+        # Получаем данные авторизованного пользователя
+        me = await client.get_me()
+        # Выводим информацию
+        print(f"Вы авторизированы как: {me.username if me.username else me.first_name}")
+        print("Наш TG: t.me/kwotko")
         print("Бот работает...")
         try:
             await client.run_until_disconnected()
