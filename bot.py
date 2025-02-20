@@ -85,23 +85,26 @@ async def authorize(client, config):
 
 # Словарь для хранения выбранных анимаций по чатам
 selected_animations = {}
+# Словарь для отслеживания, что бот ожидает ввод цифры для выбора анимации
+awaiting_selection = {}
 
 @events.register(events.NewMessage(pattern=r'^/m\b'))
 async def handle_m_command(event):
     """Обработка команды /m - выбор анимации."""
     parts = event.message.text.split()
     if len(parts) == 1:
-        # Отправляем список доступных анимаций
+        # Отправляем список доступных анимаций и просим отправить цифру выбора
         text = "Список доступных анимаций:\n"
         for num, (name, _) in animations.items():
             text += f"{num}. {name}\n"
+        text += "\nОтправьте цифру для выбора анимации."
         await event.respond(text)
+        awaiting_selection[event.chat_id] = True
     else:
         try:
             selection = int(parts[1])
             if selection in animations:
                 selected_animations[event.chat_id] = selection
-                # Отправляем подтверждение выбора анимации
                 confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
                 # Получаем 4 последних сообщения бота
                 me = await event.client.get_me()
@@ -113,6 +116,27 @@ async def handle_m_command(event):
                 await event.respond("❌ Неверный номер анимации.")
         except ValueError:
             await event.respond("❌ Укажите корректный номер анимации после /m.")
+
+@events.register(events.NewMessage(pattern=r'^\d+$'))
+async def handle_animation_digit(event):
+    """Обработка сообщения, состоящего только из цифры, для выбора анимации."""
+    if event.chat_id in awaiting_selection and awaiting_selection[event.chat_id]:
+        try:
+            selection = int(event.message.text)
+            if selection in animations:
+                selected_animations[event.chat_id] = selection
+                confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
+                awaiting_selection[event.chat_id] = False  # сбрасываем состояние ожидания
+                # Получаем 4 последних сообщения бота
+                me = await event.client.get_me()
+                bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
+                filtered_bot_messages = [msg for msg in bot_messages if msg.id != confirmation.id]
+                await event.client.delete_messages(event.chat_id, [msg.id for msg in filtered_bot_messages])
+            else:
+                await event.respond("❌ Неверный номер анимации.")
+        except ValueError:
+            await event.respond("❌ Укажите корректный номер анимации.")
+    # Если бот не ожидает ввода, ничего не делаем
 
 @events.register(events.NewMessage(pattern=r'^/p\b'))
 async def handle_p_command(event):
@@ -129,31 +153,13 @@ async def handle_p_command(event):
         except Exception as e:
             await event.respond(f"⚠ Ошибка анимации: {e}")
 
-# Новый обработчик для выбора анимации по сообщению, содержащему только цифру (без /m)
-@events.register(events.NewMessage(pattern=r'^\d+$'))
-async def handle_digit_selection(event):
-    """Обработка выбора анимации по сообщению, содержащему только цифру."""
-    try:
-        selection = int(event.message.text)
-        if selection in animations:
-            selected_animations[event.chat_id] = selection
-            confirmation = await event.respond(f"Выбрана анимация: {animations[selection][0]}")
-            me = await event.client.get_me()
-            bot_messages = await event.client.get_messages(event.chat_id, limit=4, from_user=me.id)
-            filtered_bot_messages = [msg for msg in bot_messages if msg.id != confirmation.id]
-            await event.client.delete_messages(event.chat_id, [msg.id for msg in filtered_bot_messages])
-        else:
-            await event.respond("❌ Неверный номер анимации.")
-    except ValueError:
-        await event.respond("❌ Введите корректную цифру для выбора анимации.")
-
 async def main():
     config = load_or_create_config()
     client = create_client(config)
     # Регистрация обработчиков событий
     client.add_event_handler(handle_m_command)
+    client.add_event_handler(handle_animation_digit)
     client.add_event_handler(handle_p_command)
-    client.add_event_handler(handle_digit_selection)
     
     if await authorize(client, config):
         print("Бот работает...")
